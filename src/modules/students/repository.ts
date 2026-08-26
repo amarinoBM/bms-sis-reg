@@ -1,11 +1,12 @@
 import { AppError } from "@/core/app-error";
 import { BACKENDLESS_TABLES } from "@/config/backendless";
-import { findAppRows, updateAppRow } from "@/server/connectors/backendless/app-data-client";
+import { updateAppRow } from "@/server/connectors/backendless/app-data-client";
 import {
   decryptStudentDirRow,
   encryptStudentDirRow,
 } from "@/server/connectors/backendless/cloud-code-client";
 import { hydrateUploadMetadata } from "@/modules/students/upload-metadata";
+import { buildStudentInfoState } from "@/modules/students/student-info-state";
 import type {
   EnrolledStudentSummary,
   MsStudentDirRow,
@@ -126,6 +127,7 @@ export async function loadStudentRecord(
 
   return {
     student: hydrated as MsStudentDirRow,
+    studentInfo: buildStudentInfoState(leadId, hydrated as MsStudentDirRow, chargebeeId),
     chargebeeId,
     enrolledStudents,
   };

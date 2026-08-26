@@ -1,3 +1,5 @@
+import type { StudentInfoState } from "@/modules/students/student-info-state";
+
 export type MsStudentDirRow = Record<string, unknown> & {
   objectId?: string;
   lead_id?: string;
@@ -24,6 +26,7 @@ export type EnrolledStudentSummary = {
 
 export type StudentLoadResult = {
   student: MsStudentDirRow;
+  studentInfo: StudentInfoState;
   chargebeeId: string | null;
   enrolledStudents: EnrolledStudentSummary[];
 };
