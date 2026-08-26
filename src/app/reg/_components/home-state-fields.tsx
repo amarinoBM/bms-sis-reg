@@ -71,6 +71,7 @@ function ChoiceButton({
         selected && "bg-[#fae2d9] text-[#f5713c] hover:bg-[#fae2d9]/90",
       )}
       disabled={disabled}
+      aria-pressed={selected}
       onClick={onClick}
     >
       {children}
@@ -125,9 +126,10 @@ function SituationCard({
     <button
       type="button"
       disabled={disabled}
+      aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "rounded-md border px-4 py-3 text-left transition-colors",
+        "min-h-11 rounded-md border px-4 py-3 text-left transition-colors",
         selected
           ? "border-[#f5713c] bg-[#fae2d9] shadow-[inset_0_0_0_2px_#f5713c]"
           : "border-border bg-card hover:bg-muted/30",
@@ -158,6 +160,7 @@ export function HomeStateFields({
   const [stateReg, setStateReg] = useState<StateRegDto | null>(null);
   const [loadingStateReg, setLoadingStateReg] = useState(false);
   const [stateRegError, setStateRegError] = useState<string | null>(null);
+  const [stateRegRetryNonce, setStateRegRetryNonce] = useState(0);
   const [showExemptionInput, setShowExemptionInput] = useState(() =>
     isCustomVaccineSituation(vaccineValue),
   );
@@ -203,7 +206,7 @@ export function HomeStateFields({
     return () => {
       cancelled = true;
     };
-  }, [homeState]);
+  }, [homeState, stateRegRetryNonce]);
 
   useEffect(() => {
     setShowExemptionInput(isCustomVaccineSituation(vaccineValue));
@@ -275,7 +278,8 @@ export function HomeStateFields({
           disabled={readOnly}
           onChange={(event) => handleHomeStateChange(event.target.value)}
           className={cn(
-            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body",
+            REG_TOUCH_CLASS,
+            "flex w-full rounded-md border border-input bg-background px-3 py-2 text-body",
             readOnly && "cursor-not-allowed opacity-60",
           )}
         >
@@ -289,14 +293,27 @@ export function HomeStateFields({
       </div>
 
       {loadingStateReg ? (
-        <div className="flex items-center gap-2 text-body text-muted-foreground">
+        <div
+          className="flex items-center gap-2 text-body text-muted-foreground"
+          role="status"
+        >
           <RegSpinner className="size-4" />
           Loading state requirements…
         </div>
       ) : null}
 
       {stateRegError ? (
-        <p className="text-body text-destructive">{stateRegError}</p>
+        <div className="space-y-2">
+          <p className="text-body text-destructive">{stateRegError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className={REG_TOUCH_CLASS}
+            onClick={() => setStateRegRetryNonce((current) => current + 1)}
+          >
+            Try again
+          </Button>
+        </div>
       ) : null}
 
       {showRequirementsPanel && stateReg ? (

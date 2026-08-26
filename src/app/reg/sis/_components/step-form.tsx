@@ -30,9 +30,12 @@ import {
   getWizardStepLabel,
   type WizardStepId,
 } from "@/modules/wizard/steps";
+import { isAppError } from "@/core/app-error";
+import { messageFromRegApiError } from "@/lib/reg-api-errors";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
 import { postApi, postFormApi } from "@/lib/client-api";
+import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
 import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
 
 type StepFormProps = {
@@ -148,6 +151,7 @@ export function StepForm({
     key: string;
     fileName: string;
   } | null>(null);
+  const [uploadedFileNames, setUploadedFileNames] = useState<Record<string, string>>({});
   const [showSecondGuardian, setShowSecondGuardian] = useState(() =>
     guardianContactHasValues(
       readGuardianContact("tertiary_guardian", initialValues),
@@ -200,7 +204,7 @@ export function StepForm({
       setJustSaved(true);
       await onSaved();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save.");
+      toast.error(messageFromRegApiError(error, "Could not save."));
     } finally {
       setSaving(false);
     }
@@ -208,6 +212,17 @@ export function StepForm({
 
   async function handleUpload(field: StepFieldDefinition, file: File) {
     if (!field.uploadType) {
+      return;
+    }
+
+    try {
+      assertUploadFileAllowed(file);
+    } catch (error) {
+      toast.error(
+        isAppError(error)
+          ? error.exposeMessage
+          : "Could not upload this file. Try a PDF or image under 10 MB.",
+      );
       return;
     }
 
@@ -228,12 +243,16 @@ export function StepForm({
       );
 
       setValues((current) => ({ ...current, [uploadResult.fieldKey]: uploadResult.url }));
+      setUploadedFileNames((current) => ({
+        ...current,
+        [uploadResult.fieldKey]: file.name,
+      }));
       toast.success("File uploaded");
       setIsEditing(false);
       setJustSaved(true);
       await onSaved();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed.");
+      toast.error(messageFromRegApiError(error, "Upload failed."));
     } finally {
       setUploadingKey(null);
       setPendingUpload(null);
@@ -328,6 +347,7 @@ export function StepForm({
                         ? pendingUpload.fileName
                         : undefined
                     }
+                    uploadedFileName={uploadedFileNames[field.key]}
                     onChange={(value) => updateValue(field.key, value)}
                     onUpload={(file) => handleUpload(field, file)}
                   />
@@ -348,6 +368,7 @@ export function StepForm({
                   ? pendingUpload.fileName
                   : undefined
               }
+              uploadedFileName={uploadedFileNames[field.key]}
               onChange={(value) => updateValue(field.key, value)}
               onUpload={(file) => handleUpload(field, file)}
             />
@@ -419,6 +440,7 @@ type FieldControlProps = {
   readOnly: boolean;
   uploading: boolean;
   pendingFileName?: string;
+  uploadedFileName?: string;
   onChange: (value: unknown) => void;
   onUpload: (file: File) => void;
 };
@@ -429,6 +451,7 @@ function FieldControl({
   readOnly,
   uploading,
   pendingFileName,
+  uploadedFileName,
   onChange,
   onUpload,
 }: FieldControlProps) {
@@ -491,6 +514,7 @@ function FieldControl({
         label={field.label}
         fileUrl={value ? String(value) : null}
         pendingFileName={pendingFileName}
+        uploadedFileName={uploadedFileName}
         uploading={uploading}
         readOnly={readOnly}
         onFileSelect={onUpload}

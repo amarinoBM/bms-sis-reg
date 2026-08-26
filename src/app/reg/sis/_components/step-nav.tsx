@@ -1,5 +1,6 @@
 "use client";
 
+import type { MainProgressStepStatus } from "@/modules/wizard/progress";
 import type { WizardStepId } from "@/modules/wizard/steps";
 import { WIZARD_STEPS } from "@/modules/wizard/steps";
 import { isStepComplete } from "@/modules/wizard/progress";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 type StepNavProps = {
   activeStepId: WizardStepId;
   stepCompletion: Record<string, boolean>;
+  progressSteps: MainProgressStepStatus[];
   onStepSelect: (stepId: WizardStepId) => void;
   className?: string;
 };
@@ -24,19 +26,62 @@ type StepNavProps = {
 export function StepNav({
   activeStepId,
   stepCompletion,
+  progressSteps,
   onStepSelect,
   className,
 }: StepNavProps) {
   const activeStep = WIZARD_STEPS.find((step) => step.id === activeStepId);
   const activeIndex = WIZARD_STEPS.findIndex((step) => step.id === activeStepId);
+  const completedCount = WIZARD_STEPS.filter((step) =>
+    isStepComplete(step.id, stepCompletion),
+  ).length;
+  const currentMainStep =
+    progressSteps.find((step) => step.state === "current") ?? progressSteps[0];
 
   return (
-    <div className={cn("min-w-0", className)}>
-      <div className="lg:hidden">
+    <div
+      className={cn(
+        "min-w-0 rounded-lg border border-border bg-card p-4",
+        className,
+      )}
+      aria-label="Registration navigation"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-label font-medium text-muted-foreground">
+          Registration progress
+        </p>
+        <p className="text-label text-muted-foreground">
+          {completedCount} of {WIZARD_STEPS.length} sections complete
+        </p>
+      </div>
+
+      {currentMainStep ? (
+        <p className="mt-2 text-body font-semibold text-foreground">
+          Part {currentMainStep.number} of {progressSteps.length}: {currentMainStep.label}
+        </p>
+      ) : null}
+
+      {progressSteps.length > 0 ? (
+        <ol className="mt-3 flex min-w-0 gap-1" aria-hidden="true">
+          {progressSteps.map((step) => (
+            <li
+              key={step.number}
+              className={cn(
+                "h-1.5 min-w-0 flex-1 rounded-full",
+                step.state === "complete" && "bg-primary/70",
+                step.state === "current" && "bg-primary",
+                step.state === "upcoming" && "bg-muted",
+              )}
+            />
+          ))}
+        </ol>
+      ) : null}
+
+      <div className="mt-4 space-y-2">
         <Label htmlFor="registration-section-picker" className="text-label font-medium">
-          Section
+          Current section
         </Label>
-        <p className="mt-1 text-label text-muted-foreground">
+        <p className="text-label text-muted-foreground">
           Section {activeIndex + 1} of {WIZARD_STEPS.length}
           {activeStep ? ` · ${activeStep.label}` : ""}
         </p>
@@ -50,7 +95,7 @@ export function StepNav({
         >
           <SelectTrigger
             id="registration-section-picker"
-            className={cn(REG_TOUCH_CLASS, "mt-2 w-full min-w-0")}
+            className={cn(REG_TOUCH_CLASS, "w-full min-w-0")}
           >
             <SelectValue placeholder="Choose a section" />
           </SelectTrigger>
@@ -58,7 +103,7 @@ export function StepNav({
             align="start"
             alignItemWithTrigger={false}
             sideOffset={8}
-            className="min-w-[var(--anchor-width)] w-max max-w-[min(100vw-3rem,var(--available-width))]"
+            className="min-w-[var(--anchor-width)] w-max max-w-[min(100vw-2rem,var(--available-width))]"
           >
             {WIZARD_STEPS.map((step, index) => {
               const complete = isStepComplete(step.id, stepCompletion);
@@ -66,51 +111,13 @@ export function StepNav({
               return (
                 <SelectItem key={step.id} value={step.id}>
                   {index + 1}. {step.label}
-                  {complete ? " · Done" : ""}
+                  {complete ? " · Complete" : ""}
                 </SelectItem>
               );
             })}
           </SelectContent>
         </Select>
       </div>
-
-      <nav
-        aria-label="Registration sections"
-        className="hidden rounded-lg border border-border bg-card p-4 lg:block lg:sticky lg:top-6 lg:self-start"
-      >
-        <p className="text-label font-medium text-muted-foreground">Sections</p>
-        <ul className="mt-3 space-y-1">
-          {WIZARD_STEPS.map((step, index) => {
-            const complete = isStepComplete(step.id, stepCompletion);
-            const active = step.id === activeStepId;
-
-            return (
-              <li key={step.id}>
-                <button
-                  type="button"
-                  onClick={() => onStepSelect(step.id)}
-                  aria-current={active ? "step" : undefined}
-                  className={cn(
-                    REG_TOUCH_CLASS,
-                    "flex w-full min-w-0 items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-body transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary"
-                      : "text-foreground hover:bg-muted",
-                  )}
-                >
-                  <span className="min-w-0 break-words">
-                    <span className="text-label text-muted-foreground">{index + 1}.</span>{" "}
-                    {step.label}
-                  </span>
-                  {complete ? (
-                    <span className="shrink-0 text-label text-muted-foreground">Done</span>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
     </div>
   );
 }

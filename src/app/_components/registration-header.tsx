@@ -6,7 +6,7 @@ const LOGO_PATH = "/brand/brilliant-microschools-logo.png";
 export function RegistrationHeader() {
   return (
     <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-4">
+      <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <Link
           href="https://brilliantmicroschools.org"
           className="inline-flex shrink-0 items-center"

@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { FormTextInput } from "@/app/reg/_components/form-fields";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
 import { readInterestsSelection } from "@/modules/wizard/field-options";
 import {

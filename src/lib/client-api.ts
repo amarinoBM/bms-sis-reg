@@ -1,14 +1,47 @@
+import { APP_ERROR_CODES, type AppErrorCode } from "@/core/app-error";
 import type { ApiResponse } from "@/server/http/api-envelope";
 
-async function readApiResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`);
+export class ApiClientError extends Error {
+  readonly code: AppErrorCode;
+  readonly status: number;
+
+  constructor(options: { code: AppErrorCode; message: string; status: number }) {
+    super(options.message);
+    this.name = "ApiClientError";
+    this.code = options.code;
+    this.status = options.status;
   }
+}
 
-  const payload = (await response.json()) as ApiResponse<T>;
+function isAppErrorCode(value: string): value is AppErrorCode {
+  return (APP_ERROR_CODES as readonly string[]).includes(value);
+}
 
-  if (!payload.success) {
-    throw new Error(payload.error.message);
+async function readApiResponseBody<T>(response: Response): Promise<ApiResponse<T>> {
+  try {
+    return (await response.json()) as ApiResponse<T>;
+  } catch {
+    throw new ApiClientError({
+      code: "INTERNAL_ERROR",
+      message: "Something went wrong. Try again or contact support.",
+      status: response.status,
+    });
+  }
+}
+
+async function readApiResponse<T>(response: Response): Promise<T> {
+  const payload = await readApiResponseBody<T>(response);
+
+  if (!response.ok || !payload.success) {
+    const code =
+      !payload.success && isAppErrorCode(payload.error.code)
+        ? payload.error.code
+        : "INTERNAL_ERROR";
+    const message = !payload.success
+      ? payload.error.message
+      : "Something went wrong. Try again or contact support.";
+
+    throw new ApiClientError({ code, message, status: response.status });
   }
 
   return payload.data;

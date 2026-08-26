@@ -110,7 +110,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-body text-foreground;
+    @apply overflow-x-hidden bg-background text-body text-foreground;
     font-kerning: normal;
   }
   html {

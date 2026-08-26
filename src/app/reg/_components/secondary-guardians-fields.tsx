@@ -108,21 +108,21 @@ function GuardianCard({
 }: GuardianCardProps) {
   return (
     <fieldset className="rounded-lg border border-border bg-muted/20 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <legend className="text-label font-medium text-foreground">{title}</legend>
+      <legend className="flex w-full items-start justify-between gap-3 px-0 text-label font-medium text-foreground">
+        <span className="min-w-0">{title}</span>
         {removable && onRemove ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 text-muted-foreground"
+            className="h-11 shrink-0 gap-1.5 text-muted-foreground"
             onClick={onRemove}
           >
             <X className="size-4" aria-hidden="true" />
             Remove
           </Button>
         ) : null}
-      </div>
+      </legend>
 
       <div className="mt-4 space-y-4">
         {GUARDIAN_CONTACT_FIELD_KEYS.map((fieldKey) => {

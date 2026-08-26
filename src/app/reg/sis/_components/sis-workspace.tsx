@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { HonorStep } from "@/app/reg/sis/_components/honor-step";
 import { LoadingPanel } from "@/app/reg/sis/_components/loading-panel";
-import { WizardProgressSummary } from "@/app/reg/sis/_components/wizard-progress-summary";
 import { StepForm } from "@/app/reg/sis/_components/step-form";
 import { StepNav } from "@/app/reg/sis/_components/step-nav";
 import { StudentPicker } from "@/app/reg/sis/_components/student-picker";
@@ -21,6 +20,10 @@ import {
 import { INITIAL_ACTIVE_STEP, type WizardStepId } from "@/modules/wizard/steps";
 import { getMainProgressStatuses } from "@/modules/wizard/progress";
 import { fetchApi } from "@/lib/client-api";
+import {
+  handleRegSessionExpiry,
+  messageFromRegApiError,
+} from "@/lib/reg-api-errors";
 import type { StudentLoadResult } from "@/modules/students/types";
 
 type SisWorkspaceProps = {
@@ -40,10 +43,12 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [payload, setPayload] = useState<StudentLoadResult | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const loadRequestIdRef = useRef(0);
 
   const loadStudent = useCallback(
     async (name: string, options?: LoadOptions) => {
       const background = options?.background === true;
+      const requestId = ++loadRequestIdRef.current;
 
       try {
         if (background) {
@@ -62,12 +67,27 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
           { cache: "no-store" },
         );
 
+        if (requestId !== loadRequestIdRef.current) {
+          return;
+        }
+
         setPayload(body);
         setStudentName(body.studentInfo.studentName);
         setLoadState("ready");
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Could not load student information.";
+        if (requestId !== loadRequestIdRef.current) {
+          return;
+        }
+
+        if (handleRegSessionExpiry(error, leadId, router)) {
+          toast.error("Your session expired. Sign in again with a login code.");
+          return;
+        }
+
+        const message = messageFromRegApiError(
+          error,
+          "Could not load student information.",
+        );
         if (background) {
           toast.error(message);
         } else {
@@ -76,10 +96,12 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
           toast.error(message);
         }
       } finally {
-        setIsRefreshing(false);
+        if (requestId === loadRequestIdRef.current) {
+          setIsRefreshing(false);
+        }
       }
     },
-    [leadId],
+    [leadId, router],
   );
 
   const refreshStudent = useCallback(() => {
@@ -158,8 +180,6 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
 
       {loadState === "ready" && payload && (
         <>
-          <WizardProgressSummary steps={progressSteps} />
-
           <StudentPicker
             students={payload.enrolledStudents}
             selectedStudentName={studentName}
@@ -167,15 +187,14 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
             onStudentChange={handleStudentChange}
           />
 
-          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:items-start">
-            <StepNav
-              activeStepId={activeStepId}
-              stepCompletion={payload.studentInfo.stepCompletion}
-              onStepSelect={setActiveStepId}
-              className="lg:order-none"
-            />
+          <StepNav
+            activeStepId={activeStepId}
+            stepCompletion={payload.studentInfo.stepCompletion}
+            progressSteps={progressSteps}
+            onStepSelect={setActiveStepId}
+          />
 
-            <div className="min-w-0">
+          <div className="min-w-0">
               {stepDefinition && (
                 <StepForm
                   key={`${activeStepId}-${payload.studentInfo.objectId}`}
@@ -238,7 +257,6 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   </div>
                 )}
             </div>
-          </div>
         </>
       )}
     </div>
