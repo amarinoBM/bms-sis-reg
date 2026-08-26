@@ -31,6 +31,7 @@ import {
   type WizardStepId,
 } from "@/modules/wizard/steps";
 import { isAppError } from "@/core/app-error";
+import { fromDateInputValue, toDateInputValue } from "@/lib/date-fields";
 import { messageFromRegApiError } from "@/lib/reg-api-errors";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
@@ -54,20 +55,6 @@ type FieldGroup = {
   legend?: string;
   fields: StepFieldDefinition[];
 };
-
-function toDateInputValue(value: unknown): string {
-  if (typeof value !== "number") {
-    return "";
-  }
-  return new Date(value).toISOString().slice(0, 10);
-}
-
-function fromDateInputValue(value: string): number | null {
-  if (!value) {
-    return null;
-  }
-  return new Date(value).getTime();
-}
 
 function fieldValue(values: Record<string, unknown>, key: string): unknown {
   return values[key];

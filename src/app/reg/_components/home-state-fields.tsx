@@ -10,7 +10,7 @@ import {
 import { RegSpinner } from "@/app/reg/_components/reg-spinner";
 import { Button } from "@/components/ui/button";
 import { fetchApi } from "@/lib/client-api";
-import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { REG_FIELD_FOCUS_CLASS, REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { US_STATE_OPTIONS } from "@/modules/wizard/field-options";
 import {
   HOME_STATE_COPY,
@@ -279,6 +279,7 @@ export function HomeStateFields({
           onChange={(event) => handleHomeStateChange(event.target.value)}
           className={cn(
             REG_TOUCH_CLASS,
+            REG_FIELD_FOCUS_CLASS,
             "flex w-full rounded-md border border-input bg-background px-3 py-2 text-body",
             readOnly && "cursor-not-allowed opacity-60",
           )}

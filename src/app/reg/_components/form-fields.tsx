@@ -18,12 +18,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { isAppError } from "@/core/app-error";
-import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { REG_FIELD_FOCUS_CLASS, REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
 import { cn } from "@/lib/utils";
 
 export const REG_UPLOAD_ACCEPT =
   "application/pdf,image/jpeg,image/jpg,image/png,image/webp";
+
+const regControlClass = cn(REG_TOUCH_CLASS, REG_FIELD_FOCUS_CLASS);
 
 function buildFieldA11y({
   id,
@@ -153,7 +155,7 @@ export function FormTextInput({
       <Input
         id={id}
         type={type}
-        className={REG_TOUCH_CLASS}
+        className={regControlClass}
         value={value}
         disabled={disabled}
         placeholder={placeholder}
@@ -203,7 +205,7 @@ export function FormTextarea({
     >
       <Textarea
         id={id}
-        className={cn(REG_TOUCH_CLASS, "min-w-0")}
+        className={cn(regControlClass, "min-w-0")}
         value={value}
         disabled={disabled}
         placeholder={placeholder}
@@ -259,7 +261,7 @@ export function FormSelect({
         >
           <SelectTrigger
             id={id}
-            className={cn(REG_TOUCH_CLASS, "w-full min-w-0")}
+            className={cn(regControlClass, "w-full min-w-0")}
             {...controlA11yProps({ id, description, error, required })}
           >
             <SelectValue placeholder={placeholder} className="truncate" />
@@ -420,15 +422,19 @@ export function FormDateInput({
       error={error}
       required={required}
     >
-      <Input
+      <input
         id={id}
         type="date"
-        className={REG_TOUCH_CLASS}
         value={value}
         disabled={disabled}
         min={min}
         max={max}
         required={required}
+        className={cn(
+          regControlClass,
+          "w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base md:text-sm dark:bg-input/30 disabled:cursor-not-allowed disabled:opacity-50",
+          "[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80",
+        )}
         {...controlA11yProps({ id, description, error, required })}
         onChange={(event) => onChange(event.target.value)}
       />

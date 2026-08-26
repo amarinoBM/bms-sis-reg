@@ -42,6 +42,10 @@ export function StudentPicker({
       <Label htmlFor="student-picker">Select student</Label>
       <Select
         value={selectedValue}
+        items={students.map((student) => ({
+          value: student.objectId,
+          label: student.studentName,
+        }))}
         onValueChange={(value) => {
           const nextStudent = students.find((student) => student.objectId === value);
           if (nextStudent) {
