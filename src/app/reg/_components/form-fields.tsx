@@ -18,14 +18,18 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { isAppError } from "@/core/app-error";
-import { REG_FIELD_FOCUS_CLASS, REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { REG_FIELD_FOCUS_CLASS, REG_FIELD_SURFACE_CLASS, REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
 import { cn } from "@/lib/utils";
 
 export const REG_UPLOAD_ACCEPT =
   "application/pdf,image/jpeg,image/jpg,image/png,image/webp";
 
-const regControlClass = cn(REG_TOUCH_CLASS, REG_FIELD_FOCUS_CLASS);
+const regControlClass = cn(REG_TOUCH_CLASS, REG_FIELD_FOCUS_CLASS, REG_FIELD_SURFACE_CLASS);
+
+function regControlClassName(disabled?: boolean) {
+  return cn(regControlClass, disabled && "bg-muted/40 text-muted-foreground");
+}
 
 function buildFieldA11y({
   id,
@@ -68,8 +72,8 @@ export function FormField({
   const { descriptionId, errorId } = buildFieldA11y({ id, description, error });
 
   return (
-    <div className={cn("min-w-0 space-y-2.5", className)}>
-      <Label htmlFor={id} className="break-words">
+    <div className={cn("min-w-0 space-y-2", className)}>
+      <Label htmlFor={id} className="text-label font-medium text-foreground break-words">
         {label}
         {required ? (
           <>
@@ -155,7 +159,7 @@ export function FormTextInput({
       <Input
         id={id}
         type={type}
-        className={regControlClass}
+        className={regControlClassName(disabled)}
         value={value}
         disabled={disabled}
         placeholder={placeholder}
@@ -205,7 +209,7 @@ export function FormTextarea({
     >
       <Textarea
         id={id}
-        className={cn(regControlClass, "min-w-0")}
+        className={cn(regControlClassName(disabled), "min-w-0")}
         value={value}
         disabled={disabled}
         placeholder={placeholder}
@@ -261,7 +265,7 @@ export function FormSelect({
         >
           <SelectTrigger
             id={id}
-            className={cn(regControlClass, "w-full min-w-0")}
+            className={cn(regControlClassName(disabled), "w-full min-w-0")}
             {...controlA11yProps({ id, description, error, required })}
           >
             <SelectValue placeholder={placeholder} className="truncate" />
@@ -343,7 +347,7 @@ export function FormCheckboxGroup({
   });
 
   return (
-    <fieldset className="min-w-0 space-y-3" aria-describedby={describedBy}>
+    <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 bg-muted/25 p-4" aria-describedby={describedBy}>
       <legend className="text-label font-medium text-foreground break-words">{legend}</legend>
       {description ? (
         <p id={descriptionId} className="text-label text-muted-foreground break-words">
@@ -431,8 +435,8 @@ export function FormDateInput({
         max={max}
         required={required}
         className={cn(
-          regControlClass,
-          "w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base md:text-sm dark:bg-input/30 disabled:cursor-not-allowed disabled:opacity-50",
+          regControlClassName(disabled),
+          "w-full min-w-0 rounded-lg border border-input px-2.5 py-1 text-base md:text-sm disabled:cursor-not-allowed disabled:opacity-50",
           "[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80",
         )}
         {...controlA11yProps({ id, description, error, required })}

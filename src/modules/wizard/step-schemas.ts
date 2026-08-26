@@ -73,7 +73,8 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "1",
     saveHandler: "save1",
     title: "General information",
-    description: (name) => `Student identity and demographics for ${name}.`,
+    description: (name) =>
+      `Help us get to know ${name}. Fields marked with * are required.`,
     fields: [
       { key: "student_name", label: "Student first name", type: "text" },
       { key: "student_nick_name", label: "Nickname", type: "text" },
@@ -95,7 +96,8 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "2",
     saveHandler: "save1.5",
     title: "Parent contact",
-    description: (name) => `Primary parent or guardian contact for ${name}.`,
+    description: (name) =>
+      `Who should we contact about ${name}? This is usually a parent or guardian.`,
     fields: [
       { key: "parent_name", label: "Parent first name", type: "text" },
       { key: "parent_last_name", label: "Parent last name", type: "text" },

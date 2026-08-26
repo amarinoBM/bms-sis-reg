@@ -37,6 +37,7 @@ import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
 import { postApi, postFormApi } from "@/lib/client-api";
 import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
+import { fieldLayoutClass, getFieldUiHints } from "@/modules/wizard/field-hints";
 import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
 
 type StepFormProps = {
@@ -263,13 +264,15 @@ export function StepForm({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-card p-6">
-      <h2 className="text-section font-semibold text-foreground">{definition.title}</h2>
-      <p className="mt-2 text-body text-muted-foreground">
-        {definition.description(studentName)}
-      </p>
+    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
+        <h2 className="text-section font-semibold text-foreground">{definition.title}</h2>
+        <p className="mt-1.5 text-body leading-relaxed text-muted-foreground">
+          {definition.description(studentName)}
+        </p>
+      </div>
 
-      <div className="mt-6 space-y-5">
+      <div className="space-y-6 p-6">
         {iepNotRequired ? (
           <div className="rounded-md border border-border bg-muted/30 p-4 text-body text-muted-foreground">
             You indicated that {studentName} does not have an IEP or 504 plan. No document upload
@@ -320,11 +323,43 @@ export function StepForm({
 
           if (group.legend) {
             return (
-              <fieldset key={`${group.legend}-${groupIndex}`} className="space-y-3">
+              <fieldset
+                key={`${group.legend}-${groupIndex}`}
+                className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4"
+              >
                 <legend className="text-label font-medium text-foreground">{group.legend}</legend>
-                {group.fields.map((field) => (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {group.fields.map((field) => (
+                    <div key={field.key} className={cn("min-w-0", fieldLayoutClass("full"))}>
+                      <FieldControl
+                        field={field}
+                        value={fieldValue(activeValues, field.key)}
+                        readOnly={readOnly}
+                        uploading={uploadingKey === field.key}
+                        pendingFileName={
+                          pendingUpload?.key === field.key
+                            ? pendingUpload.fileName
+                            : undefined
+                        }
+                        uploadedFileName={uploadedFileNames[field.key]}
+                        onChange={(value) => updateValue(field.key, value)}
+                        onUpload={(file) => handleUpload(field, file)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          }
+
+          return (
+            <div key={`fields-${groupIndex}`} className="grid gap-5 sm:grid-cols-2">
+              {group.fields.map((field) => (
+                <div
+                  key={field.key}
+                  className={cn("min-w-0", fieldLayoutClass(getFieldUiHints(field).layout))}
+                >
                   <FieldControl
-                    key={field.key}
                     field={field}
                     value={fieldValue(activeValues, field.key)}
                     readOnly={readOnly}
@@ -338,59 +373,40 @@ export function StepForm({
                     onChange={(value) => updateValue(field.key, value)}
                     onUpload={(file) => handleUpload(field, file)}
                   />
-                ))}
-              </fieldset>
-            );
-          }
-
-          return group.fields.map((field) => (
-            <FieldControl
-              key={field.key}
-              field={field}
-              value={fieldValue(activeValues, field.key)}
-              readOnly={readOnly}
-              uploading={uploadingKey === field.key}
-              pendingFileName={
-                pendingUpload?.key === field.key
-                  ? pendingUpload.fileName
-                  : undefined
-              }
-              uploadedFileName={uploadedFileNames[field.key]}
-              onChange={(value) => updateValue(field.key, value)}
-              onUpload={(file) => handleUpload(field, file)}
-            />
-          ));
+                </div>
+              ))}
+            </div>
+          );
         })}
-      </div>
 
-      {uploadOnlyStep && (
-        <p className="mt-4 text-label text-muted-foreground">
-          Uploads in this section are saved automatically.
-        </p>
-      )}
+        {uploadOnlyStep && (
+          <p className="text-label text-muted-foreground">
+            Uploads in this section are saved automatically.
+          </p>
+        )}
 
-      {definition.saveHandler && !readOnly && (
-        <div className="mt-6">
-          <Button
-            className={cn(REG_TOUCH_CLASS, "gap-2")}
-            onClick={handleSave}
-            disabled={saving}
-            aria-busy={saving}
-          >
-            {saving ? (
-              <>
-                <RegSpinner size="sm" variant="onPrimary" />
-                Saving…
-              </>
-            ) : (
-              "Save section"
-            )}
-          </Button>
-        </div>
-      )}
+        {definition.saveHandler && !readOnly && (
+          <div>
+            <Button
+              className={cn(REG_TOUCH_CLASS, "gap-2")}
+              onClick={handleSave}
+              disabled={saving}
+              aria-busy={saving}
+            >
+              {saving ? (
+                <>
+                  <RegSpinner size="sm" variant="onPrimary" />
+                  Saving…
+                </>
+              ) : (
+                "Save section"
+              )}
+            </Button>
+          </div>
+        )}
 
-      {(sectionComplete && (definition.saveHandler || uploadOnlyStep)) || iepNotRequired ? (
-        <SectionSavedActions
+        {(sectionComplete && (definition.saveHandler || uploadOnlyStep)) || iepNotRequired ? (
+          <SectionSavedActions
           message={
             iepNotRequired
               ? "No IEP or 504 document is required."
@@ -416,7 +432,8 @@ export function StepForm({
               : "Next section"
           }
         />
-      ) : null}
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -442,6 +459,8 @@ function FieldControl({
   onChange,
   onUpload,
 }: FieldControlProps) {
+  const ui = getFieldUiHints(field);
+
   if (field.type === "multiselect") {
     const selected = Array.isArray(value) ? value.map(String) : [];
 
@@ -474,8 +493,10 @@ function FieldControl({
       <FormTextarea
         id={field.key}
         label={field.label}
+        description={ui.hint}
         value={String(value ?? "")}
         disabled={readOnly}
+        placeholder={ui.placeholder}
         onChange={(next) => onChange(next)}
       />
     );
@@ -486,9 +507,11 @@ function FieldControl({
       <FormSelect
         id={field.key}
         label={field.label}
+        description={ui.hint}
         value={value ? String(value) : ""}
         options={field.options ?? []}
         disabled={readOnly}
+        placeholder={ui.selectPlaceholder ?? "Select an option"}
         onChange={(next) => onChange(next)}
       />
     );
@@ -514,6 +537,7 @@ function FieldControl({
       <FormDateInput
         id={field.key}
         label={field.label}
+        description={ui.hint}
         value={toDateInputValue(value)}
         disabled={readOnly}
         onChange={(next) => onChange(fromDateInputValue(next))}
@@ -526,9 +550,12 @@ function FieldControl({
       <FormTextInput
         id={field.key}
         label={field.label}
+        description={ui.hint}
         type="email"
         value={String(value ?? "")}
         disabled={readOnly}
+        placeholder={ui.placeholder}
+        autoComplete={ui.autoComplete}
         onChange={(next) => onChange(next)}
       />
     );
@@ -539,9 +566,13 @@ function FieldControl({
       <FormTextInput
         id={field.key}
         label={field.label}
+        description={ui.hint}
         type="tel"
         value={String(value ?? "")}
         disabled={readOnly}
+        placeholder={ui.placeholder}
+        autoComplete={ui.autoComplete}
+        inputMode="tel"
         onChange={(next) => onChange(next)}
       />
     );
@@ -551,8 +582,11 @@ function FieldControl({
     <FormTextInput
       id={field.key}
       label={field.label}
+      description={ui.hint}
       value={String(value ?? "")}
       disabled={readOnly}
+      placeholder={ui.placeholder}
+      autoComplete={ui.autoComplete}
       onChange={(next) => onChange(next)}
     />
   );

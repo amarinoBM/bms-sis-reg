@@ -107,7 +107,7 @@ function GuardianCard({
   onChange,
 }: GuardianCardProps) {
   return (
-    <fieldset className="rounded-lg border border-border bg-muted/20 p-4">
+    <fieldset className="rounded-lg border border-border/80 bg-muted/25 p-4">
       <legend className="flex w-full items-start justify-between gap-3 px-0 text-label font-medium text-foreground">
         <span className="min-w-0">{title}</span>
         {removable && onRemove ? (
