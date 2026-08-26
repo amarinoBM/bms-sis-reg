@@ -4,6 +4,7 @@ import { AppError } from "@/core/app-error";
 import { signHonorCode } from "@/modules/honor/sign-honor";
 import { loadStudentRecord } from "@/modules/students/repository";
 import { runRoute } from "@/server/http/route-handler";
+import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
 
 const bodySchema = z.object({
   leadId: z.string().min(1),
@@ -16,6 +17,9 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   return runRoute(async () => {
     const parsed = bodySchema.parse(await request.json());
+
+    await requireParentApiSession(parsed.leadId);
+
     const current = await loadStudentRecord(parsed.leadId, parsed.studentName);
 
     if (current.student.objectId !== parsed.objectId) {

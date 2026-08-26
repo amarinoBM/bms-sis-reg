@@ -1,16 +1,28 @@
+import { randomInt } from "node:crypto";
+
 import { AppError } from "@/core/app-error";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/config/backendless";
 import {
+  assertOtpSendAllowed,
+  assertOtpVerifyAllowed,
+  clearOtpVerifyFailures,
   getCacheValue,
   parentOtpCacheKey,
   putCacheValue,
 } from "@/server/connectors/backendless/cache-client";
 import { sendOtpEmail } from "@/server/connectors/backendless/email-client";
-import { findEnrolledStudents } from "@/modules/students/repository";
+import {
+  collectLeadParentEmails,
+  isEmailAllowedForLead,
+} from "@/modules/students/student-wizard-dto";
+import {
+  findEnrolledStudents,
+  loadStudentRecord,
+} from "@/modules/students/repository";
 import { getServerEnv } from "@/config/env";
 
-function generateOtp(): number {
-  return Math.floor(Math.random() * 999999) + 1;
+function generateOtp(): string {
+  return String(randomInt(100000, 1000000));
 }
 
 function normalizeOtp(value: unknown): string {
@@ -33,6 +45,21 @@ function validateEmail(email: string): void {
   }
 }
 
+async function loadAllowedParentEmails(
+  leadId: string,
+  fetchImpl: typeof fetch,
+): Promise<string[]> {
+  const enrolledStudents = await findEnrolledStudents(leadId, fetchImpl);
+  const rows: Record<string, unknown>[] = [];
+
+  for (const student of enrolledStudents) {
+    const loaded = await loadStudentRecord(leadId, student.studentName, fetchImpl);
+    rows.push(loaded.student);
+  }
+
+  return collectLeadParentEmails(rows);
+}
+
 export async function sendParentOtp(
   leadId: string,
   email: string,
@@ -47,9 +74,21 @@ export async function sendParentOtp(
     });
   }
 
+  await assertOtpSendAllowed(leadId, fetchImpl);
+
+  const allowedEmails = await loadAllowedParentEmails(leadId, fetchImpl);
+  if (!isEmailAllowedForLead(email, allowedEmails)) {
+    throw new AppError({
+      code: "INVALID_INPUT",
+      message:
+        "That email does not match our records for this registration link. Use the parent email on your enrollment paperwork or contact help@brilliantmicroschool.org.",
+    });
+  }
+
   const otp = generateOtp();
   await putCacheValue(parentOtpCacheKey(leadId), otp, undefined, fetchImpl);
-  await sendOtpEmail(leadId, email.trim(), otp, fetchImpl);
+  await clearOtpVerifyFailures(leadId, fetchImpl);
+  await sendOtpEmail(leadId, email.trim(), Number(otp), fetchImpl);
 
   return { cooldownSeconds: OTP_RESEND_COOLDOWN_SECONDS };
 }
@@ -77,11 +116,14 @@ export async function verifyParentOtp(
   }
 
   if (normalizeOtp(cachedOtp) !== normalizeOtp(otpInput)) {
+    await assertOtpVerifyAllowed(leadId, fetchImpl);
     throw new AppError({
       code: "INVALID_INPUT",
       message: "Invalid one time pin. Please check and try again",
     });
   }
+
+  await clearOtpVerifyFailures(leadId, fetchImpl);
 
   const students = await findEnrolledStudents(leadId, fetchImpl);
 

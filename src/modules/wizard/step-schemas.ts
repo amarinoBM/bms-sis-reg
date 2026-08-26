@@ -19,6 +19,8 @@ export type StepFieldDefinition = {
   options?: string[];
   placeholder?: string;
   uploadType?: "birth_cert" | "student_pic" | "learning" | "transcript" | "iep";
+  /** Groups consecutive checkboxes under one fieldset legend. */
+  group?: string;
 };
 
 export type StepFormDefinition = {
@@ -66,20 +68,20 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
       { key: "student_nick_name", label: "Nickname", type: "text" },
       { key: "student_last_name", label: "Last name", type: "text" },
       { key: "student_birth_date", label: "Birth date", type: "date" },
-      { key: "male", label: "Male", type: "checkbox" },
-      { key: "female", label: "Female", type: "checkbox" },
-      { key: "transgender", label: "Transgender", type: "checkbox" },
-      { key: "gender_variant_non_conforming", label: "Gender variant / non-conforming", type: "checkbox" },
-      { key: "prefer_not_to_say_gender", label: "Prefer not to say (gender)", type: "checkbox" },
+      { key: "male", label: "Male", type: "checkbox", group: "Gender" },
+      { key: "female", label: "Female", type: "checkbox", group: "Gender" },
+      { key: "transgender", label: "Transgender", type: "checkbox", group: "Gender" },
+      { key: "gender_variant_non_conforming", label: "Gender variant / non-conforming", type: "checkbox", group: "Gender" },
+      { key: "prefer_not_to_say_gender", label: "Prefer not to say (gender)", type: "checkbox", group: "Gender" },
       { key: "other_gender", label: "Other gender", type: "text" },
-      { key: "African_American", label: "African American", type: "checkbox" },
-      { key: "Asian", label: "Asian", type: "checkbox" },
-      { key: "Caucasian", label: "Caucasian", type: "checkbox" },
-      { key: "Latino_Hispanic", label: "Latino / Hispanic", type: "checkbox" },
-      { key: "Native_American", label: "Native American", type: "checkbox" },
-      { key: "Native_Hawaiian", label: "Native Hawaiian", type: "checkbox" },
-      { key: "other_unknown_ethnicity", label: "Other / unknown ethnicity", type: "checkbox" },
-      { key: "prefer_not_to_say_ethnicity", label: "Prefer not to say (ethnicity)", type: "checkbox" },
+      { key: "African_American", label: "African American", type: "checkbox", group: "Ethnicity" },
+      { key: "Asian", label: "Asian", type: "checkbox", group: "Ethnicity" },
+      { key: "Caucasian", label: "Caucasian", type: "checkbox", group: "Ethnicity" },
+      { key: "Latino_Hispanic", label: "Latino / Hispanic", type: "checkbox", group: "Ethnicity" },
+      { key: "Native_American", label: "Native American", type: "checkbox", group: "Ethnicity" },
+      { key: "Native_Hawaiian", label: "Native Hawaiian", type: "checkbox", group: "Ethnicity" },
+      { key: "other_unknown_ethnicity", label: "Other / unknown ethnicity", type: "checkbox", group: "Ethnicity" },
+      { key: "prefer_not_to_say_ethnicity", label: "Prefer not to say (ethnicity)", type: "checkbox", group: "Ethnicity" },
       { key: "studentBirthCert", label: "Birth certificate", type: "file", uploadType: "birth_cert" },
       { key: "studentPic", label: "Student photo", type: "file", uploadType: "student_pic" },
     ],
@@ -221,7 +223,8 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
   {
     stepId: "9",
     title: "IEP / 504 upload",
-    description: (name) => `Upload IEP or 504 documents for ${name}.`,
+    description: (name) =>
+      `Upload IEP or 504 documents for ${name}. Files are saved automatically when you upload.`,
     fields: [
       { key: "upload_copy_EIP_504_plan", label: "IEP / 504 document", type: "file", uploadType: "iep" },
     ],

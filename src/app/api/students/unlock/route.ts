@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 import { AppError } from "@/core/app-error";
-import { saveStudentRecord } from "@/modules/students/repository";
+import { loadStudentRecord, saveStudentRecord } from "@/modules/students/repository";
 import { WIZARD_STEPS } from "@/modules/wizard/steps";
 import { runRoute } from "@/server/http/route-handler";
 import type { WizardStepId } from "@/modules/wizard/steps";
+import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
 
 const bodySchema = z.object({
   leadId: z.string().min(1),
@@ -20,10 +21,20 @@ export async function POST(request: Request) {
   return runRoute(async () => {
     const parsed = bodySchema.parse(await request.json());
 
+    await requireParentApiSession(parsed.leadId);
+
     if (!isWizardStepId(parsed.stepId)) {
       throw new AppError({
         code: "INVALID_INPUT",
         message: "Invalid step id.",
+      });
+    }
+
+    const current = await loadStudentRecord(parsed.leadId);
+    if (current.student.objectId !== parsed.objectId) {
+      throw new AppError({
+        code: "INVALID_INPUT",
+        message: "Student record mismatch.",
       });
     }
 

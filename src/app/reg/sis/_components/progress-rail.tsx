@@ -23,7 +23,7 @@ export function ProgressRail({ steps }: ProgressRailProps) {
                 className={cn(
                   "flex size-7 items-center justify-center rounded-full text-label font-semibold",
                   step.state === "current" && "bg-primary text-primary-foreground",
-                  step.state === "complete" && "bg-[var(--ink-primary)] text-white",
+                  step.state === "complete" && "bg-[var(--ink-primary)] text-primary-foreground",
                   step.state === "upcoming" && "border border-border bg-card text-muted-foreground",
                 )}
               >

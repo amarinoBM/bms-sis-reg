@@ -5,6 +5,7 @@ import { runRoute } from "@/server/http/route-handler";
 import { saveStudentStep, loadStudentRecord } from "@/modules/students/repository";
 import { parseSaveStep } from "@/modules/wizard/save-service";
 import { unflattenFormValues } from "@/modules/wizard/step-schemas";
+import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
 
 const bodySchema = z.object({
   leadId: z.string().min(1),
@@ -18,6 +19,9 @@ export async function POST(request: Request) {
   return runRoute(async () => {
     const json = await request.json();
     const parsed = bodySchema.parse(json);
+
+    await requireParentApiSession(parsed.leadId);
+
     const saveStep = parseSaveStep(parsed.saveStep);
 
     const current = await loadStudentRecord(

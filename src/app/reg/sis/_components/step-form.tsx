@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ExternalLink } from "@/app/reg/_components/external-link";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
+import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { postApi, postFormApi } from "@/lib/client-api";
 
 type StepFormProps = {
@@ -27,6 +29,11 @@ type StepFormProps = {
   initialValues: Record<string, unknown>;
   disabled: boolean;
   onSaved: () => Promise<void>;
+};
+
+type FieldGroup = {
+  legend?: string;
+  fields: StepFieldDefinition[];
 };
 
 function toDateInputValue(value: unknown): string {
@@ -47,6 +54,37 @@ function fieldValue(values: Record<string, unknown>, key: string): unknown {
   return values[key];
 }
 
+function groupStepFields(fields: StepFieldDefinition[]): FieldGroup[] {
+  const groups: FieldGroup[] = [];
+  let checkboxRun: StepFieldDefinition[] = [];
+  let checkboxLegend: string | undefined;
+
+  function flushCheckboxRun() {
+    if (checkboxRun.length > 0) {
+      groups.push({ legend: checkboxLegend, fields: checkboxRun });
+      checkboxRun = [];
+      checkboxLegend = undefined;
+    }
+  }
+
+  for (const field of fields) {
+    if (field.type === "checkbox" && field.group) {
+      if (checkboxLegend && checkboxLegend !== field.group) {
+        flushCheckboxRun();
+      }
+      checkboxLegend = field.group;
+      checkboxRun.push(field);
+      continue;
+    }
+
+    flushCheckboxRun();
+    groups.push({ fields: [field] });
+  }
+
+  flushCheckboxRun();
+  return groups;
+}
+
 export function StepForm({
   definition,
   leadId,
@@ -65,6 +103,8 @@ export function StepForm({
 
   const readOnly = disabled && !isEditing;
   const activeValues = readOnly ? initialValues : values;
+  const fieldGroups = groupStepFields(definition.fields);
+  const uploadOnlyStep = !definition.saveHandler && definition.fields.some((f) => f.type === "file");
 
   async function handleUnlock() {
     setUnlocking(true);
@@ -148,22 +188,49 @@ export function StepForm({
       </p>
 
       <div className="mt-6 space-y-4">
-        {definition.fields.map((field) => (
-          <FieldControl
-            key={field.key}
-            field={field}
-            value={fieldValue(activeValues, field.key)}
-            readOnly={readOnly}
-            uploading={uploadingKey === field.key}
-            onChange={(value) => updateValue(field.key, value)}
-            onUpload={(file) => handleUpload(field, file)}
-          />
-        ))}
+        {fieldGroups.map((group, groupIndex) => {
+          if (group.legend) {
+            return (
+              <fieldset key={`${group.legend}-${groupIndex}`} className="space-y-3">
+                <legend className="text-label font-medium text-foreground">{group.legend}</legend>
+                {group.fields.map((field) => (
+                  <FieldControl
+                    key={field.key}
+                    field={field}
+                    value={fieldValue(activeValues, field.key)}
+                    readOnly={readOnly}
+                    uploading={uploadingKey === field.key}
+                    onChange={(value) => updateValue(field.key, value)}
+                    onUpload={(file) => handleUpload(field, file)}
+                  />
+                ))}
+              </fieldset>
+            );
+          }
+
+          return group.fields.map((field) => (
+            <FieldControl
+              key={field.key}
+              field={field}
+              value={fieldValue(activeValues, field.key)}
+              readOnly={readOnly}
+              uploading={uploadingKey === field.key}
+              onChange={(value) => updateValue(field.key, value)}
+              onUpload={(file) => handleUpload(field, file)}
+            />
+          ));
+        })}
       </div>
+
+      {uploadOnlyStep && (
+        <p className="mt-4 text-label text-muted-foreground">
+          Uploads in this section are saved automatically.
+        </p>
+      )}
 
       {definition.saveHandler && !readOnly && (
         <div className="mt-6">
-          <Button onClick={handleSave} disabled={saving}>
+          <Button className={REG_TOUCH_CLASS} onClick={handleSave} disabled={saving}>
             {saving ? "Saving…" : "Save section"}
           </Button>
         </div>
@@ -172,7 +239,12 @@ export function StepForm({
       {disabled && !isEditing && definition.saveHandler && (
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <p className="text-label text-muted-foreground">This section has been saved.</p>
-          <Button variant="outline" onClick={handleUnlock} disabled={unlocking}>
+          <Button
+            variant="outline"
+            className={REG_TOUCH_CLASS}
+            onClick={handleUnlock}
+            disabled={unlocking}
+          >
             {unlocking ? "Unlocking…" : "Edit section"}
           </Button>
         </div>
@@ -218,6 +290,7 @@ function FieldControl({
         <Label htmlFor={field.key}>{field.label}</Label>
         <Textarea
           id={field.key}
+          className={REG_TOUCH_CLASS}
           value={String(value ?? "")}
           disabled={readOnly}
           onChange={(event) => onChange(event.target.value)}
@@ -235,7 +308,7 @@ function FieldControl({
           onValueChange={(next) => onChange(next)}
           disabled={readOnly}
         >
-          <SelectTrigger id={field.key}>
+          <SelectTrigger id={field.key} className={REG_TOUCH_CLASS}>
             <SelectValue placeholder="Select…" />
           </SelectTrigger>
           <SelectContent>
@@ -256,9 +329,9 @@ function FieldControl({
         <Label htmlFor={field.key}>{field.label}</Label>
         {value ? (
           <p className="text-body text-foreground">
-            <a href={String(value)} className="text-primary underline" target="_blank" rel="noreferrer">
+            <ExternalLink href={String(value)} className="text-primary underline">
               View uploaded file
-            </a>
+            </ExternalLink>
           </p>
         ) : (
           <p className="text-label text-muted-foreground">No file uploaded yet.</p>
@@ -267,6 +340,7 @@ function FieldControl({
           <Input
             id={field.key}
             type="file"
+            className={REG_TOUCH_CLASS}
             disabled={uploading}
             onChange={(event) => {
               const file = event.target.files?.[0];
@@ -287,6 +361,7 @@ function FieldControl({
         <Input
           id={field.key}
           type="date"
+          className={REG_TOUCH_CLASS}
           value={toDateInputValue(value)}
           disabled={readOnly}
           onChange={(event) => onChange(fromDateInputValue(event.target.value))}
@@ -300,6 +375,7 @@ function FieldControl({
       <Label htmlFor={field.key}>{field.label}</Label>
       <Input
         id={field.key}
+        className={REG_TOUCH_CLASS}
         type={field.type === "email" ? "email" : field.type === "phone" ? "tel" : "text"}
         value={String(value ?? "")}
         disabled={readOnly}

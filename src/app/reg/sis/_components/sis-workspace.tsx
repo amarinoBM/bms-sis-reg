@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ import { StepNav } from "@/app/reg/sis/_components/step-nav";
 import { StudentPicker } from "@/app/reg/sis/_components/student-picker";
 import { SubmitStep } from "@/app/reg/sis/_components/submit-step";
 import { TosStep } from "@/app/reg/sis/_components/tos-step";
+import { Button } from "@/components/ui/button";
 import { isStepDisabled } from "@/modules/wizard/progress";
 import {
   flattenFormValues,
@@ -27,6 +28,10 @@ type SisWorkspaceProps = {
   initialStudentName: string;
 };
 
+type LoadOptions = {
+  background?: boolean;
+};
+
 export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) {
   const router = useRouter();
   const [studentName, setStudentName] = useState(initialStudentName);
@@ -34,38 +39,69 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
   const [loadState, setLoadState] = useState<"loading" | "error" | "ready">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [payload, setPayload] = useState<StudentLoadResult | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadStudent = useCallback(async (name: string) => {
-    setLoadState("loading");
-    setErrorMessage(null);
+  const loadStudent = useCallback(
+    async (name: string, options?: LoadOptions) => {
+      const background = options?.background === true;
 
-    try {
-      const params = new URLSearchParams({
-        lead_id: leadId,
-        student_name: name,
-      });
-      const body = await fetchApi<StudentLoadResult>(
-        `/api/students/load?${params.toString()}`,
-        { cache: "no-store" },
-      );
+      try {
+        if (background) {
+          setIsRefreshing(true);
+        } else {
+          setLoadState("loading");
+          setErrorMessage(null);
+        }
 
-      setPayload(body);
-      setStudentName(body.studentInfo.studentName);
-      setLoadState("ready");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not load student information.";
-      setErrorMessage(message);
-      setLoadState("error");
-      toast.error(message);
-    }
-  }, [leadId]);
+        const params = new URLSearchParams({
+          lead_id: leadId,
+          student_name: name,
+        });
+        const body = await fetchApi<StudentLoadResult>(
+          `/api/students/load?${params.toString()}`,
+          { cache: "no-store" },
+        );
+
+        setPayload(body);
+        setStudentName(body.studentInfo.studentName);
+        setLoadState("ready");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Could not load student information.";
+        if (background) {
+          toast.error(message);
+        } else {
+          setErrorMessage(message);
+          setLoadState("error");
+          toast.error(message);
+        }
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [leadId],
+  );
+
+  const refreshStudent = useCallback(() => {
+    return loadStudent(studentName, { background: true });
+  }, [loadStudent, studentName]);
 
   useEffect(() => {
     void loadStudent(initialStudentName);
   }, [initialStudentName, loadStudent]);
 
   const handleStudentChange = (nextStudentName: string) => {
+    if (nextStudentName === studentName) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Switch to ${nextStudentName}? You will return to the first section for that student.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
     const params = new URLSearchParams({
       lead_id: leadId,
       student_name: nextStudentName,
@@ -76,9 +112,13 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
     void loadStudent(nextStudentName);
   };
 
-  const progressSteps = payload
-    ? getMainProgressStatuses(activeStepId, payload.studentInfo.stepCompletion)
-    : [];
+  const progressSteps = useMemo(
+    () =>
+      payload
+        ? getMainProgressStatuses(activeStepId, payload.studentInfo.stepCompletion)
+        : [],
+    [activeStepId, payload],
+  );
 
   const formValues = payload ? flattenFormValues(payload.student) : {};
   const stepDefinition = getStepFormDefinition(activeStepId);
@@ -90,6 +130,11 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
         <p className="mt-2 text-body text-muted-foreground">
           Complete each section to finish registration for your student.
         </p>
+        {isRefreshing && (
+          <p className="mt-2 text-label text-muted-foreground" role="status" aria-live="polite">
+            Updating your saved information…
+          </p>
+        )}
       </div>
 
       {loadState === "loading" && <LoadingPanel />}
@@ -98,6 +143,16 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
         <div className="rounded-lg border border-destructive/30 bg-card p-6">
           <h2 className="text-section font-semibold text-foreground">Could not load form</h2>
           <p className="mt-2 text-body text-muted-foreground">{errorMessage}</p>
+          <p className="mt-2 text-body text-muted-foreground">
+            If this continues, email{" "}
+            <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
+              help@brilliantmicroschool.org
+            </a>
+            .
+          </p>
+          <Button className="mt-4" onClick={() => void loadStudent(studentName)}>
+            Try again
+          </Button>
         </div>
       )}
 
@@ -129,7 +184,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   stepId={activeStepId}
                   initialValues={formValues}
                   disabled={isStepDisabled(activeStepId, payload.student)}
-                  onSaved={() => loadStudent(studentName)}
+                  onSaved={refreshStudent}
                 />
               )}
 
@@ -140,7 +195,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   studentName={payload.studentInfo.studentName}
                   signed={payload.student.honorCodeSigned === "Completed"}
                   honorCodeURL={payload.student.honorCodeURL as string | undefined}
-                  onSigned={() => loadStudent(studentName)}
+                  onSigned={refreshStudent}
                 />
               )}
 
@@ -149,10 +204,9 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
                   studentName={payload.studentInfo.studentName}
-                  chargebeeId={payload.chargebeeId}
                   signed={payload.student.ToSBool === true}
                   tosURL={payload.student.ToSURL as string | undefined}
-                  onSigned={() => loadStudent(studentName)}
+                  onSigned={refreshStudent}
                 />
               )}
 
@@ -163,7 +217,8 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   studentName={payload.studentInfo.studentName}
                   student={payload.student}
                   completed={payload.student.is_complete_sis === true}
-                  onSubmitted={() => loadStudent(studentName)}
+                  onSubmitted={refreshStudent}
+                  onGoToStep={setActiveStepId}
                 />
               )}
 

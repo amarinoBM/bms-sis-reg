@@ -23,8 +23,12 @@ export function getServerEnv(env: Record<string, string | undefined> = process.e
     throw new Error("Invalid server environment configuration.");
   }
 
+  if (env.NODE_ENV === "production" && !env.AUTH_SECRET?.trim()) {
+    throw new Error("AUTH_SECRET is required in production.");
+  }
+
   const authSecret =
-    env.AUTH_SECRET ?? "development-only-secret-min-32-chars!!";
+    env.AUTH_SECRET?.trim() ?? "development-only-secret-min-32-chars!!";
 
   return {
     backendlessRestUrl: env.BACKENDLESS_REST_URL ?? "",

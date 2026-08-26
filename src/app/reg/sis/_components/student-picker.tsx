@@ -1,3 +1,4 @@
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -5,6 +6,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { cn } from "@/lib/utils";
 import type { EnrolledStudentSummary } from "@/modules/students/types";
 
 type StudentPickerProps = {
@@ -28,9 +31,7 @@ export function StudentPicker({
 
   return (
     <div className="space-y-2">
-      <p className="text-label font-medium uppercase tracking-label text-muted-foreground">
-        Select student
-      </p>
+      <Label htmlFor="student-picker">Select student</Label>
       <Select
         value={selectedStudentName}
         onValueChange={(value) => {
@@ -39,7 +40,7 @@ export function StudentPicker({
           }
         }}
       >
-        <SelectTrigger className="w-full max-w-md">
+        <SelectTrigger id="student-picker" className={cn(REG_TOUCH_CLASS, "w-full max-w-md")}>
           <SelectValue placeholder="Choose a student" />
         </SelectTrigger>
         <SelectContent>

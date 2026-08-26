@@ -1,0 +1,35 @@
+---
+description: BMS SIS registration API route conventions — parent session, validation, response shape.
+globs: src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# SIS registration API routes
+
+- **Auth:** Parent data routes require `requireParentApiSession(leadId)` before any Backendless read/write. Match `leadId` from body/query to iron-session `leadId`. Return **401** `UNAUTHENTICATED` when missing or mismatched.
+- **Public routes:** Only `POST /api/otp/send`, `POST /api/otp/verify`, and `GET /api/health` skip session auth.
+- **OTP send:** Email must match decrypted `parent_email` / `email` on enrolled students for that `lead_id`. Rate-limit sends and failed verifies via Backendless cache.
+- **Validation:** Zod-parse bodies and query params; return 400 `INVALID_INPUT` for bad input. Verify `objectId` matches loaded `ms_student_dir` row for save/upload/honor/tos/complete/unlock.
+- **Response shape:** Use `runRoute` → `{ success: true, data }` or `{ success: false, error: { code, message } }`. Never return raw Cloud Code payloads to the client.
+- **Student payload:** Return `toStudentLoadResultDto()` from load — strip `studentMSPassword`, `studentMSEmail`, `UpdateHistory`, `previous_data`, `slots`, etc.
+- **Writes:** All Backendless mutations require `EXTERNAL_WRITES_ENABLED=true` (throws `FORBIDDEN` otherwise).
+- **Uploads:** `assertUploadFileAllowed` — max 10 MB, PDF/JPEG/PNG/WEBP only.
+- **Errors:** `AppError` codes map to HTTP status via `route-handler`; do not expose stack traces or Backendless cause text to clients.
+- **Logging:** Never log student PII, OTP values, or secrets.
+
+## Route map
+
+| Action | Method | Path | Auth |
+| --- | --- | --- | --- |
+| Health | GET | `/api/health` | Public |
+| Send OTP | POST | `/api/otp/send` | Public (email must match lead) |
+| Verify OTP | POST | `/api/otp/verify` | Public (sets session) |
+| Load student | GET | `/api/students/load` | Parent session |
+| Save step | POST | `/api/students/save` | Parent session |
+| Unlock step | POST | `/api/students/unlock` | Parent session |
+| Upload file | POST | `/api/uploads` | Parent session |
+| Sign honor | POST | `/api/honor/sign` | Parent session |
+| Sign TOS | POST | `/api/tos/sign` | Parent session |
+| Submit SIS | POST | `/api/sis/complete` | Parent session → `{ submitted: true }` |
+
+Parent UI pages: `/reg` (OTP), `/reg/sis` (wizard — `requireParentSessionForLead` on server).

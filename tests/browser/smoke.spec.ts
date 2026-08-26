@@ -22,16 +22,18 @@ test("health route returns typed success JSON", async ({ request }) => {
   });
 });
 
-test("sample error route returns safe typed failure JSON", async ({ request }) => {
-  const response = await request.get("/api/foundation/sample-error");
-  expect(response.status()).toBe(403);
+test("students load route requires parent session", async ({ request }) => {
+  const response = await request.get(
+    "/api/students/load?lead_id=lead_test&student_name=Noah",
+  );
+  expect(response.status()).toBe(401);
 
   const body = await response.json();
   expect(body).toEqual({
     success: false,
     error: {
-      code: "FORBIDDEN",
-      message: "Sample route for typed API failures.",
+      code: "UNAUTHENTICATED",
+      message: "Please sign in with your one-time code to continue.",
     },
   });
   expect(JSON.stringify(body)).not.toContain("stack");

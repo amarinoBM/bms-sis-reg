@@ -1,0 +1,38 @@
+import { AppError } from "@/core/app-error";
+
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
+
+const ALLOWED_EXTENSIONS = new Set(["pdf", "jpg", "jpeg", "png", "webp"]);
+
+export function assertUploadFileAllowed(file: File): void {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new AppError({
+      code: "INVALID_INPUT",
+      message: "File is too large. Maximum size is 10 MB.",
+    });
+  }
+
+  const mime = file.type.trim().toLowerCase();
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+  if (mime && ALLOWED_MIME_TYPES.has(mime)) {
+    return;
+  }
+
+  if (extension && ALLOWED_EXTENSIONS.has(extension)) {
+    return;
+  }
+
+  throw new AppError({
+    code: "INVALID_INPUT",
+    message: "Upload PDF or image files only (PDF, JPG, PNG, WEBP).",
+  });
+}

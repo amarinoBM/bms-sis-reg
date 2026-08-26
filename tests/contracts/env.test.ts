@@ -22,4 +22,13 @@ describe("server env", () => {
 
     expect(env.externalWritesEnabled).toBe(false);
   });
+
+  it("requires AUTH_SECRET in production", () => {
+    expect(() =>
+      getServerEnv({
+        NODE_ENV: "production",
+        BACKENDLESS_REST_URL: "https://api.backendless.com/app/key",
+      }),
+    ).toThrow("AUTH_SECRET is required in production.");
+  });
 });

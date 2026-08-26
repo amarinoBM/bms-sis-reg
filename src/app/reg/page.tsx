@@ -15,9 +15,12 @@ export default async function RegPage({ searchParams }: RegPageProps) {
       <RegistrationShell>
         <h1 className="text-title font-semibold text-foreground">Invalid registration link</h1>
         <p className="mt-3 max-w-xl text-body text-muted-foreground">
-          This page needs a registration link with a <code>lead_id</code>. If you
-          received a link from Brilliant Microschools, open that link directly or
-          contact help@brilliantmicroschool.org.
+          This page needs a valid registration link from Brilliant Microschools. Open the link
+          from your admissions email, or contact{" "}
+          <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
+            help@brilliantmicroschool.org
+          </a>
+          .
         </p>
       </RegistrationShell>
     );

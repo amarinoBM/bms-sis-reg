@@ -3,9 +3,16 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { DocumentReviewPanel } from "@/app/reg/_components/document-review-panel";
+import { ExternalLink } from "@/app/reg/_components/external-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  HONOR_DOCUMENT_PREVIEW_URL,
+  HONOR_DOCUMENT_TEMPLATE_ID,
+} from "@/config/document-templates";
+import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { postApi } from "@/lib/client-api";
 
 type HonorStepProps = {
@@ -27,10 +34,16 @@ export function HonorStep({
 }: HonorStepProps) {
   const [parentSignature, setParentSignature] = useState("");
   const [studentSignatureOverride, setStudentSignatureOverride] = useState<string | null>(null);
+  const [hasReviewedDocument, setHasReviewedDocument] = useState(false);
   const [signing, setSigning] = useState(false);
   const studentSignature = studentSignatureOverride ?? studentName;
 
   async function handleSign() {
+    if (!hasReviewedDocument) {
+      toast.error("Please read the honor code and confirm before signing.");
+      return;
+    }
+
     if (!parentSignature.trim() || !studentSignature.trim()) {
       toast.error("Enter both parent and student signatures.");
       return;
@@ -54,43 +67,75 @@ export function HonorStep({
     }
   }
 
+  if (signed) {
+    return (
+      <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="text-section font-semibold text-foreground">Honor code</h2>
+        <p className="mt-6 text-body text-foreground">
+          {honorCodeURL ? (
+            <>
+              Signed.{" "}
+              <ExternalLink href={honorCodeURL} className="text-primary underline">
+                View signed honor code
+              </ExternalLink>
+            </>
+          ) : (
+            <>
+              Signed. If you need a copy, email{" "}
+              <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
+                help@brilliantmicroschool.org
+              </a>
+              .
+            </>
+          )}
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-lg border border-border bg-card p-6">
       <h2 className="text-section font-semibold text-foreground">Honor code</h2>
       <p className="mt-2 text-body text-muted-foreground">
-        Review and sign the honor code for {studentName}.
+        Read the honor code below, then sign on behalf of yourself and {studentName}.
       </p>
 
-      {signed && honorCodeURL ? (
-        <p className="mt-6 text-body">
-          Signed.{" "}
-          <a href={honorCodeURL} className="text-primary underline" target="_blank" rel="noreferrer">
-            View signed honor code
-          </a>
-        </p>
-      ) : (
-        <div className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="honor-parent-signature">Parent signature</Label>
-            <Input
-              id="honor-parent-signature"
-              value={parentSignature}
-              onChange={(event) => setParentSignature(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="honor-student-signature">Student signature</Label>
-            <Input
-              id="honor-student-signature"
-              value={studentSignature}
-              onChange={(event) => setStudentSignatureOverride(event.target.value)}
-            />
-          </div>
-          <Button onClick={handleSign} disabled={signing}>
-            {signing ? "Signing…" : "Sign honor code"}
-          </Button>
+      <DocumentReviewPanel
+        title="honor code"
+        templateFileId={HONOR_DOCUMENT_TEMPLATE_ID}
+        previewUrl={HONOR_DOCUMENT_PREVIEW_URL}
+        onReviewedChange={setHasReviewedDocument}
+      />
+
+      <div className="mt-6 space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="honor-parent-signature">Parent signature (type your full name)</Label>
+          <Input
+            id="honor-parent-signature"
+            className={REG_TOUCH_CLASS}
+            value={parentSignature}
+            onChange={(event) => setParentSignature(event.target.value)}
+          />
         </div>
-      )}
+        <div className="space-y-2">
+          <Label htmlFor="honor-student-signature">
+            Student signature (type {studentName}&apos;s full name)
+          </Label>
+          <Input
+            id="honor-student-signature"
+            className={REG_TOUCH_CLASS}
+            value={studentSignature}
+            onChange={(event) => setStudentSignatureOverride(event.target.value)}
+          />
+        </div>
+        <Button
+          className={REG_TOUCH_CLASS}
+          onClick={handleSign}
+          disabled={signing || !hasReviewedDocument}
+        >
+          {signing ? "Signing…" : "Sign honor code"}
+        </Button>
+      </div>
     </section>
   );
 }

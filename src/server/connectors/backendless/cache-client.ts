@@ -69,3 +69,68 @@ export async function getCacheValue<T>(
 export function parentOtpCacheKey(leadId: string): string {
   return `parentOTP-${leadId}`;
 }
+
+export function parentOtpSendCountKey(leadId: string): string {
+  return `parentOTP-send-count-${leadId}`;
+}
+
+export function parentOtpVerifyFailKey(leadId: string): string {
+  return `parentOTP-verify-fail-${leadId}`;
+}
+
+const OTP_SEND_WINDOW_SECONDS = 3600;
+const OTP_SEND_MAX_PER_WINDOW = 10;
+const OTP_VERIFY_FAIL_MAX = 10;
+
+export async function incrementRateLimit(
+  key: string,
+  ttlSeconds: number,
+  maxAttempts: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const current = (await getCacheValue<number>(key, fetchImpl)) ?? 0;
+
+  if (current >= maxAttempts) {
+    throw new AppError({
+      code: "FORBIDDEN",
+      message: "Too many attempts. Please wait and try again.",
+    });
+  }
+
+  await putCacheValue(key, current + 1, ttlSeconds, fetchImpl);
+}
+
+export async function assertOtpSendAllowed(
+  leadId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  await incrementRateLimit(
+    parentOtpSendCountKey(leadId),
+    OTP_SEND_WINDOW_SECONDS,
+    OTP_SEND_MAX_PER_WINDOW,
+    fetchImpl,
+  );
+}
+
+export async function assertOtpVerifyAllowed(
+  leadId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  await incrementRateLimit(
+    parentOtpVerifyFailKey(leadId),
+    OTP_CACHE_TTL_SECONDS,
+    OTP_VERIFY_FAIL_MAX,
+    fetchImpl,
+  );
+}
+
+export async function clearOtpVerifyFailures(
+  leadId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const restUrl = requireBackendlessRestUrl();
+  const key = parentOtpVerifyFailKey(leadId);
+  await fetchImpl(`${restUrl}/cache/${encodeCacheKey(key)}`, {
+    method: "DELETE",
+  });
+}
