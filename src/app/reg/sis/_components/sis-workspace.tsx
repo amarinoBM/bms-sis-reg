@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { HonorStep } from "@/app/reg/sis/_components/honor-step";
 import { LoadingPanel } from "@/app/reg/sis/_components/loading-panel";
-import { ProgressRail } from "@/app/reg/sis/_components/progress-rail";
+import { WizardProgressSummary } from "@/app/reg/sis/_components/wizard-progress-summary";
 import { StepForm } from "@/app/reg/sis/_components/step-form";
 import { StepNav } from "@/app/reg/sis/_components/step-nav";
 import { StudentPicker } from "@/app/reg/sis/_components/student-picker";
@@ -124,7 +124,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
   const stepDefinition = getStepFormDefinition(activeStepId);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div>
         <h1 className="text-title font-semibold text-foreground">Student Information</h1>
         <p className="mt-2 text-body text-muted-foreground">
@@ -158,7 +158,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
 
       {loadState === "ready" && payload && (
         <>
-          <ProgressRail steps={progressSteps} className="hidden md:block" />
+          <WizardProgressSummary steps={progressSteps} />
 
           <StudentPicker
             students={payload.enrolledStudents}
@@ -167,14 +167,15 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
             onStudentChange={handleStudentChange}
           />
 
-          <div className="grid min-w-0 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:items-start">
             <StepNav
               activeStepId={activeStepId}
               stepCompletion={payload.studentInfo.stepCompletion}
               onStepSelect={setActiveStepId}
+              className="lg:order-none"
             />
 
-            <div>
+            <div className="min-w-0">
               {stepDefinition && (
                 <StepForm
                   key={`${activeStepId}-${payload.studentInfo.objectId}`}
