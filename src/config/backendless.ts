@@ -3,9 +3,10 @@ export const BACKENDLESS_TABLES = {
   studentInfo: "StudentInfo",
   weeklySlots: "weekly_slots",
   parentMaps: "parent_maps",
+  stateRegs: "state_regs",
 } as const;
 
-export const OTP_CACHE_TTL_SECONDS = 7200;
+export const OTP_CACHE_TTL_SECONDS = 1800;
 export const OTP_RESEND_COOLDOWN_SECONDS = 30;
 
 export const EMAIL_FROM = {

@@ -4,10 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { FormTextInput } from "@/app/reg/_components/form-fields";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/config/backendless";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
 import { postApi } from "@/lib/client-api";
@@ -117,19 +116,16 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
         void handleVerifyOtp();
       }}
     >
-      <div className="space-y-2">
-        <Label htmlFor="parent-email">Parent email</Label>
-        <Input
-          id="parent-email"
-          type="email"
-          className={REG_TOUCH_CLASS}
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@example.com"
-          autoComplete="email"
-          required
-        />
-      </div>
+      <FormTextInput
+        id="parent-email"
+        label="Parent email"
+        type="email"
+        value={email}
+        placeholder="you@example.com"
+        autoComplete="email"
+        required
+        onChange={setEmail}
+      />
 
       <button
         type="button"
@@ -140,19 +136,16 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
         {sendLabel}
       </button>
 
-      <div className="space-y-2">
-        <Label htmlFor="one-time-pin">Login code</Label>
-        <Input
-          id="one-time-pin"
-          inputMode="numeric"
-          className={REG_TOUCH_CLASS}
-          value={otp}
-          onChange={(event) => setOtp(event.target.value)}
-          placeholder="6-digit code from email"
-          maxLength={6}
-          required
-        />
-      </div>
+      <FormTextInput
+        id="one-time-pin"
+        label="Login code"
+        value={otp}
+        inputMode="numeric"
+        placeholder="6-digit code from email"
+        maxLength={6}
+        required
+        onChange={setOtp}
+      />
 
       <button
         type="submit"

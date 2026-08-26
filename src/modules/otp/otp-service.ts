@@ -3,12 +3,15 @@ import { randomInt } from "node:crypto";
 import { AppError } from "@/core/app-error";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/config/backendless";
 import {
+  assertOtpResendCooldown,
   assertOtpSendAllowed,
   assertOtpVerifyAllowed,
   clearOtpVerifyFailures,
+  deleteCacheValue,
   getCacheValue,
   parentOtpCacheKey,
   putCacheValue,
+  recordOtpSend,
 } from "@/server/connectors/backendless/cache-client";
 import { sendOtpEmail } from "@/server/connectors/backendless/email-client";
 import {
@@ -75,6 +78,7 @@ export async function sendParentOtp(
   }
 
   await assertOtpSendAllowed(leadId, fetchImpl);
+  await assertOtpResendCooldown(leadId, fetchImpl);
 
   const allowedEmails = await loadAllowedParentEmails(leadId, fetchImpl);
   if (!isEmailAllowedForLead(email, allowedEmails)) {
@@ -88,6 +92,7 @@ export async function sendParentOtp(
   const otp = generateOtp();
   await putCacheValue(parentOtpCacheKey(leadId), otp, undefined, fetchImpl);
   await clearOtpVerifyFailures(leadId, fetchImpl);
+  await recordOtpSend(leadId, fetchImpl);
   await sendOtpEmail(leadId, email.trim(), Number(otp), fetchImpl);
 
   return { cooldownSeconds: OTP_RESEND_COOLDOWN_SECONDS };
@@ -124,6 +129,7 @@ export async function verifyParentOtp(
   }
 
   await clearOtpVerifyFailures(leadId, fetchImpl);
+  await deleteCacheValue(parentOtpCacheKey(leadId), fetchImpl);
 
   const students = await findEnrolledStudents(leadId, fetchImpl);
 

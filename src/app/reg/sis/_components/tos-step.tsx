@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { FormTextInput } from "@/app/reg/_components/form-fields";
+import { SectionSavedActions } from "@/app/reg/_components/section-saved-actions";
+import { getWizardStepLabel } from "@/modules/wizard/steps";
 import { DocumentReviewPanel } from "@/app/reg/_components/document-review-panel";
 import { ExternalLink } from "@/app/reg/_components/external-link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   TOS_DOCUMENT_PREVIEW_URL,
   TOS_DOCUMENT_TEMPLATE_ID,
 } from "@/config/document-templates";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { postApi } from "@/lib/client-api";
+
+import type { WizardStepId } from "@/modules/wizard/steps";
 
 type TosStepProps = {
   leadId: string;
@@ -22,6 +25,7 @@ type TosStepProps = {
   signed: boolean;
   tosURL?: string | null;
   onSigned: () => Promise<void>;
+  onGoToStep: (stepId: WizardStepId) => void;
 };
 
 export function TosStep({
@@ -31,6 +35,7 @@ export function TosStep({
   signed,
   tosURL,
   onSigned,
+  onGoToStep,
 }: TosStepProps) {
   const [parentSignature, setParentSignature] = useState("");
   const [hasReviewedDocument, setHasReviewedDocument] = useState(false);
@@ -86,6 +91,11 @@ export function TosStep({
             </>
           )}
         </p>
+        <SectionSavedActions
+          message="Terms of service signed."
+          onNext={() => onGoToStep("12")}
+          nextLabel={`Next: ${getWizardStepLabel("12")}`}
+        />
       </section>
     );
   }
@@ -105,15 +115,12 @@ export function TosStep({
       />
 
       <div className="mt-6 space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="tos-parent-signature">Parent signature (type your full name)</Label>
-          <Input
-            id="tos-parent-signature"
-            className={REG_TOUCH_CLASS}
-            value={parentSignature}
-            onChange={(event) => setParentSignature(event.target.value)}
-          />
-        </div>
+        <FormTextInput
+          id="tos-parent-signature"
+          label="Parent signature (type your full name)"
+          value={parentSignature}
+          onChange={setParentSignature}
+        />
         <Button
           className={REG_TOUCH_CLASS}
           onClick={handleSign}

@@ -1,5 +1,15 @@
 import type { WizardStepId } from "@/modules/wizard/steps";
 import type { SaveHandlerKey } from "@/modules/wizard/save-handlers";
+import {
+  COMPUTER_SYSTEM_OPTIONS,
+  ETHNICITY_OPTIONS,
+  GENDER_OPTIONS,
+  INTEREST_CATEGORY_OPTIONS,
+  LENGTH_OF_STAYING_OPTIONS,
+  PARENT_RELATION_OPTIONS,
+} from "@/modules/wizard/field-options";
+import { enrichFlatFormValues } from "@/modules/wizard/field-normalization";
+import { collectGuardianContactsFromFlat } from "@/modules/wizard/guardian-contact";
 
 export type StepFieldType =
   | "text"
@@ -9,6 +19,7 @@ export type StepFieldType =
   | "textarea"
   | "checkbox"
   | "select"
+  | "multiselect"
   | "number"
   | "file";
 
@@ -68,20 +79,14 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
       { key: "student_nick_name", label: "Nickname", type: "text" },
       { key: "student_last_name", label: "Last name", type: "text" },
       { key: "student_birth_date", label: "Birth date", type: "date" },
-      { key: "male", label: "Male", type: "checkbox", group: "Gender" },
-      { key: "female", label: "Female", type: "checkbox", group: "Gender" },
-      { key: "transgender", label: "Transgender", type: "checkbox", group: "Gender" },
-      { key: "gender_variant_non_conforming", label: "Gender variant / non-conforming", type: "checkbox", group: "Gender" },
-      { key: "prefer_not_to_say_gender", label: "Prefer not to say (gender)", type: "checkbox", group: "Gender" },
+      { key: "gender_selection", label: "Gender", type: "select", options: [...GENDER_OPTIONS] },
       { key: "other_gender", label: "Other gender", type: "text" },
-      { key: "African_American", label: "African American", type: "checkbox", group: "Ethnicity" },
-      { key: "Asian", label: "Asian", type: "checkbox", group: "Ethnicity" },
-      { key: "Caucasian", label: "Caucasian", type: "checkbox", group: "Ethnicity" },
-      { key: "Latino_Hispanic", label: "Latino / Hispanic", type: "checkbox", group: "Ethnicity" },
-      { key: "Native_American", label: "Native American", type: "checkbox", group: "Ethnicity" },
-      { key: "Native_Hawaiian", label: "Native Hawaiian", type: "checkbox", group: "Ethnicity" },
-      { key: "other_unknown_ethnicity", label: "Other / unknown ethnicity", type: "checkbox", group: "Ethnicity" },
-      { key: "prefer_not_to_say_ethnicity", label: "Prefer not to say (ethnicity)", type: "checkbox", group: "Ethnicity" },
+      {
+        key: "ethnicity_selection",
+        label: "Ethnicity",
+        type: "select",
+        options: [...ETHNICITY_OPTIONS],
+      },
       { key: "studentBirthCert", label: "Birth certificate", type: "file", uploadType: "birth_cert" },
       { key: "studentPic", label: "Student photo", type: "file", uploadType: "student_pic" },
     ],
@@ -97,21 +102,22 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
       { key: "parent_email", label: "Email", type: "email" },
       { key: "parent_phone", label: "Phone", type: "phone" },
       { key: "parent_address", label: "Address", type: "textarea" },
-      { key: "parent_relation", label: "Relationship to student", type: "text" },
+      {
+        key: "parent_relation",
+        label: "Relationship to student",
+        type: "select",
+        options: [...PARENT_RELATION_OPTIONS],
+      },
       { key: "share_contact", label: "Share contact with other families", type: "checkbox" },
     ],
   },
   {
     stepId: "1.6",
     saveHandler: "save1.6",
-    title: "Secondary guardian",
-    description: (name) => `Secondary guardian and PTO preferences for ${name}.`,
+    title: "Secondary guardians",
+    description: (name) =>
+      `Add any additional guardians for ${name}. You can include up to two.`,
     fields: [
-      { key: "secondary_guardian.parent_name", label: "Guardian first name", type: "text" },
-      { key: "secondary_guardian.parent_last_name", label: "Guardian last name", type: "text" },
-      { key: "secondary_guardian.parent_email", label: "Guardian email", type: "email" },
-      { key: "secondary_guardian.parent_phone", label: "Guardian phone", type: "phone" },
-      { key: "secondary_guardian.parent_relation", label: "Relationship", type: "text" },
       { key: "PTO", label: "Interested in PTO", type: "checkbox" },
     ],
   },
@@ -121,7 +127,18 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     title: "Interests",
     description: (name) => `What is ${name} most interested in?`,
     fields: [
-      { key: "most_interested_in", label: "Most interested in", type: "textarea" },
+      {
+        key: "most_interested_in",
+        label: "Most interested in",
+        type: "select",
+        options: [...INTEREST_CATEGORY_OPTIONS],
+      },
+      {
+        key: "interests",
+        label: "Additional interests",
+        type: "multiselect",
+        options: [...INTEREST_CATEGORY_OPTIONS],
+      },
     ],
   },
   {
@@ -196,16 +213,10 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
   {
     stepId: "7",
     saveHandler: "save7",
-    title: "State requirements",
-    description: (name) => `Home state rules and vaccines for ${name}.`,
-    fields: [
-      { key: "home_state", label: "Home state", type: "text" },
-      { key: "determining_required_paperwork_home_state", label: "Required paperwork notes", type: "textarea" },
-      { key: "vaccine_situation", label: "Vaccine situation", type: "textarea" },
-      { key: "step_up_id", label: "Step Up ID", type: "text" },
-      { key: "student_award_id", label: "Student award ID", type: "text" },
-      { key: "submit_step_up", label: "Submit Step Up", type: "checkbox" },
-    ],
+    title: "Home state",
+    description: () =>
+      "Private school students from a state other than Florida need to submit a letter each year to their local school district.",
+    fields: [],
   },
   {
     stepId: "8",
@@ -214,10 +225,20 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     description: (name) => `Technology and scheduling for ${name}.`,
     fields: [
       { key: "email", label: "Student email", type: "email" },
-      { key: "computer_system", label: "Computer system", type: "text" },
+      {
+        key: "computer_system",
+        label: "Computer system",
+        type: "select",
+        options: [...COMPUTER_SYSTEM_OPTIONS],
+      },
       { key: "electives", label: "Electives", type: "textarea" },
       { key: "starting_date", label: "Starting date", type: "date" },
-      { key: "length_of_staying", label: "Length of stay", type: "text" },
+      {
+        key: "length_of_staying",
+        label: "Length of stay",
+        type: "select",
+        options: [...LENGTH_OF_STAYING_OPTIONS],
+      },
     ],
   },
   {
@@ -238,38 +259,33 @@ export function getStepFormDefinition(stepId: WizardStepId): StepFormDefinition 
 export function flattenFormValues(
   student: Record<string, unknown>,
 ): Record<string, unknown> {
-  const flat: Record<string, unknown> = { ...student };
-
-  if (student.share_contact === "Yes") {
-    flat.share_contact = true;
-  } else if (student.share_contact === "No") {
-    flat.share_contact = false;
-  }
-
-  const secondary = student.secondary_guardian;
-  if (secondary && typeof secondary === "object" && !Array.isArray(secondary)) {
-    for (const [key, value] of Object.entries(secondary as Record<string, unknown>)) {
-      flat[`secondary_guardian.${key}`] = value;
-    }
-  }
-
-  return flat;
+  return enrichFlatFormValues(student);
 }
 
 export function unflattenFormValues(values: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  const secondary: Record<string, unknown> = {};
+  const guardians = collectGuardianContactsFromFlat(values);
 
   for (const [key, value] of Object.entries(values)) {
-    if (key.startsWith("secondary_guardian.")) {
-      secondary[key.replace("secondary_guardian.", "")] = value;
+    if (
+      key.startsWith("secondary_guardian.") ||
+      key.startsWith("tertiary_guardian.")
+    ) {
       continue;
     }
     result[key] = value;
   }
 
-  if (Object.keys(secondary).length > 0) {
-    result.secondary_guardian = secondary;
+  if (guardians.secondary_guardian) {
+    result.secondary_guardian = guardians.secondary_guardian;
+  }
+
+  if (guardians.tertiary_guardian) {
+    result.tertiary_guardian = guardians.tertiary_guardian;
+  } else if (
+    Object.keys(values).some((key) => key.startsWith("tertiary_guardian."))
+  ) {
+    result.tertiary_guardian = null;
   }
 
   return result;

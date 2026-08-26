@@ -1,6 +1,7 @@
 import { saveStudentRecord } from "@/modules/students/repository";
 import { DRIVE_FOLDER_ID } from "@/modules/uploads/upload-config";
 import { sendScheduledDocumentEmail } from "@/server/connectors/backendless/email-client";
+import { buildTosSignedEmailHtml } from "@/modules/email/bms-email-template";
 import { invokeCloudCode } from "@/server/connectors/backendless/cloud-code-client";
 import {
   allowDriveFileAccess,
@@ -172,17 +173,16 @@ export async function signTermsOfService(
     fetchImpl,
   );
 
-  const bodyHtml = [
-    `Dear ${input.parentName},`,
-    "<br><br>Thank you for signing the Terms of Service.",
-    `<br><br><a href='${tosURL}'>Brilliant Microschool Terms of Service</a>`,
-    "<br><br>Parent Support Team",
-  ].join("");
+  const bodyHtml = buildTosSignedEmailHtml({
+    parentName: input.parentName,
+    studentName: input.studentName,
+    documentUrl: tosURL,
+  });
 
   await sendScheduledDocumentEmail(
     input.leadId,
     input.email,
-    "Signed Terms of Service",
+    "Signed terms of service — Brilliant Microschools",
     bodyHtml,
     fetchImpl,
   );

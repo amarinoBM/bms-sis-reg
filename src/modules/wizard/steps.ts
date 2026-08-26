@@ -24,7 +24,7 @@ export type WizardStepDefinition = {
 export const WIZARD_STEPS: WizardStepDefinition[] = [
   { id: "1", label: "Student info", saveHandler: "save1" },
   { id: "1.5", label: "Parent contact", saveHandler: "save1.5" },
-  { id: "1.6", label: "Secondary guardian", saveHandler: "save1.6" },
+  { id: "1.6", label: "Secondary guardians", saveHandler: "save1.6" },
   { id: "2", label: "Interests", saveHandler: "save2" },
   { id: "3", label: "Learning profile", saveHandler: "save3" },
   { id: "4", label: "Grade levels", saveHandler: "save4" },
@@ -55,3 +55,16 @@ export const MAIN_PROGRESS_STEPS = [
 ];
 
 export const INITIAL_ACTIVE_STEP: WizardStepId = "1";
+
+export function getWizardStepLabel(stepId: WizardStepId): string {
+  return WIZARD_STEPS.find((step) => step.id === stepId)?.label ?? stepId;
+}
+
+export function getNextStepId(stepId: WizardStepId): WizardStepId | null {
+  const index = WIZARD_STEPS.findIndex((step) => step.id === stepId);
+  if (index < 0 || index >= WIZARD_STEPS.length - 1) {
+    return null;
+  }
+
+  return WIZARD_STEPS[index + 1].id;
+}

@@ -185,6 +185,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   initialValues={formValues}
                   disabled={isStepDisabled(activeStepId, payload.student)}
                   onSaved={refreshStudent}
+                  onGoToStep={setActiveStepId}
                 />
               )}
 
@@ -196,6 +197,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   signed={payload.student.honorCodeSigned === "Completed"}
                   honorCodeURL={payload.student.honorCodeURL as string | undefined}
                   onSigned={refreshStudent}
+                  onGoToStep={setActiveStepId}
                 />
               )}
 
@@ -207,6 +209,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   signed={payload.student.ToSBool === true}
                   tosURL={payload.student.ToSURL as string | undefined}
                   onSigned={refreshStudent}
+                  onGoToStep={setActiveStepId}
                 />
               )}
 

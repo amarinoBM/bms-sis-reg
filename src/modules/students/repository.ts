@@ -7,6 +7,7 @@ import {
 } from "@/server/connectors/backendless/cloud-code-client";
 import { hydrateUploadMetadata } from "@/modules/students/upload-metadata";
 import { buildStudentInfoState } from "@/modules/students/student-info-state";
+import { expandVirtualFormFields } from "@/modules/wizard/field-normalization";
 import { buildStepSavePayload } from "@/modules/wizard/save-service";
 import type { SaveHandlerKey } from "@/modules/wizard/save-handlers";
 import { syncParentMapForContactSave } from "@/modules/parent-maps/sync-parent-map";
@@ -155,7 +156,10 @@ export async function saveStudentStep(
   previousRow: Record<string, unknown>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ objectId: string }> {
-  const normalizedFields = { ...fields };
+  const normalizedFields = expandVirtualFormFields(
+    saveStep,
+    { ...fields },
+  );
 
   if (saveStep === "save1.5" && typeof normalizedFields.share_contact === "boolean") {
     normalizedFields.share_contact = normalizedFields.share_contact ? "Yes" : "No";

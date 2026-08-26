@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { FormTextInput } from "@/app/reg/_components/form-fields";
+import { SectionSavedActions } from "@/app/reg/_components/section-saved-actions";
+import { getWizardStepLabel } from "@/modules/wizard/steps";
 import { DocumentReviewPanel } from "@/app/reg/_components/document-review-panel";
 import { ExternalLink } from "@/app/reg/_components/external-link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   HONOR_DOCUMENT_PREVIEW_URL,
   HONOR_DOCUMENT_TEMPLATE_ID,
 } from "@/config/document-templates";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { postApi } from "@/lib/client-api";
+
+import type { WizardStepId } from "@/modules/wizard/steps";
 
 type HonorStepProps = {
   leadId: string;
@@ -22,6 +25,7 @@ type HonorStepProps = {
   signed: boolean;
   honorCodeURL?: string | null;
   onSigned: () => Promise<void>;
+  onGoToStep: (stepId: WizardStepId) => void;
 };
 
 export function HonorStep({
@@ -31,6 +35,7 @@ export function HonorStep({
   signed,
   honorCodeURL,
   onSigned,
+  onGoToStep,
 }: HonorStepProps) {
   const [parentSignature, setParentSignature] = useState("");
   const [studentSignatureOverride, setStudentSignatureOverride] = useState<string | null>(null);
@@ -89,6 +94,11 @@ export function HonorStep({
             </>
           )}
         </p>
+        <SectionSavedActions
+          message="Honor code signed."
+          onNext={() => onGoToStep("11")}
+          nextLabel={`Next: ${getWizardStepLabel("11")}`}
+        />
       </section>
     );
   }
@@ -108,26 +118,18 @@ export function HonorStep({
       />
 
       <div className="mt-6 space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="honor-parent-signature">Parent signature (type your full name)</Label>
-          <Input
-            id="honor-parent-signature"
-            className={REG_TOUCH_CLASS}
-            value={parentSignature}
-            onChange={(event) => setParentSignature(event.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="honor-student-signature">
-            Student signature (type {studentName}&apos;s full name)
-          </Label>
-          <Input
-            id="honor-student-signature"
-            className={REG_TOUCH_CLASS}
-            value={studentSignature}
-            onChange={(event) => setStudentSignatureOverride(event.target.value)}
-          />
-        </div>
+        <FormTextInput
+          id="honor-parent-signature"
+          label="Parent signature (type your full name)"
+          value={parentSignature}
+          onChange={setParentSignature}
+        />
+        <FormTextInput
+          id="honor-student-signature"
+          label={`Student signature (type ${studentName}'s full name)`}
+          value={studentSignature}
+          onChange={setStudentSignatureOverride}
+        />
         <Button
           className={REG_TOUCH_CLASS}
           onClick={handleSign}

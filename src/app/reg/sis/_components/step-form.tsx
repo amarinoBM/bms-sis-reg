@@ -3,32 +3,46 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { ExternalLink } from "@/app/reg/_components/external-link";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
+  FormCheckbox,
+  FormCheckboxGroup,
+  FormDateInput,
+  FormFileUpload,
+  FormSelect,
+  FormTextarea,
+  FormTextInput,
+} from "@/app/reg/_components/form-fields";
+import { SecondaryGuardiansFields } from "@/app/reg/_components/secondary-guardians-fields";
+import { HomeStateFields } from "@/app/reg/_components/home-state-fields";
+import { RegSpinner } from "@/app/reg/_components/reg-spinner";
+import { Button } from "@/components/ui/button";
+import { SectionSavedActions } from "@/app/reg/_components/section-saved-actions";
+import {
+  GUARDIAN_CONTACT_FIELD_KEYS,
+  guardianContactHasValues,
+  guardianFlatKey,
+  readGuardianContact,
+} from "@/modules/wizard/guardian-contact";
+import {
+  getNextStepId,
+  getWizardStepLabel,
+  type WizardStepId,
+} from "@/modules/wizard/steps";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { cn } from "@/lib/utils";
 import { postApi, postFormApi } from "@/lib/client-api";
+import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
 
 type StepFormProps = {
   definition: StepFormDefinition;
   leadId: string;
   objectId: string;
   studentName: string;
-  stepId: string;
+  stepId: WizardStepId;
   initialValues: Record<string, unknown>;
   disabled: boolean;
   onSaved: () => Promise<void>;
+  onGoToStep: (stepId: WizardStepId) => void;
 };
 
 type FieldGroup = {
@@ -94,17 +108,29 @@ export function StepForm({
   initialValues,
   disabled,
   onSaved,
+  onGoToStep,
 }: StepFormProps) {
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [saving, setSaving] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [pendingUpload, setPendingUpload] = useState<{
+    key: string;
+    fileName: string;
+  } | null>(null);
+  const [showSecondGuardian, setShowSecondGuardian] = useState(() =>
+    guardianContactHasValues(
+      readGuardianContact("tertiary_guardian", initialValues),
+    ),
+  );
 
   const readOnly = disabled && !isEditing;
   const activeValues = readOnly ? initialValues : values;
   const fieldGroups = groupStepFields(definition.fields);
   const uploadOnlyStep = !definition.saveHandler && definition.fields.some((f) => f.type === "file");
+  const nextStepId = getNextStepId(stepId);
+  const sectionComplete = disabled && !isEditing;
 
   async function handleUnlock() {
     setUnlocking(true);
@@ -151,6 +177,7 @@ export function StepForm({
       return;
     }
 
+    setPendingUpload({ key: field.key, fileName: file.name });
     setUploadingKey(field.key);
     try {
       const formData = new FormData();
@@ -173,11 +200,24 @@ export function StepForm({
       toast.error(error instanceof Error ? error.message : "Upload failed.");
     } finally {
       setUploadingKey(null);
+      setPendingUpload(null);
     }
   }
 
   function updateValue(key: string, value: unknown) {
     setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleRemoveSecondGuardian() {
+    const clearedFields = GUARDIAN_CONTACT_FIELD_KEYS.reduce<
+      Record<string, unknown>
+    >((acc, fieldKey) => {
+      acc[guardianFlatKey("tertiary_guardian", fieldKey)] = "";
+      return acc;
+    }, {});
+
+    setValues((current) => ({ ...current, ...clearedFields }));
+    setShowSecondGuardian(false);
   }
 
   return (
@@ -188,6 +228,26 @@ export function StepForm({
       </p>
 
       <div className="mt-6 space-y-4">
+        {stepId === "1.6" ? (
+          <SecondaryGuardiansFields
+            values={activeValues}
+            readOnly={readOnly}
+            showSecondGuardian={showSecondGuardian}
+            onShowSecondGuardian={() => setShowSecondGuardian(true)}
+            onRemoveSecondGuardian={handleRemoveSecondGuardian}
+            onChange={updateValue}
+          />
+        ) : null}
+
+        {stepId === "7" ? (
+          <HomeStateFields
+            studentName={studentName}
+            values={activeValues}
+            readOnly={readOnly}
+            onChange={updateValue}
+          />
+        ) : null}
+
         {fieldGroups.map((group, groupIndex) => {
           if (group.legend) {
             return (
@@ -200,6 +260,11 @@ export function StepForm({
                     value={fieldValue(activeValues, field.key)}
                     readOnly={readOnly}
                     uploading={uploadingKey === field.key}
+                    pendingFileName={
+                      pendingUpload?.key === field.key
+                        ? pendingUpload.fileName
+                        : undefined
+                    }
                     onChange={(value) => updateValue(field.key, value)}
                     onUpload={(file) => handleUpload(field, file)}
                   />
@@ -215,6 +280,11 @@ export function StepForm({
               value={fieldValue(activeValues, field.key)}
               readOnly={readOnly}
               uploading={uploadingKey === field.key}
+              pendingFileName={
+                pendingUpload?.key === field.key
+                  ? pendingUpload.fileName
+                  : undefined
+              }
               onChange={(value) => updateValue(field.key, value)}
               onUpload={(file) => handleUpload(field, file)}
             />
@@ -230,24 +300,49 @@ export function StepForm({
 
       {definition.saveHandler && !readOnly && (
         <div className="mt-6">
-          <Button className={REG_TOUCH_CLASS} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save section"}
+          <Button
+            className={cn(REG_TOUCH_CLASS, "gap-2")}
+            onClick={handleSave}
+            disabled={saving}
+            aria-busy={saving}
+          >
+            {saving ? (
+              <>
+                <RegSpinner size="sm" variant="onPrimary" />
+                Saving…
+              </>
+            ) : (
+              "Save section"
+            )}
           </Button>
         </div>
       )}
 
-      {disabled && !isEditing && definition.saveHandler && (
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <p className="text-label text-muted-foreground">This section has been saved.</p>
-          <Button
-            variant="outline"
-            className={REG_TOUCH_CLASS}
-            onClick={handleUnlock}
-            disabled={unlocking}
-          >
-            {unlocking ? "Unlocking…" : "Edit section"}
-          </Button>
-        </div>
+      {sectionComplete && (definition.saveHandler || uploadOnlyStep) && (
+        <SectionSavedActions
+          message={
+            definition.saveHandler
+              ? "This section has been saved."
+              : "This section is complete."
+          }
+          onEdit={
+            definition.saveHandler
+              ? () => void handleUnlock()
+              : undefined
+          }
+          editLabel={unlocking ? "Unlocking…" : "Edit section"}
+          editDisabled={unlocking}
+          onNext={
+            nextStepId
+              ? () => onGoToStep(nextStepId)
+              : undefined
+          }
+          nextLabel={
+            nextStepId
+              ? `Next: ${getWizardStepLabel(nextStepId)}`
+              : "Next section"
+          }
+        />
       )}
     </section>
   );
@@ -258,6 +353,7 @@ type FieldControlProps = {
   value: unknown;
   readOnly: boolean;
   uploading: boolean;
+  pendingFileName?: string;
   onChange: (value: unknown) => void;
   onUpload: (file: File) => void;
 };
@@ -267,120 +363,121 @@ function FieldControl({
   value,
   readOnly,
   uploading,
+  pendingFileName,
   onChange,
   onUpload,
 }: FieldControlProps) {
+  if (field.type === "multiselect") {
+    const selected = Array.isArray(value) ? value.map(String) : [];
+
+    return (
+      <FormCheckboxGroup
+        legend={field.label}
+        idPrefix={field.key}
+        options={field.options ?? []}
+        value={selected}
+        disabled={readOnly}
+        onChange={(next) => onChange(next)}
+      />
+    );
+  }
+
   if (field.type === "checkbox") {
     return (
-      <div className="flex items-center gap-2">
-        <Checkbox
-          checked={Boolean(value)}
-          disabled={readOnly}
-          onCheckedChange={(checked) => onChange(checked === true)}
-          id={field.key}
-        />
-        <Label htmlFor={field.key}>{field.label}</Label>
-      </div>
+      <FormCheckbox
+        id={field.key}
+        label={field.label}
+        checked={Boolean(value)}
+        disabled={readOnly}
+        onChange={(checked) => onChange(checked)}
+      />
     );
   }
 
   if (field.type === "textarea") {
     return (
-      <div className="space-y-2">
-        <Label htmlFor={field.key}>{field.label}</Label>
-        <Textarea
-          id={field.key}
-          className={REG_TOUCH_CLASS}
-          value={String(value ?? "")}
-          disabled={readOnly}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </div>
+      <FormTextarea
+        id={field.key}
+        label={field.label}
+        value={String(value ?? "")}
+        disabled={readOnly}
+        onChange={(next) => onChange(next)}
+      />
     );
   }
 
   if (field.type === "select") {
     return (
-      <div className="space-y-2">
-        <Label htmlFor={field.key}>{field.label}</Label>
-        <Select
-          value={value ? String(value) : ""}
-          onValueChange={(next) => onChange(next)}
-          disabled={readOnly}
-        >
-          <SelectTrigger id={field.key} className={REG_TOUCH_CLASS}>
-            <SelectValue placeholder="Select…" />
-          </SelectTrigger>
-          <SelectContent>
-            {field.options?.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <FormSelect
+        id={field.key}
+        label={field.label}
+        value={value ? String(value) : ""}
+        options={field.options ?? []}
+        disabled={readOnly}
+        onChange={(next) => onChange(next)}
+      />
     );
   }
 
   if (field.type === "file") {
     return (
-      <div className="space-y-2">
-        <Label htmlFor={field.key}>{field.label}</Label>
-        {value ? (
-          <p className="text-body text-foreground">
-            <ExternalLink href={String(value)} className="text-primary underline">
-              View uploaded file
-            </ExternalLink>
-          </p>
-        ) : (
-          <p className="text-label text-muted-foreground">No file uploaded yet.</p>
-        )}
-        {!readOnly && (
-          <Input
-            id={field.key}
-            type="file"
-            className={REG_TOUCH_CLASS}
-            disabled={uploading}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onUpload(file);
-              }
-            }}
-          />
-        )}
-      </div>
+      <FormFileUpload
+        id={field.key}
+        label={field.label}
+        fileUrl={value ? String(value) : null}
+        pendingFileName={pendingFileName}
+        uploading={uploading}
+        readOnly={readOnly}
+        onFileSelect={onUpload}
+      />
     );
   }
 
   if (field.type === "date") {
     return (
-      <div className="space-y-2">
-        <Label htmlFor={field.key}>{field.label}</Label>
-        <Input
-          id={field.key}
-          type="date"
-          className={REG_TOUCH_CLASS}
-          value={toDateInputValue(value)}
-          disabled={readOnly}
-          onChange={(event) => onChange(fromDateInputValue(event.target.value))}
-        />
-      </div>
+      <FormDateInput
+        id={field.key}
+        label={field.label}
+        value={toDateInputValue(value)}
+        disabled={readOnly}
+        onChange={(next) => onChange(fromDateInputValue(next))}
+      />
+    );
+  }
+
+  if (field.type === "email") {
+    return (
+      <FormTextInput
+        id={field.key}
+        label={field.label}
+        type="email"
+        value={String(value ?? "")}
+        disabled={readOnly}
+        onChange={(next) => onChange(next)}
+      />
+    );
+  }
+
+  if (field.type === "phone") {
+    return (
+      <FormTextInput
+        id={field.key}
+        label={field.label}
+        type="tel"
+        value={String(value ?? "")}
+        disabled={readOnly}
+        onChange={(next) => onChange(next)}
+      />
     );
   }
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={field.key}>{field.label}</Label>
-      <Input
-        id={field.key}
-        className={REG_TOUCH_CLASS}
-        type={field.type === "email" ? "email" : field.type === "phone" ? "tel" : "text"}
-        value={String(value ?? "")}
-        disabled={readOnly}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </div>
+    <FormTextInput
+      id={field.key}
+      label={field.label}
+      value={String(value ?? "")}
+      disabled={readOnly}
+      onChange={(next) => onChange(next)}
+    />
   );
 }

@@ -1,3 +1,5 @@
+import { RegSpinner } from "@/app/reg/_components/reg-spinner";
+
 type LoadingPanelProps = {
   message?: string;
 };
@@ -9,10 +11,7 @@ export function LoadingPanel({ message = "Loading student information…" }: Loa
       role="status"
       aria-live="polite"
     >
-      <span
-        className="size-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary"
-        aria-hidden="true"
-      />
+      <RegSpinner />
       <span>{message}</span>
     </div>
   );

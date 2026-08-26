@@ -35,7 +35,8 @@ describe("ms_student_dir helpers", () => {
 
   it("matches production OTP email body copy", () => {
     expect(buildOtpEmailBody(123456)).toContain("123456");
-    expect(buildOtpEmailBody(123456)).toContain("2 hours");
-    expect(buildOtpEmailBody(123456)).toContain("Open registration");
+    expect(buildOtpEmailBody(123456)).toContain("30 minutes");
+    expect(buildOtpEmailBody(123456)).toContain("registration page you already have open");
+    expect(buildOtpEmailBody(123456)).not.toContain("Open registration");
   });
 });

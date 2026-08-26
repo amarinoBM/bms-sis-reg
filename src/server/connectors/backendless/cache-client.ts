@@ -1,6 +1,9 @@
 import { AppError } from "@/core/app-error";
 import { requireBackendlessRestUrl } from "@/config/env";
-import { OTP_CACHE_TTL_SECONDS } from "@/config/backendless";
+import {
+  OTP_CACHE_TTL_SECONDS,
+  OTP_RESEND_COOLDOWN_SECONDS,
+} from "@/config/backendless";
 
 function encodeCacheKey(key: string): string {
   return encodeURIComponent(key);
@@ -28,6 +31,28 @@ export async function putCacheValue(
       message: "Could not store OTP in cache.",
       status: 502,
       cause: await response.text(),
+    });
+  }
+}
+
+export async function deleteCacheValue(
+  key: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const restUrl = requireBackendlessRestUrl();
+  const response = await fetchImpl(`${restUrl}/cache/${encodeCacheKey(key)}`, {
+    method: "DELETE",
+  });
+
+  if (response.status === 404) {
+    return;
+  }
+
+  if (!response.ok) {
+    throw new AppError({
+      code: "EXTERNAL_WRITE_FAILED",
+      message: "Could not delete cache value.",
+      status: 502,
     });
   }
 }
@@ -78,6 +103,10 @@ export function parentOtpVerifyFailKey(leadId: string): string {
   return `parentOTP-verify-fail-${leadId}`;
 }
 
+export function parentOtpLastSendKey(leadId: string): string {
+  return `parentOTP-last-send-${leadId}`;
+}
+
 const OTP_SEND_WINDOW_SECONDS = 3600;
 const OTP_SEND_MAX_PER_WINDOW = 10;
 const OTP_VERIFY_FAIL_MAX = 10;
@@ -112,6 +141,40 @@ export async function assertOtpSendAllowed(
   );
 }
 
+export async function assertOtpResendCooldown(
+  leadId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const lastSendMs = await getCacheValue<number>(parentOtpLastSendKey(leadId), fetchImpl);
+
+  if (lastSendMs === null || lastSendMs === undefined) {
+    return;
+  }
+
+  const elapsedMs = Date.now() - lastSendMs;
+  const cooldownMs = OTP_RESEND_COOLDOWN_SECONDS * 1000;
+
+  if (elapsedMs < cooldownMs) {
+    const remainingSeconds = Math.ceil((cooldownMs - elapsedMs) / 1000);
+    throw new AppError({
+      code: "FORBIDDEN",
+      message: `Please wait ${remainingSeconds} seconds before requesting a new code.`,
+    });
+  }
+}
+
+export async function recordOtpSend(
+  leadId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  await putCacheValue(
+    parentOtpLastSendKey(leadId),
+    Date.now(),
+    OTP_RESEND_COOLDOWN_SECONDS,
+    fetchImpl,
+  );
+}
+
 export async function assertOtpVerifyAllowed(
   leadId: string,
   fetchImpl: typeof fetch = fetch,
@@ -128,9 +191,5 @@ export async function clearOtpVerifyFailures(
   leadId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  const restUrl = requireBackendlessRestUrl();
-  const key = parentOtpVerifyFailKey(leadId);
-  await fetchImpl(`${restUrl}/cache/${encodeCacheKey(key)}`, {
-    method: "DELETE",
-  });
+  await deleteCacheValue(parentOtpVerifyFailKey(leadId), fetchImpl);
 }

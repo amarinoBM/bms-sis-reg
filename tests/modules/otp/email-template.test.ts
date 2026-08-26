@@ -8,10 +8,11 @@ describe("OTP email template", () => {
 
     expect(html).toContain("123456");
     expect(html).toContain("expires in <strong");
-    expect(html).toContain("2 hours");
+    expect(html).toContain("30 minutes");
     expect(html).toContain("Brilliant Microschools");
     expect(html).toContain("brilliant-microschools-logo.png");
-    expect(html).toContain("Open registration");
+    expect(html).toContain("registration page you already have open");
+    expect(html).not.toContain("Open registration");
     expect(html).toContain("help@brilliantmicroschool.org");
   });
 

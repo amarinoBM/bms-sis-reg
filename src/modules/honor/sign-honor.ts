@@ -7,6 +7,7 @@ import {
   HONOR_TEMPLATE,
 } from "@/server/connectors/backendless/sis-cloud-code";
 import { sendScheduledDocumentEmail } from "@/server/connectors/backendless/email-client";
+import { buildHonorSignedEmailHtml } from "@/modules/email/bms-email-template";
 import { DRIVE_FOLDER_ID } from "@/modules/uploads/upload-config";
 
 function formatSignedDate(date: Date): string {
@@ -69,20 +70,16 @@ export async function signHonorCode(
     fetchImpl,
   );
 
-  const bodyHtml = [
-    `Dear ${input.parentName},`,
-    "<br><br>I trust this email finds you well. Thank you for taking the time to review and sign the honor code.",
-    "<br><br>Attached to this email, you will find a copy of the signed honor code for your records.",
-    `<br><br><a href='${honorCodeURL}'>Brilliant Microschool Honor Code</a>`,
-    "<br><br>Best Regards,",
-    "<br><br>Parent Support Team",
-    "<br>help@brilliantmicroschool.org",
-  ].join("");
+  const bodyHtml = buildHonorSignedEmailHtml({
+    parentName: input.parentName,
+    studentName: input.studentName,
+    documentUrl: honorCodeURL,
+  });
 
   await sendScheduledDocumentEmail(
     input.leadId,
     input.email,
-    "Signed Honor Code",
+    "Signed honor code — Brilliant Microschools",
     bodyHtml,
     fetchImpl,
   );

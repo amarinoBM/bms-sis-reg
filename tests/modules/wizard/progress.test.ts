@@ -5,7 +5,7 @@ import {
   getMainProgressStatuses,
   isStepComplete,
 } from "@/modules/wizard/progress";
-import { INITIAL_ACTIVE_STEP } from "@/modules/wizard/steps";
+import { INITIAL_ACTIVE_STEP, getNextStepId, getWizardStepLabel } from "@/modules/wizard/steps";
 
 describe("wizard progress", () => {
   it("marks disabled flags and honor/TOS completion", () => {
@@ -28,5 +28,12 @@ describe("wizard progress", () => {
 
     expect(statuses[0].state).toBe("current");
     expect(statuses[1].state).toBe("upcoming");
+  });
+
+  it("returns the next wizard step in order", () => {
+    expect(getNextStepId("1")).toBe("1.5");
+    expect(getNextStepId("6")).toBe("6.1");
+    expect(getWizardStepLabel("1.5")).toBe("Parent contact");
+    expect(getNextStepId("12")).toBeNull();
   });
 });

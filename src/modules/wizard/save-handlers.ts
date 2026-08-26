@@ -43,8 +43,8 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
     "parent_relation",
     "share_contact",
   ],
-  "save1.6": ["PTO", "secondary_guardian"],
-  save2: ["most_interested_in"],
+  "save1.6": ["PTO", "secondary_guardian", "tertiary_guardian"],
+  save2: ["interests", "most_interested_in"],
   save3: [
     "ADHD",
     "Dyscalculia",
