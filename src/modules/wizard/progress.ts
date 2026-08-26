@@ -39,6 +39,10 @@ export function buildStepCompletionMap(
     completion["12"] = true;
   }
 
+  if (student.IEP_or_504_plan !== true) {
+    completion["9"] = true;
+  }
+
   return completion;
 }
 
@@ -51,7 +55,7 @@ export function isStepComplete(
 
 export function getMainProgressStatuses(
   activeStepId: WizardStepId,
-  completion: StepCompletionMap,
+  _completion: StepCompletionMap,
 ): MainProgressStepStatus[] {
   const activeMainStep = MAIN_PROGRESS_STEPS.find((step) =>
     step.stepIds.includes(activeStepId),
@@ -59,12 +63,6 @@ export function getMainProgressStatuses(
   const activeNumber = activeMainStep?.number ?? 1;
 
   return MAIN_PROGRESS_STEPS.map((step) => {
-    const allComplete = step.stepIds.every((id) => isStepComplete(id, completion));
-
-    if (allComplete) {
-      return { number: step.number, label: step.label, state: "complete" as const };
-    }
-
     if (step.number === activeNumber) {
       return { number: step.number, label: step.label, state: "current" as const };
     }
@@ -73,6 +71,7 @@ export function getMainProgressStatuses(
       return { number: step.number, label: step.label, state: "complete" as const };
     }
 
+    // Future main steps stay upcoming even when honor/TOS flags are already set.
     return { number: step.number, label: step.label, state: "upcoming" as const };
   });
 }

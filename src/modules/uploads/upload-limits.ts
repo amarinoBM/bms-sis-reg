@@ -27,7 +27,7 @@ export function assertUploadFileAllowed(file: File): void {
     return;
   }
 
-  if (extension && ALLOWED_EXTENSIONS.has(extension)) {
+  if (!mime && extension && ALLOWED_EXTENSIONS.has(extension)) {
     return;
   }
 

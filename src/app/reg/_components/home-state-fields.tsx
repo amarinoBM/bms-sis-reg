@@ -153,6 +153,7 @@ export function HomeStateFields({
     readString(values.determining_required_paperwork_home_state) === PAPERWORK_SUPPORT_NO;
   const vaccineValue = readString(values.vaccine_situation);
   const submitStepUp = readBoolean(values.submit_step_up);
+  const stepUpDeclined = values.submit_step_up === false;
 
   const [stateReg, setStateReg] = useState<StateRegDto | null>(null);
   const [loadingStateReg, setLoadingStateReg] = useState(false);
@@ -335,7 +336,11 @@ export function HomeStateFields({
             </a>
           </p>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="space-y-2">
+            <p className="text-label font-medium text-foreground">
+              {HOME_STATE_COPY.paperworkPrompt}
+            </p>
+            <div className="flex flex-wrap gap-3">
             <ChoiceButton
               selected={paperworkYesSelected}
               disabled={readOnly}
@@ -350,6 +355,7 @@ export function HomeStateFields({
             >
               {HOME_STATE_COPY.paperworkNo}
             </ChoiceButton>
+          </div>
           </div>
         </div>
       ) : null}
@@ -416,7 +422,7 @@ export function HomeStateFields({
               {HOME_STATE_COPY.stepUpYes}
             </ChoiceButton>
             <ChoiceButton
-              selected={!submitStepUp && homeState.length > 0}
+              selected={stepUpDeclined}
               disabled={readOnly}
               onClick={handleStepUpNo}
             >

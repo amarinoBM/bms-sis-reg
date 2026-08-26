@@ -4,7 +4,6 @@ import {
   COMPUTER_SYSTEM_OPTIONS,
   ETHNICITY_OPTIONS,
   GENDER_OPTIONS,
-  INTEREST_CATEGORY_OPTIONS,
   LENGTH_OF_STAYING_OPTIONS,
   PARENT_RELATION_OPTIONS,
 } from "@/modules/wizard/field-options";
@@ -43,7 +42,7 @@ export type StepFormDefinition = {
 };
 
 const GRADE_OPTIONS = [
-  "Grade K",
+  "Kindergarten",
   "Grade 1",
   "Grade 2",
   "Grade 3",
@@ -56,16 +55,17 @@ const GRADE_OPTIONS = [
   "Grade 10",
   "Grade 11",
   "Grade 12",
+  "NA",
+  "Graduating",
 ];
 
-const CONFIDENCE_OPTIONS = ["1", "2", "3", "4", "5"];
-
 const LEARNING_ENV_OPTIONS = [
-  "Homeschool",
+  "Homeschool with parent",
+  "Homeschool co-op, pod, or microschool",
+  "Physical private school",
+  "Virtual private school",
+  "Physical public/charter school",
   "Virtual public/charter school",
-  "Private school",
-  "Public school",
-  "Other",
 ];
 
 export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
@@ -125,21 +125,9 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "2",
     saveHandler: "save2",
     title: "Interests",
-    description: (name) => `What is ${name} most interested in?`,
-    fields: [
-      {
-        key: "most_interested_in",
-        label: "Most interested in",
-        type: "select",
-        options: [...INTEREST_CATEGORY_OPTIONS],
-      },
-      {
-        key: "interests",
-        label: "Additional interests",
-        type: "multiselect",
-        options: [...INTEREST_CATEGORY_OPTIONS],
-      },
-    ],
+    description: (name) =>
+      `Search and pick ${name}'s top interest, then add any other interests.`,
+    fields: [],
   },
   {
     stepId: "3",
@@ -148,15 +136,20 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     description: (name) => `Learning and behavioral challenges for ${name}.`,
     fields: [
       { key: "learning_or_behavioral_challenges", label: "Has learning or behavioral challenges", type: "checkbox" },
-      { key: "ADHD", label: "ADHD", type: "checkbox" },
-      { key: "Dyslexia", label: "Dyslexia", type: "checkbox" },
-      { key: "Dyscalculia", label: "Dyscalculia", type: "checkbox" },
-      { key: "Dysgraphia", label: "Dysgraphia", type: "checkbox" },
-      { key: "anxiety", label: "Anxiety", type: "checkbox" },
-      { key: "depression", label: "Depression", type: "checkbox" },
-      { key: "asperger", label: "Asperger", type: "checkbox" },
-      { key: "austism_spectrum_discorder", label: "Autism spectrum disorder", type: "checkbox" },
-      { key: "behavioral_issues", label: "Behavioral issues", type: "checkbox" },
+      { key: "ADHD", label: "ADHD", type: "checkbox", group: "Challenges" },
+      { key: "Dyslexia", label: "Dyslexia", type: "checkbox", group: "Challenges" },
+      { key: "Dyscalculia", label: "Dyscalculia", type: "checkbox", group: "Challenges" },
+      { key: "Dysgraphia", label: "Dysgraphia", type: "checkbox", group: "Challenges" },
+      { key: "anxiety", label: "Anxiety", type: "checkbox", group: "Challenges" },
+      { key: "depression", label: "Depression", type: "checkbox", group: "Challenges" },
+      { key: "asperger", label: "Asperger’s", type: "checkbox", group: "Challenges" },
+      { key: "austism_spectrum_discorder", label: "Autism spectrum disorder", type: "checkbox", group: "Challenges" },
+      { key: "behavioral_issues", label: "Behavioral issues", type: "checkbox", group: "Challenges" },
+      { key: "auditory_processing_disorder", label: "Auditory processing disorder", type: "checkbox", group: "Challenges" },
+      { key: "language_processing_disorder", label: "Language processing disorder", type: "checkbox", group: "Challenges" },
+      { key: "nonverbal_learning_disorder", label: "Nonverbal learning disorder", type: "checkbox", group: "Challenges" },
+      { key: "visual_perceptual_or_visual_motor_defecit", label: "Visual perceptual / visual motor deficit", type: "checkbox", group: "Challenges" },
+      { key: "other_behavioral_challenges", label: "Other", type: "checkbox", group: "Challenges" },
       { key: "additional_info_behavioral_challenges", label: "Additional information", type: "textarea" },
     ],
   },
@@ -167,7 +160,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     description: (name) => `Current grade levels for ${name}.`,
     fields: [
       { key: "math_grade_level", label: "Math", type: "select", options: GRADE_OPTIONS },
-      { key: "ela_grade_level", label: "ELA", type: "select", options: GRADE_OPTIONS },
+      { key: "ela_grade_level", label: "English language arts (ELA)", type: "select", options: GRADE_OPTIONS },
       { key: "science_grade_level", label: "Science", type: "select", options: GRADE_OPTIONS },
     ],
   },
@@ -175,15 +168,8 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "5",
     saveHandler: "save5",
     title: "Confidence",
-    description: (name) => `Rate ${name}'s confidence in these areas (1–5).`,
-    fields: [
-      { key: "confidence_in_reading", label: "Reading", type: "select", options: CONFIDENCE_OPTIONS },
-      { key: "confidence_in_writing", label: "Writing", type: "select", options: CONFIDENCE_OPTIONS },
-      { key: "confidence_using_technology", label: "Technology", type: "select", options: CONFIDENCE_OPTIONS },
-      { key: "confidence_in_collaborating", label: "Collaborating", type: "select", options: CONFIDENCE_OPTIONS },
-      { key: "confidence_in_engaging_independent_work", label: "Independent work", type: "select", options: CONFIDENCE_OPTIONS },
-      { key: "connecting_with_adults", label: "Connecting with adults", type: "select", options: CONFIDENCE_OPTIONS },
-    ],
+    description: (name) => `How confident is ${name} in each area below?`,
+    fields: [],
   },
   {
     stepId: "6",
@@ -207,6 +193,12 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     description: (name) => `Transcripts and credit transfer for ${name}.`,
     fields: [
       { key: "transferCredit", label: "Request credit transfer", type: "checkbox" },
+      {
+        key: "CreditTransfer",
+        label: "Subjects or credits to transfer",
+        type: "textarea",
+        placeholder: "List courses or credits you want reviewed",
+      },
       { key: "uploadTranscript", label: "Transcript upload", type: "file", uploadType: "transcript" },
     ],
   },
@@ -224,7 +216,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     title: "Technology & scheduling",
     description: (name) => `Technology and scheduling for ${name}.`,
     fields: [
-      { key: "email", label: "Student email", type: "email" },
+      { key: "email", label: "Preferred student email address", type: "email" },
       {
         key: "computer_system",
         label: "Computer system",

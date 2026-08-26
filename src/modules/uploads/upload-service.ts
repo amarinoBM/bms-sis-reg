@@ -65,6 +65,10 @@ export async function uploadStudentFile(
     savePayload[mapping.metadataKey] = metadata;
   }
 
+  if (mapping.extraFieldKey) {
+    savePayload[mapping.extraFieldKey] = driveUrl;
+  }
+
   if (mapping.marksStepDisabled) {
     savePayload[`${mapping.marksStepDisabled}disabled`] = true;
   }

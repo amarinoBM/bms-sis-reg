@@ -30,6 +30,20 @@ describe("wizard progress", () => {
     expect(statuses[1].state).toBe("upcoming");
   });
 
+  it("does not mark future main steps complete when honor or TOS are already signed", () => {
+    const statuses = getMainProgressStatuses("3", { "10": true, "11": true });
+
+    expect(statuses.find((step) => step.number === 10)?.state).toBe("upcoming");
+    expect(statuses.find((step) => step.number === 11)?.state).toBe("upcoming");
+    expect(statuses.find((step) => step.number === 3)?.state).toBe("current");
+  });
+
+  it("marks step 9 complete when student has no IEP or 504 plan", () => {
+    const completion = buildStepCompletionMap({ IEP_or_504_plan: false });
+
+    expect(isStepComplete("9", completion)).toBe(true);
+  });
+
   it("returns the next wizard step in order", () => {
     expect(getNextStepId("1")).toBe("1.5");
     expect(getNextStepId("6")).toBe("6.1");

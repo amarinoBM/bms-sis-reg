@@ -31,4 +31,14 @@ describe("server env", () => {
       }),
     ).toThrow("AUTH_SECRET is required in production.");
   });
+
+  it("requires Cloud Code URL and public app URL in production", () => {
+    expect(() =>
+      getServerEnv({
+        NODE_ENV: "production",
+        BACKENDLESS_REST_URL: "https://api.backendless.com/app/key",
+        AUTH_SECRET: "development-only-secret-min-32-chars!!",
+      }),
+    ).toThrow("BACKENDLESS_CODE_URL is required in production.");
+  });
 });

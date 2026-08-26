@@ -4,17 +4,24 @@ import { AppError } from "@/core/app-error";
 import { sendParentOtp, verifyParentOtp } from "@/modules/otp/otp-service";
 
 describe("otp service", () => {
-  it("rejects empty email on send", async () => {
-    await expect(sendParentOtp("lead_test", "   ")).rejects.toMatchObject({
-      code: "INVALID_INPUT",
-      message: "You need to enter an email to proceed.",
+  it("rejects send when no parent email is on file", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/cache/parentOTP-last-send-lead_test") && !init?.method) {
+        return new Response("null", { status: 404 });
+      }
+      if (url.includes("/data/ms_student_dir")) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
     });
-  });
 
-  it("rejects email containing spaces", async () => {
-    await expect(sendParentOtp("lead_test", "bad @email.com")).rejects.toMatchObject({
+    process.env.BACKENDLESS_REST_URL = "https://api.backendless.com/app/key";
+    process.env.BACKENDLESS_CODE_URL = "https://api.backendless.com/app/code";
+
+    await expect(sendParentOtp("lead_test", fetchImpl)).rejects.toMatchObject({
       code: "INVALID_INPUT",
-      message: "Check email if it's correct.",
+      message: expect.stringContaining("parent email on file"),
     });
   });
 
@@ -81,10 +88,6 @@ describe("otp service", () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
-      if (url.includes("/cache/parentOTP-send-count-lead_test") && init?.method === "PUT") {
-        return new Response("", { status: 200 });
-      }
-
       if (url.includes("/cache/parentOTP-last-send-lead_test") && !init?.method) {
         return new Response(String(Date.now() - 5000), { status: 200 });
       }
@@ -95,7 +98,7 @@ describe("otp service", () => {
     process.env.BACKENDLESS_REST_URL = "https://api.backendless.com/app/key";
     process.env.BACKENDLESS_CODE_URL = "https://api.backendless.com/app/code";
 
-    await expect(sendParentOtp("lead_test", "parent@example.com", fetchImpl)).rejects.toMatchObject({
+    await expect(sendParentOtp("lead_test", fetchImpl)).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: expect.stringMatching(/Please wait \d+ seconds/),
     });

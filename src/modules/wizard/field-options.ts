@@ -21,34 +21,36 @@ export const ETHNICITY_OPTIONS = [
 
 export const PARENT_RELATION_OPTIONS = [
   "Parent",
+  "Grandparent",
   "Legal Guardian",
+  "Other",
   "I'd rather not say",
 ] as const;
 
 export const INTEREST_CATEGORY_OPTIONS = [
-  "Sports",
-  "Music",
-  "Arts and Crafts",
-  "Science and Nature",
-  "Reading and Writing",
-  "Technology and Computing",
-  "Performing Arts",
-  "History and Geography",
-  "Languages and Linguistics",
-  "Mathematics",
-  "Cooking and Baking",
-  "Board Games and Puzzles",
-  "Movies and Television",
-  "Outdoor Activities",
-  "Animals and Pets",
-  "Volunteering and Community Service",
-  "Photography and Videography",
-  "Fashion and Design",
-  "Collecting",
-  "Health and Fitness",
-  "Astronomy and Space Exploration",
-  "Mind and Brain Games",
-  "Vehicles and Mechanics",
+  "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
+  "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
+  "Arts and Crafts: Drawing, Painting, Sculpting, Pottery, Knitting, DIY projects, etc.",
+  "Science and Nature: Astronomy, Biology, Chemistry, Environmental conservation, Gardening, etc.",
+  "Reading and Writing: Fiction, Non-fiction, Poetry, Creative writing, Comics, etc.",
+  "Technology and Computing: Video games, Coding, Robotics, Web design, etc.",
+  "Performing Arts: Theater, Dance, Magic, Circus arts, etc.",
+  "History and Geography: World history, Archaeology, Cultural studies, Map reading, etc.",
+  "Languages and Linguistics: Learning foreign languages, Sign language, Linguistics, etc.",
+  "Mathematics: Solving puzzles, Math competitions, etc.",
+  "Cooking and Baking: Trying new recipes, Cake decorating, etc.",
+  "Board Games and Puzzles: Chess, Card games, Jigsaw puzzles, etc.",
+  "Movies and Television: Watching films, Animation, Documentary, etc.",
+  "Outdoor Activities: Hiking, Camping, Birdwatching, Fishing, etc.",
+  "Animals and Pets: Learning about animals, Pet care, Horseback riding, etc.",
+  "Volunteering and Community Service: Charity work, Community clean-up, Helping at animal shelters, etc.",
+  "Photography and Videography: Taking photos, Making videos, Editing, etc.",
+  "Fashion and Design: Clothing design, Fashion blogging, Interior design, etc.",
+  "Collecting: Stamps, Coins, Figurines, etc.",
+  "Health and Fitness: Yoga, Meditation, Running, Weightlifting, etc.",
+  "Astronomy and Space Exploration: Stargazing, Learning about space missions, etc.",
+  "Mind and Brain Games: Sudoku, Crossword puzzles, Brain teasers, etc.",
+  "Vehicles and Mechanics: Cars, Bikes, Model building, etc.",
 ] as const;
 
 export const COMPUTER_SYSTEM_OPTIONS = [
@@ -246,8 +248,9 @@ export function normalizeInterestCategory(value: string): string | null {
     return exact;
   }
 
-  const prefix = INTEREST_CATEGORY_OPTIONS.find((option) =>
-    trimmed.startsWith(`${option}:`),
-  );
-  return prefix ?? null;
+  const fromShortLabel = INTEREST_CATEGORY_OPTIONS.find((option) => {
+    const category = option.split(":")[0];
+    return category === trimmed || trimmed.startsWith(`${category}:`);
+  });
+  return fromShortLabel ?? null;
 }

@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return { tosURL: current.student.ToSURL };
     }
 
-    const email = String(current.student.email ?? current.student.parent_email ?? "");
+    const email = String(current.student.parent_email ?? "").trim();
     if (!email) {
       throw new AppError({
         code: "INVALID_INPUT",
@@ -54,5 +54,5 @@ export async function POST(request: Request) {
       chargebeeId: current.chargebeeId,
       student: current.student,
     });
-  });
+  }, request);
 }

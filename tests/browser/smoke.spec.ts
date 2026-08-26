@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 
 test("home page loads the BMS registration shell", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Parent registration workspace" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start registration (OTP)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Student registration" })).toBeVisible();
+  await expect(page.getByText("Open the registration link")).toBeVisible();
   await expect(page.getByRole("img", { name: "Brilliant Microschools" })).toBeVisible();
   await expect(page.getByText("Student Registration")).toBeVisible();
 });

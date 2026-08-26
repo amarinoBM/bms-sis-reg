@@ -7,6 +7,7 @@ export type UploadType =
 
 export type UploadFieldMapping = {
   fieldKey: string;
+  extraFieldKey?: string;
   metadataKey?: string;
   fileNamePrefix: string;
   marksStepDisabled?: string;
@@ -29,6 +30,7 @@ export const UPLOAD_FIELD_MAP: Record<UploadType, UploadFieldMapping> = {
   },
   transcript: {
     fieldKey: "uploadTranscript",
+    extraFieldKey: "transcriptFiles",
     fileNamePrefix: "Transcript_",
   },
   iep: {

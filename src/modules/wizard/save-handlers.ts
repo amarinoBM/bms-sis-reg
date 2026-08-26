@@ -99,7 +99,6 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
   ],
   "save6.1": [
     "CreditTransfer",
-    "lead_id",
     "transcriptFiles",
     "transferCredit",
     "uploadTranscript",

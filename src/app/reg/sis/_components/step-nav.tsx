@@ -32,13 +32,13 @@ export function StepNav({ activeStepId, stepCompletion, onStepSelect }: StepNavP
                 aria-current={active ? "step" : undefined}
                 className={cn(
                   REG_TOUCH_CLASS,
-                  "flex shrink-0 items-center justify-between rounded-md px-3 py-2 text-left text-body transition-colors lg:w-full",
+                  "flex min-w-0 shrink-0 items-center justify-between rounded-md px-3 py-2 text-left text-body transition-colors lg:w-full",
                   active
                     ? "bg-primary/10 text-primary"
                     : "text-foreground hover:bg-muted",
                 )}
               >
-                <span>{step.label}</span>
+                <span className="min-w-0 break-words">{step.label}</span>
                 {complete && (
                   <span className="text-label text-muted-foreground">Done</span>
                 )}

@@ -124,7 +124,8 @@ export function TosStep({
         <Button
           className={REG_TOUCH_CLASS}
           onClick={handleSign}
-          disabled={signing || !hasReviewedDocument}
+          disabled={signing || !hasReviewedDocument || !parentSignature.trim()}
+          aria-busy={signing}
         >
           {signing ? "Signing…" : "Sign terms of service"}
         </Button>

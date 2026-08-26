@@ -27,6 +27,14 @@ export function getServerEnv(env: Record<string, string | undefined> = process.e
     throw new Error("AUTH_SECRET is required in production.");
   }
 
+  if (env.NODE_ENV === "production" && !env.BACKENDLESS_CODE_URL?.trim()) {
+    throw new Error("BACKENDLESS_CODE_URL is required in production.");
+  }
+
+  if (env.NODE_ENV === "production" && !env.NEXT_PUBLIC_APP_URL?.trim()) {
+    throw new Error("NEXT_PUBLIC_APP_URL is required in production.");
+  }
+
   const authSecret =
     env.AUTH_SECRET?.trim() ?? "development-only-secret-min-32-chars!!";
 

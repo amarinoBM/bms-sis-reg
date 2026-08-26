@@ -38,17 +38,23 @@ export function FormField({
   children,
   className,
 }: FormFieldProps) {
+  const descriptionId = description ? `${id}-description` : undefined;
+
   return (
-    <div className={cn("space-y-2", className)}>
-      <Label htmlFor={id}>{label}</Label>
+    <div className={cn("min-w-0 space-y-2.5", className)}>
+      <Label htmlFor={id} className="break-words">{label}</Label>
       {description ? (
-        <p id={`${id}-description`} className="text-label text-muted-foreground">
+        <p id={descriptionId} className="text-label text-muted-foreground break-words">
           {description}
         </p>
       ) : null}
       {children}
     </div>
   );
+}
+
+function describedByProps(description?: string, id?: string) {
+  return description && id ? { "aria-describedby": `${id}-description` } : {};
 }
 
 type FormTextInputProps = {
@@ -93,6 +99,7 @@ export function FormTextInput({
         inputMode={inputMode}
         maxLength={maxLength}
         required={required}
+        {...describedByProps(description, id)}
         onChange={(event) => onChange(event.target.value)}
       />
     </FormField>
@@ -126,6 +133,7 @@ export function FormTextarea({
         value={value}
         disabled={disabled}
         placeholder={placeholder}
+        {...describedByProps(description, id)}
         onChange={(event) => onChange(event.target.value)}
       />
     </FormField>
@@ -160,10 +168,14 @@ export function FormSelect({
         onValueChange={(next) => onChange(next ?? "")}
         disabled={disabled}
       >
-        <SelectTrigger id={id} className={REG_TOUCH_CLASS}>
-          <SelectValue placeholder={placeholder} />
+        <SelectTrigger
+          id={id}
+          className={cn(REG_TOUCH_CLASS, "w-full min-w-0")}
+          {...describedByProps(description, id)}
+        >
+          <SelectValue placeholder={placeholder} className="truncate" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent align="start" alignItemWithTrigger={false} sideOffset={8} className="min-w-[var(--anchor-width)] w-max max-w-[min(100vw-3rem,var(--available-width))]">
           {options.map((option) => (
             <SelectItem key={option} value={option}>
               {option}
@@ -191,14 +203,17 @@ export function FormCheckbox({
   disabled,
 }: FormCheckboxProps) {
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex min-w-0 items-start gap-2">
       <Checkbox
         id={id}
+        className="mt-0.5 shrink-0"
         checked={checked}
         disabled={disabled}
         onCheckedChange={(next) => onChange(next === true)}
       />
-      <Label htmlFor={id} className="text-body leading-snug">{label}</Label>
+      <Label htmlFor={id} className="min-w-0 text-body leading-snug break-words">
+        {label}
+      </Label>
     </div>
   );
 }
@@ -222,21 +237,26 @@ export function FormCheckboxGroup({
   disabled,
   idPrefix,
 }: FormCheckboxGroupProps) {
+  const descriptionId = description ? `${idPrefix}-description` : undefined;
+
   return (
-    <fieldset className="space-y-3">
-      <legend className="text-label font-medium text-foreground">{legend}</legend>
+    <fieldset className="min-w-0 space-y-3">
+      <legend className="text-label font-medium text-foreground break-words">{legend}</legend>
       {description ? (
-        <p className="text-label text-muted-foreground">{description}</p>
+        <p id={descriptionId} className="text-label text-muted-foreground break-words">
+          {description}
+        </p>
       ) : null}
       <div className="space-y-2">
-        {options.map((option) => {
-          const optionId = `${idPrefix}-${option}`;
+        {options.map((option, index) => {
+          const optionId = `${idPrefix}-${index}`;
           const checked = value.includes(option);
 
           return (
-            <div key={option} className="flex items-start gap-2">
+            <div key={option} className="flex min-w-0 items-start gap-2">
               <Checkbox
                 id={optionId}
+                className="mt-0.5 shrink-0"
                 checked={checked}
                 disabled={disabled}
                 onCheckedChange={(next) => {
@@ -247,7 +267,7 @@ export function FormCheckboxGroup({
                   onChange(value.filter((item) => item !== option));
                 }}
               />
-              <Label htmlFor={optionId} className="text-body leading-snug">
+              <Label htmlFor={optionId} className="min-w-0 text-body leading-snug break-words">
                 {option}
               </Label>
             </div>
@@ -283,6 +303,7 @@ export function FormDateInput({
         className={REG_TOUCH_CLASS}
         value={value}
         disabled={disabled}
+        {...describedByProps(description, id)}
         onChange={(event) => onChange(event.target.value)}
       />
     </FormField>
@@ -314,6 +335,7 @@ export function FormFileUpload({
 }: FormFileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasFile = Boolean(fileUrl);
+  const descriptionId = `${id}-description`;
 
   function openFilePicker() {
     if (uploading) {
@@ -326,12 +348,13 @@ export function FormFileUpload({
     <FormField id={id} label={label} description={description}>
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border p-4 transition-all duration-200",
+          "relative min-w-0 overflow-hidden rounded-lg border p-4 transition-all duration-200",
           uploading && "border-primary/40 bg-primary/5 ring-2 ring-primary/15",
           hasFile && !uploading && "border-primary/25 bg-primary/5",
           !hasFile && !uploading && "border-border bg-muted/30",
         )}
         aria-busy={uploading}
+        aria-describedby={description ? descriptionId : undefined}
       >
         {uploading ? (
           <div
@@ -343,7 +366,7 @@ export function FormFileUpload({
         ) : null}
 
         <div
-          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
           role={uploading ? "status" : undefined}
           aria-live={uploading ? "polite" : undefined}
         >
@@ -376,7 +399,7 @@ export function FormFileUpload({
               ) : hasFile ? (
                 <ExternalLink
                   href={String(fileUrl)}
-                  className="text-body text-primary underline underline-offset-2"
+                  className="block truncate text-body text-primary underline underline-offset-2"
                 >
                   View uploaded file
                 </ExternalLink>
@@ -417,6 +440,7 @@ export function FormFileUpload({
           accept={accept}
           className="hidden"
           disabled={readOnly || uploading}
+          aria-describedby={description ? descriptionId : undefined}
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {

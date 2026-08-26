@@ -14,6 +14,7 @@ export const HOME_STATE_COPY = {
   studyInformationLink: "here",
   paperworkYes: "Yes",
   paperworkNo: "No",
+  paperworkPrompt: "Do you need help with your state's homeschool paperwork?",
   floridaImmunization: [
     "To ensure the safety and well-being of all our Florida students,",
     "it's essential that we confirm the availability of the Florida Certification of ",
@@ -33,7 +34,7 @@ export const HOME_STATE_COPY = {
   vaccineSituationPrompt: "Please select your situation from below:",
   vaccineConfirmingTitle: "Confirming",
   vaccineConfirmingDetail:
-    "We have already completed the necessary vaccinations and have sent relevant form for to the state’s",
+    "We have already completed the necessary vaccinations and have sent the relevant form to the state.",
   vaccinePendingTitle: "Pending",
   vaccinePendingDetail:
     "We don't currently have the form, but we will be submitting it shortly.",

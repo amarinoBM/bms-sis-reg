@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       return { honorCodeURL: current.student.honorCodeURL };
     }
 
-    const email = String(current.student.email ?? current.student.parent_email ?? "");
+    const email = String(current.student.parent_email ?? "").trim();
     if (!email) {
       throw new AppError({
         code: "INVALID_INPUT",
@@ -54,5 +54,5 @@ export async function POST(request: Request) {
       studentName: parsed.studentName,
       email,
     });
-  });
+  }, request);
 }

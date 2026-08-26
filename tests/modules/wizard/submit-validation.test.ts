@@ -37,7 +37,7 @@ describe("submit validation", () => {
       math_grade_level: "Grade 6",
       ela_grade_level: "Grade 6",
       science_grade_level: "Grade 6",
-      learning_environment_past_12_months: "Homeschool",
+      learning_environment_past_12_months: "Homeschool with parent",
       learning_experiece_past_12_months: "Great",
       home_state: "FL",
       honorCodeSigned: "Completed",

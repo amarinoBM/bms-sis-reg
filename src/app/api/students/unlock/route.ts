@@ -45,5 +45,5 @@ export async function POST(request: Request) {
     });
 
     return { stepId: parsed.stepId, unlocked: true };
-  });
+  }, request);
 }

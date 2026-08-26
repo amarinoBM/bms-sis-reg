@@ -42,14 +42,23 @@ function buildEnrolledWhereClause(leadId: string, studentName?: string): string 
 
 function toEnrolledStudentSummaries(rows: MsStudentDirRow[]): EnrolledStudentSummary[] {
   const summaries: EnrolledStudentSummary[] = [];
+  const seen = new Set<string>();
 
   for (const row of rows) {
-    if (row.student_name && row.objectId) {
-      summaries.push({
-        studentName: String(row.student_name),
-        objectId: String(row.objectId),
-      });
+    if (!row.student_name || !row.objectId) {
+      continue;
     }
+
+    const objectId = String(row.objectId);
+    if (seen.has(objectId)) {
+      continue;
+    }
+
+    seen.add(objectId);
+    summaries.push({
+      studentName: String(row.student_name),
+      objectId,
+    });
   }
 
   return summaries;
@@ -93,7 +102,7 @@ export async function loadStudentRecord(
   fetchImpl: typeof fetch = fetch,
 ): Promise<StudentLoadResult> {
   const normalizedName = studentName ? trimStudentName(studentName) : undefined;
-  const where = buildEnrolledWhereClause(leadId, normalizedName);
+  const where = buildEnrolledWhereClause(leadId);
   const restUrl = process.env.BACKENDLESS_REST_URL?.replace(/\/$/, "");
 
   if (!restUrl) {
@@ -126,11 +135,23 @@ export async function loadStudentRecord(
     });
   }
 
+  const namedRows = rows.filter((candidate) => candidate.student_name && candidate.objectId);
+  if (normalizedName) {
+    const hasRequestedStudent = namedRows.some(
+      (row) =>
+        normalizeStudentName(String(row.student_name)).toLowerCase() ===
+        normalizedName.toLowerCase(),
+    );
+    if (!hasRequestedStudent) {
+      throw new AppError({
+        code: "NOT_FOUND",
+        message: "No enrolled student found for this registration link.",
+      });
+    }
+  }
+
   const targetName = normalizedName ?? enrolledStudents[0].studentName;
-  const row = pickBestEnrolledStudentRow(
-    rows.filter((candidate) => candidate.student_name && candidate.objectId),
-    targetName,
-  );
+  const row = pickBestEnrolledStudentRow(namedRows, targetName);
 
   const decrypted = await decryptStudentDirRow(leadId, row, fetchImpl);
   const hydrated = hydrateUploadMetadata(decrypted);
@@ -212,7 +233,7 @@ function looksLikeEncryptedValue(value: string): boolean {
 }
 
 function pickParentEmail(row: MsStudentDirRow): string | null {
-  const candidates = [row.email, row.parent_email];
+  const candidates = [row.parent_email, row.email];
 
   for (const candidate of candidates) {
     if (!candidate || typeof candidate !== "string") {

@@ -23,5 +23,5 @@ export async function POST(request: Request) {
     });
 
     return result;
-  });
+  }, request);
 }

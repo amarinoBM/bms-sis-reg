@@ -121,7 +121,7 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
     key: "email",
     label: "Parent Email",
     stepId: "1.5",
-    isMissing: (student) => !hasText(student.parent_email) && !hasText(student.email),
+    isMissing: (student) => !hasText(student.parent_email),
   },
   {
     key: "parent_phone",

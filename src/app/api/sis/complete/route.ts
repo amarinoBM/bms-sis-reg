@@ -60,5 +60,5 @@ export async function POST(request: Request) {
     });
 
     return { submitted: true };
-  });
+  }, request);
 }

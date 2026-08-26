@@ -6,6 +6,7 @@ import {
   apiSuccess,
   type ApiResponse,
 } from "@/server/http/api-envelope";
+import { assertSameOrigin } from "@/server/http/assert-same-origin";
 
 export function jsonSuccess<TData>(
   data: TData,
@@ -37,8 +38,12 @@ export function handleRouteError(error: unknown): NextResponse<ApiResponse<never
 
 export async function runRoute<TData>(
   handler: () => Promise<TData>,
+  request?: Request,
 ): Promise<NextResponse<ApiResponse<TData>>> {
   try {
+    if (request) {
+      assertSameOrigin(request);
+    }
     const data = await handler();
     return jsonSuccess(data);
   } catch (error) {

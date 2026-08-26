@@ -158,15 +158,16 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
 
       {loadState === "ready" && payload && (
         <>
-          <ProgressRail steps={progressSteps} />
+          <ProgressRail steps={progressSteps} className="hidden md:block" />
 
           <StudentPicker
             students={payload.enrolledStudents}
             selectedStudentName={studentName}
+            selectedObjectId={payload.studentInfo.objectId}
             onStudentChange={handleStudentChange}
           />
 
-          <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
             <StepNav
               activeStepId={activeStepId}
               stepCompletion={payload.studentInfo.stepCompletion}

@@ -58,7 +58,9 @@ describe("wizard field enums", () => {
     expect(flat.gender_selection).toBe("Female");
     expect(flat.ethnicity_selection).toBe("Caucasian");
     expect(flat.interests).toEqual(["Sports", "Music"]);
-    expect(flat.most_interested_in).toBe("Sports");
+    expect(flat.most_interested_in).toBe(
+      "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
+    );
     expect(flat.share_contact).toBe(true);
     expect(flat["secondary_guardian.parent_relation"]).toBe("Legal Guardian");
   });
@@ -69,7 +71,12 @@ describe("wizard field enums", () => {
       interests: ["Sports", "Music"],
     });
 
-    expect(expanded.most_interested_in).toBe("Technology and Computing");
-    expect(readInterestsSelection(expanded.interests)).toEqual(["Sports", "Music"]);
+    expect(expanded.most_interested_in).toBe(
+      "Technology and Computing: Video games, Coding, Robotics, Web design, etc.",
+    );
+    expect(readInterestsSelection(expanded.interests)).toEqual([
+      "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
+      "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
+    ]);
   });
 });

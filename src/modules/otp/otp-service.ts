@@ -1,4 +1,4 @@
-import { randomInt } from "node:crypto";
+import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 
 import { AppError } from "@/core/app-error";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/config/backendless";
@@ -15,12 +15,8 @@ import {
 } from "@/server/connectors/backendless/cache-client";
 import { sendOtpEmail } from "@/server/connectors/backendless/email-client";
 import {
-  collectLeadParentEmails,
-  isEmailAllowedForLead,
-} from "@/modules/students/student-wizard-dto";
-import {
   findEnrolledStudents,
-  loadStudentRecord,
+  findSuggestedParentEmail,
 } from "@/modules/students/repository";
 import { getServerEnv } from "@/config/env";
 
@@ -32,44 +28,32 @@ function normalizeOtp(value: unknown): string {
   return String(value).trim();
 }
 
-function validateEmail(email: string): void {
-  if (!email.trim()) {
-    throw new AppError({
-      code: "INVALID_INPUT",
-      message: "You need to enter an email to proceed.",
-    });
-  }
-
-  if (email.includes(" ")) {
-    throw new AppError({
-      code: "INVALID_INPUT",
-      message: "Check email if it's correct.",
-    });
-  }
+function hashOtp(otp: string): string {
+  return createHash("sha256").update(otp).digest("hex");
 }
 
-async function loadAllowedParentEmails(
-  leadId: string,
-  fetchImpl: typeof fetch,
-): Promise<string[]> {
-  const enrolledStudents = await findEnrolledStudents(leadId, fetchImpl);
-  const rows: Record<string, unknown>[] = [];
+function otpMatches(cached: unknown, input: string): boolean {
+  const cachedValue = normalizeOtp(cached);
+  const submitted = normalizeOtp(input);
 
-  for (const student of enrolledStudents) {
-    const loaded = await loadStudentRecord(leadId, student.studentName, fetchImpl);
-    rows.push(loaded.student);
+  if (/^\d{6}$/.test(cachedValue)) {
+    return cachedValue === submitted;
   }
 
-  return collectLeadParentEmails(rows);
+  const hashed = hashOtp(submitted);
+  const left = Buffer.from(hashed);
+  const right = Buffer.from(cachedValue);
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return timingSafeEqual(left, right);
 }
 
 export async function sendParentOtp(
   leadId: string,
-  email: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ cooldownSeconds: number }> {
-  validateEmail(email);
-
   if (!getServerEnv().backendlessCodeUrl) {
     throw new AppError({
       code: "INTERNAL_ERROR",
@@ -77,23 +61,23 @@ export async function sendParentOtp(
     });
   }
 
-  await assertOtpSendAllowed(leadId, fetchImpl);
   await assertOtpResendCooldown(leadId, fetchImpl);
 
-  const allowedEmails = await loadAllowedParentEmails(leadId, fetchImpl);
-  if (!isEmailAllowedForLead(email, allowedEmails)) {
+  const email = await findSuggestedParentEmail(leadId, fetchImpl);
+  if (!email) {
     throw new AppError({
       code: "INVALID_INPUT",
       message:
-        "That email does not match our records for this registration link. Use the parent email on your enrollment paperwork or contact help@brilliantmicroschool.org.",
+        "We do not have a parent email on file for this registration link. Contact help@brilliantmicroschool.org.",
     });
   }
 
+  await assertOtpSendAllowed(leadId, fetchImpl);
+
   const otp = generateOtp();
-  await putCacheValue(parentOtpCacheKey(leadId), otp, undefined, fetchImpl);
-  await clearOtpVerifyFailures(leadId, fetchImpl);
+  await putCacheValue(parentOtpCacheKey(leadId), hashOtp(otp), undefined, fetchImpl);
   await recordOtpSend(leadId, fetchImpl);
-  await sendOtpEmail(leadId, email.trim(), Number(otp), fetchImpl);
+  await sendOtpEmail(leadId, email, Number(otp), fetchImpl);
 
   return { cooldownSeconds: OTP_RESEND_COOLDOWN_SECONDS };
 }
@@ -120,7 +104,7 @@ export async function verifyParentOtp(
     });
   }
 
-  if (normalizeOtp(cachedOtp) !== normalizeOtp(otpInput)) {
+  if (!otpMatches(cachedOtp, otpInput)) {
     await assertOtpVerifyAllowed(leadId, fetchImpl);
     throw new AppError({
       code: "INVALID_INPUT",

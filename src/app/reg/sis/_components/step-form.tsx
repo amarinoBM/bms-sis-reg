@@ -14,6 +14,8 @@ import {
 } from "@/app/reg/_components/form-fields";
 import { SecondaryGuardiansFields } from "@/app/reg/_components/secondary-guardians-fields";
 import { HomeStateFields } from "@/app/reg/_components/home-state-fields";
+import { InterestsFields } from "@/app/reg/_components/interests-fields";
+import { ConfidenceScaleFields } from "@/app/reg/_components/confidence-scale-fields";
 import { RegSpinner } from "@/app/reg/_components/reg-spinner";
 import { Button } from "@/components/ui/button";
 import { SectionSavedActions } from "@/app/reg/_components/section-saved-actions";
@@ -68,6 +70,32 @@ function fieldValue(values: Record<string, unknown>, key: string): unknown {
   return values[key];
 }
 
+function shouldShowStepField(
+  stepId: WizardStepId,
+  field: StepFieldDefinition,
+  values: Record<string, unknown>,
+): boolean {
+  if (stepId === "3") {
+    if (field.group === "Challenges" || field.key === "additional_info_behavioral_challenges") {
+      return values.learning_or_behavioral_challenges === true;
+    }
+  }
+
+  if (stepId === "6.1" && (field.key === "CreditTransfer" || field.key === "uploadTranscript")) {
+    return values.transferCredit === true;
+  }
+
+  return true;
+}
+
+function visibleStepFields(
+  stepId: WizardStepId,
+  fields: StepFieldDefinition[],
+  values: Record<string, unknown>,
+): StepFieldDefinition[] {
+  return fields.filter((field) => shouldShowStepField(stepId, field, values));
+}
+
 function groupStepFields(fields: StepFieldDefinition[]): FieldGroup[] {
   const groups: FieldGroup[] = [];
   let checkboxRun: StepFieldDefinition[] = [];
@@ -114,6 +142,7 @@ export function StepForm({
   const [saving, setSaving] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [pendingUpload, setPendingUpload] = useState<{
     key: string;
@@ -125,12 +154,14 @@ export function StepForm({
     ),
   );
 
-  const readOnly = disabled && !isEditing;
-  const activeValues = readOnly ? initialValues : values;
-  const fieldGroups = groupStepFields(definition.fields);
-  const uploadOnlyStep = !definition.saveHandler && definition.fields.some((f) => f.type === "file");
+  const sectionComplete = (disabled || justSaved) && !isEditing;
+  const readOnly = sectionComplete;
+  const activeValues = readOnly && !justSaved ? initialValues : values;
+  const visibleFields = visibleStepFields(stepId, definition.fields, activeValues);
+  const fieldGroups = groupStepFields(visibleFields);
+  const uploadOnlyStep = !definition.saveHandler && visibleFields.some((f) => f.type === "file");
+  const iepNotRequired = stepId === "9" && activeValues.IEP_or_504_plan !== true;
   const nextStepId = getNextStepId(stepId);
-  const sectionComplete = disabled && !isEditing;
 
   async function handleUnlock() {
     setUnlocking(true);
@@ -141,6 +172,7 @@ export function StepForm({
         stepId,
       });
       setValues(initialValues);
+      setJustSaved(false);
       setIsEditing(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not unlock section.");
@@ -163,7 +195,9 @@ export function StepForm({
         studentName,
         fields: values,
       });
-      toast.success("Saved");
+      toast.success("Section saved");
+      setIsEditing(false);
+      setJustSaved(true);
       await onSaved();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save.");
@@ -195,6 +229,8 @@ export function StepForm({
 
       setValues((current) => ({ ...current, [uploadResult.fieldKey]: uploadResult.url }));
       toast.success("File uploaded");
+      setIsEditing(false);
+      setJustSaved(true);
       await onSaved();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed.");
@@ -227,7 +263,14 @@ export function StepForm({
         {definition.description(studentName)}
       </p>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 space-y-5">
+        {iepNotRequired ? (
+          <div className="rounded-md border border-border bg-muted/30 p-4 text-body text-muted-foreground">
+            You indicated that {studentName} does not have an IEP or 504 plan. No document upload
+            is required for this section.
+          </div>
+        ) : null}
+
         {stepId === "1.6" ? (
           <SecondaryGuardiansFields
             values={activeValues}
@@ -235,6 +278,22 @@ export function StepForm({
             showSecondGuardian={showSecondGuardian}
             onShowSecondGuardian={() => setShowSecondGuardian(true)}
             onRemoveSecondGuardian={handleRemoveSecondGuardian}
+            onChange={updateValue}
+          />
+        ) : null}
+
+        {stepId === "2" ? (
+          <InterestsFields
+            values={activeValues}
+            readOnly={readOnly}
+            onChange={updateValue}
+          />
+        ) : null}
+
+        {stepId === "5" ? (
+          <ConfidenceScaleFields
+            values={activeValues}
+            readOnly={readOnly}
             onChange={updateValue}
           />
         ) : null}
@@ -249,6 +308,10 @@ export function StepForm({
         ) : null}
 
         {fieldGroups.map((group, groupIndex) => {
+          if (iepNotRequired) {
+            return null;
+          }
+
           if (group.legend) {
             return (
               <fieldset key={`${group.legend}-${groupIndex}`} className="space-y-3">
@@ -318,15 +381,17 @@ export function StepForm({
         </div>
       )}
 
-      {sectionComplete && (definition.saveHandler || uploadOnlyStep) && (
+      {(sectionComplete && (definition.saveHandler || uploadOnlyStep)) || iepNotRequired ? (
         <SectionSavedActions
           message={
-            definition.saveHandler
-              ? "This section has been saved."
-              : "This section is complete."
+            iepNotRequired
+              ? "No IEP or 504 document is required."
+              : definition.saveHandler
+                ? "This section has been saved."
+                : "This section is complete."
           }
           onEdit={
-            definition.saveHandler
+            definition.saveHandler && sectionComplete
               ? () => void handleUnlock()
               : undefined
           }
@@ -343,7 +408,7 @@ export function StepForm({
               : "Next section"
           }
         />
-      )}
+      ) : null}
     </section>
   );
 }

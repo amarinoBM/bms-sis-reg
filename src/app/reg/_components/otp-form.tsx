@@ -13,7 +13,7 @@ import { postApi } from "@/lib/client-api";
 
 type OtpFormProps = {
   leadId: string;
-  suggestedEmail?: string | null;
+  maskedEmail?: string | null;
 };
 
 type SendResponse = { cooldownSeconds: number };
@@ -23,18 +23,13 @@ type VerifyResponse = {
   students: { studentName: string; objectId: string }[];
 };
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
+export function OtpForm({ leadId, maskedEmail }: OtpFormProps) {
   const router = useRouter();
-  const [email, setEmail] = useState(suggestedEmail ?? "");
   const [otp, setOtp] = useState("");
   const [sendLabel, setSendLabel] = useState("Send login code");
   const [verifyDisabled, setVerifyDisabled] = useState(false);
   const cooldownIntervalRef = useRef<number | null>(null);
-  const sendDisabled = sendLabel !== "Send login code";
+  const sendDisabled = sendLabel !== "Send login code" || !maskedEmail;
 
   useEffect(() => {
     return () => {
@@ -45,8 +40,8 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
   }, []);
 
   async function handleSendOtp() {
-    if (!isValidEmail(email)) {
-      toast.error("Enter a valid email address.");
+    if (!maskedEmail) {
+      toast.error("We do not have a parent email on file for this link.");
       return;
     }
 
@@ -55,7 +50,6 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
     try {
       const result = await postApi<SendResponse>("/api/otp/send", {
         leadId,
-        email: email.trim(),
       });
 
       toast.success("Login code sent — check your email within 2 minutes");
@@ -116,16 +110,19 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
         void handleVerifyOtp();
       }}
     >
-      <FormTextInput
-        id="parent-email"
-        label="Parent email"
-        type="email"
-        value={email}
-        placeholder="you@example.com"
-        autoComplete="email"
-        required
-        onChange={setEmail}
-      />
+      <p className="text-body text-foreground">
+        We will send a login code to{" "}
+        <span className="font-medium">{maskedEmail ?? "the parent email on file"}</span>.
+      </p>
+      {!maskedEmail ? (
+        <p className="text-label text-muted-foreground">
+          We could not find a parent email for this link. Contact{" "}
+          <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
+            help@brilliantmicroschool.org
+          </a>
+          .
+        </p>
+      ) : null}
 
       <button
         type="button"

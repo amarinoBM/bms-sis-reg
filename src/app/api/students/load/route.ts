@@ -22,5 +22,5 @@ export async function GET(request: Request) {
 
     const result = await loadStudentRecord(parsed.lead_id, parsed.student_name);
     return toStudentLoadResultDto(result);
-  });
+  }, request);
 }

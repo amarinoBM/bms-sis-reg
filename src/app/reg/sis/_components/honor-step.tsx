@@ -133,7 +133,13 @@ export function HonorStep({
         <Button
           className={REG_TOUCH_CLASS}
           onClick={handleSign}
-          disabled={signing || !hasReviewedDocument}
+          disabled={
+            signing ||
+            !hasReviewedDocument ||
+            !parentSignature.trim() ||
+            !studentSignature.trim()
+          }
+          aria-busy={signing}
         >
           {signing ? "Signing…" : "Sign honor code"}
         </Button>

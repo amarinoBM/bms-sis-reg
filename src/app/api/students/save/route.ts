@@ -45,5 +45,5 @@ export async function POST(request: Request) {
       fields,
       current.student,
     );
-  });
+  }, request);
 }

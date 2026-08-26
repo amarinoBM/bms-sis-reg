@@ -37,7 +37,9 @@ export function expandVirtualFormFields(
 
   if (saveStep === "save2") {
     const interests = readInterestsSelection(expanded.interests);
-    expanded.interests = interests;
+    expanded.interests = interests.map(
+      (item) => normalizeInterestCategory(item) ?? item,
+    );
 
     const mostInterestedIn = expanded.most_interested_in;
     if (typeof mostInterestedIn === "string") {
