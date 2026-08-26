@@ -160,27 +160,42 @@ export async function saveStudentRecord(
   return { objectId };
 }
 
+function looksLikeEncryptedValue(value: string): boolean {
+  return value.startsWith("sis:v1:");
+}
+
+function pickParentEmail(row: MsStudentDirRow): string | null {
+  const candidates = [row.email, row.parent_email];
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "string") {
+      continue;
+    }
+
+    const trimmed = candidate.trim();
+    if (trimmed && !looksLikeEncryptedValue(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return null;
+}
+
 export async function findSuggestedParentEmail(
   leadId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
-  const rows = await findAppRows<MsStudentDirRow>(
-    BACKENDLESS_TABLES.msStudentDir,
-    { lead_id: leadId },
-    fetchImpl,
-    { loadRelations: "slots" },
-  );
+  const enrolledStudents = await findEnrolledStudents(leadId, fetchImpl);
 
-  for (const row of rows) {
-    if (row.parent_email && String(row.parent_email).trim()) {
-      return String(row.parent_email).trim();
-    }
+  if (enrolledStudents.length === 0) {
+    return null;
+  }
 
-    const slots = Array.isArray(row.slots) ? row.slots : [];
-    for (const slot of slots) {
-      if (slot?.email && String(slot.email).trim()) {
-        return String(slot.email).trim();
-      }
+  for (const student of enrolledStudents) {
+    const { student: row } = await loadStudentRecord(leadId, student.studentName, fetchImpl);
+    const email = pickParentEmail(row);
+    if (email) {
+      return email;
     }
   }
 

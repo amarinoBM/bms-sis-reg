@@ -1,18 +1,13 @@
 import Link from "next/link";
 
+import { RegistrationHeader } from "@/app/_components/registration-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <p className="text-label font-medium uppercase tracking-label text-muted-foreground">
-            BMS Student Registration
-          </p>
-        </div>
-      </header>
+      <RegistrationHeader />
 
       <main className="mx-auto max-w-3xl px-6 py-12">
         <h1 className="text-title font-semibold text-foreground">
