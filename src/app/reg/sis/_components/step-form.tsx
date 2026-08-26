@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
-import type { ApiResponse } from "@/server/http/api-envelope";
+import { postApi, postFormApi } from "@/lib/client-api";
 
 type StepFormProps = {
   definition: StepFormDefinition;
@@ -64,28 +64,17 @@ export function StepForm({
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   const readOnly = disabled && !isEditing;
-
-  useEffect(() => {
-    setValues(initialValues);
-    setIsEditing(false);
-  }, [initialValues]);
+  const activeValues = readOnly ? initialValues : values;
 
   async function handleUnlock() {
     setUnlocking(true);
     try {
-      const response = await fetch("/api/students/unlock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leadId,
-          objectId,
-          stepId,
-        }),
+      await postApi<{ unlocked: boolean }>("/api/students/unlock", {
+        leadId,
+        objectId,
+        stepId,
       });
-      const body = (await response.json()) as ApiResponse<{ unlocked: boolean }>;
-      if (!body.success) {
-        throw new Error(body.error.message);
-      }
+      setValues(initialValues);
       setIsEditing(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not unlock section.");
@@ -101,21 +90,13 @@ export function StepForm({
 
     setSaving(true);
     try {
-      const response = await fetch("/api/students/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leadId,
-          objectId,
-          saveStep: definition.saveHandler,
-          studentName,
-          fields: values,
-        }),
+      await postApi<{ objectId: string }>("/api/students/save", {
+        leadId,
+        objectId,
+        saveStep: definition.saveHandler,
+        studentName,
+        fields: values,
       });
-      const body = (await response.json()) as ApiResponse<{ objectId: string }>;
-      if (!body.success) {
-        throw new Error(body.error.message);
-      }
       toast.success("Saved");
       await onSaved();
     } catch (error) {
@@ -140,16 +121,12 @@ export function StepForm({
       formData.append("fieldKey", field.key);
       formData.append("file", file);
 
-      const response = await fetch("/api/uploads", {
-        method: "POST",
-        body: formData,
-      });
-      const body = (await response.json()) as ApiResponse<{ fieldKey: string; url: string }>;
-      if (!body.success) {
-        throw new Error(body.error.message);
-      }
+      const uploadResult = await postFormApi<{ fieldKey: string; url: string }>(
+        "/api/uploads",
+        formData,
+      );
 
-      setValues((current) => ({ ...current, [body.data.fieldKey]: body.data.url }));
+      setValues((current) => ({ ...current, [uploadResult.fieldKey]: uploadResult.url }));
       toast.success("File uploaded");
       await onSaved();
     } catch (error) {
@@ -175,7 +152,7 @@ export function StepForm({
           <FieldControl
             key={field.key}
             field={field}
-            value={fieldValue(values, field.key)}
+            value={fieldValue(activeValues, field.key)}
             readOnly={readOnly}
             uploading={uploadingKey === field.key}
             onChange={(value) => updateValue(field.key, value)}

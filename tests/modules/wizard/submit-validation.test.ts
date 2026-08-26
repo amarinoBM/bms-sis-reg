@@ -22,6 +22,7 @@ describe("submit validation", () => {
 
   it("accepts a minimally complete record", () => {
     const result = validateSubmitReadiness({
+      contact_id: "cont_abcdefghijklmnop",
       student_name: "Noah",
       student_last_name: "Moore",
       student_birth_date: Date.now(),

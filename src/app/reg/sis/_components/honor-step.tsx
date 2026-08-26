@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ApiResponse } from "@/server/http/api-envelope";
+import { postApi } from "@/lib/client-api";
 
 type HonorStepProps = {
   leadId: string;
@@ -26,8 +26,9 @@ export function HonorStep({
   onSigned,
 }: HonorStepProps) {
   const [parentSignature, setParentSignature] = useState("");
-  const [studentSignature, setStudentSignature] = useState(studentName);
+  const [studentSignatureOverride, setStudentSignatureOverride] = useState<string | null>(null);
   const [signing, setSigning] = useState(false);
+  const studentSignature = studentSignatureOverride ?? studentName;
 
   async function handleSign() {
     if (!parentSignature.trim() || !studentSignature.trim()) {
@@ -37,21 +38,13 @@ export function HonorStep({
 
     setSigning(true);
     try {
-      const response = await fetch("/api/honor/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leadId,
-          objectId,
-          studentName,
-          parentSignature: parentSignature.trim(),
-          studentSignature: studentSignature.trim(),
-        }),
+      await postApi<{ honorCodeURL: string }>("/api/honor/sign", {
+        leadId,
+        objectId,
+        studentName,
+        parentSignature: parentSignature.trim(),
+        studentSignature: studentSignature.trim(),
       });
-      const body = (await response.json()) as ApiResponse<{ honorCodeURL: string }>;
-      if (!body.success) {
-        throw new Error(body.error.message);
-      }
       toast.success("Honor code signed");
       await onSigned();
     } catch (error) {
@@ -90,7 +83,7 @@ export function HonorStep({
             <Input
               id="honor-student-signature"
               value={studentSignature}
-              onChange={(event) => setStudentSignature(event.target.value)}
+              onChange={(event) => setStudentSignatureOverride(event.target.value)}
             />
           </div>
           <Button onClick={handleSign} disabled={signing}>

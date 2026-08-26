@@ -8,7 +8,7 @@ import {
   formatMissingFieldsMessage,
   validateSubmitReadiness,
 } from "@/modules/wizard/submit-validation";
-import type { ApiResponse } from "@/server/http/api-envelope";
+import { postApi } from "@/lib/client-api";
 
 type SubmitStepProps = {
   leadId: string;
@@ -38,19 +38,11 @@ export function SubmitStep({
 
     setSubmitting(true);
     try {
-      const response = await fetch("/api/sis/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leadId,
-          objectId,
-          studentName,
-        }),
+      await postApi<{ success: boolean }>("/api/sis/complete", {
+        leadId,
+        objectId,
+        studentName,
       });
-      const body = (await response.json()) as ApiResponse<{ success: boolean }>;
-      if (!body.success) {
-        throw new Error(body.error.message);
-      }
       toast.success("Registration submitted");
       await onSubmitted();
     } catch (error) {

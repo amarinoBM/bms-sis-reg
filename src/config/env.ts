@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 const serverEnvSchema = z.object({
-  BACKENDLESS_REST_URL: z.string().url(),
-  BACKENDLESS_CODE_URL: z.string().url().optional(),
+  BACKENDLESS_REST_URL: z.url(),
+  BACKENDLESS_CODE_URL: z.url().optional(),
   EXTERNAL_WRITES_ENABLED: z.enum(["true", "false"]).optional(),
   AUTH_SECRET: z.string().min(32).optional(),
-  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
 });
 
 export type ServerEnv = {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { RegistrationHeader } from "@/app/_components/registration-header";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
 export default function Home() {

@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:browser": "playwright test",
     "knip": "knip",
+    "doctor": "react-doctor",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run knip"
   },
   "dependencies": {
@@ -41,6 +42,7 @@
     "eslint-config-next": "15.5.23",
     "eslint-config-prettier": "^10.1.8",
     "knip": "^6.32.3",
+    "react-doctor": "^0.9.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5"

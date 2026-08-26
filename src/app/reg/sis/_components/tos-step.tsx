@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ApiResponse } from "@/server/http/api-envelope";
+import { postApi } from "@/lib/client-api";
 
 type TosStepProps = {
   leadId: string;
@@ -38,20 +38,12 @@ export function TosStep({
 
     setSigning(true);
     try {
-      const response = await fetch("/api/tos/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leadId,
-          objectId,
-          studentName,
-          parentSignature: parentSignature.trim(),
-        }),
+      await postApi<{ tosURL: string }>("/api/tos/sign", {
+        leadId,
+        objectId,
+        studentName,
+        parentSignature: parentSignature.trim(),
       });
-      const body = (await response.json()) as ApiResponse<{ tosURL: string }>;
-      if (!body.success) {
-        throw new Error(body.error.message);
-      }
       toast.success("Terms of service signed");
       await onSigned();
     } catch (error) {

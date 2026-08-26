@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/config/backendless";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import type { ApiResponse } from "@/server/http/api-envelope";
+import { postApi } from "@/lib/client-api";
 
 type OtpFormProps = {
   leadId: string;
@@ -23,42 +23,19 @@ type VerifyResponse = {
   students: { studentName: string; objectId: string }[];
 };
 
-async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const payload = (await response.json()) as ApiResponse<T>;
-
-  if (!payload.success) {
-    throw new Error(payload.error.message);
-  }
-
-  return payload.data;
-}
-
 export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState(suggestedEmail ?? "");
   const [otp, setOtp] = useState("");
   const [sendLabel, setSendLabel] = useState("Send OTP");
-  const [sendDisabled, setSendDisabled] = useState(false);
   const [verifyDisabled, setVerifyDisabled] = useState(false);
-
-  useEffect(() => {
-    if (suggestedEmail && !email) {
-      setEmail(suggestedEmail);
-    }
-  }, [suggestedEmail, email]);
+  const sendDisabled = sendLabel !== "Send OTP";
 
   async function handleSendOtp() {
-    setSendDisabled(true);
     setSendLabel("Sending login code…");
 
     try {
-      const result = await postJson<SendResponse>("/api/otp/send", {
+      const result = await postApi<SendResponse>("/api/otp/send", {
         leadId,
         email,
       });
@@ -76,14 +53,12 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
         } else {
           window.clearInterval(interval);
           setSendLabel("Send OTP");
-          setSendDisabled(false);
         }
       }, 1000);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not send OTP.";
       toast.error(message);
       setSendLabel("Send OTP");
-      setSendDisabled(false);
     }
   }
 
@@ -91,7 +66,7 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
     setVerifyDisabled(true);
 
     try {
-      const result = await postJson<VerifyResponse>("/api/otp/verify", {
+      const result = await postApi<VerifyResponse>("/api/otp/verify", {
         leadId,
         otp,
       });
@@ -99,6 +74,7 @@ export function OtpForm({ leadId, suggestedEmail }: OtpFormProps) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not verify OTP.";
       toast.error(message);
+    } finally {
       setVerifyDisabled(false);
     }
   }

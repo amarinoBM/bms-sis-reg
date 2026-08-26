@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { normalizeStudentName } from "@/modules/students/student-row-selection";
 import { getParentSession } from "@/server/auth/parent-session";
 
 export async function requireParentSessionForLead(leadId: string): Promise<void> {
@@ -15,6 +16,6 @@ export function normalizeStudentNameParam(studentName?: string): string | undefi
     return undefined;
   }
 
-  const normalized = studentName.trim().replace(/%20/g, " ");
+  const normalized = normalizeStudentName(studentName);
   return normalized.length > 0 ? normalized : undefined;
 }

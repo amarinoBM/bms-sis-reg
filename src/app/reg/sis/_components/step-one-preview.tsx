@@ -1,15 +1,17 @@
 import type { MsStudentDirRow } from "@/modules/students/types";
 
+const birthDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
 function formatBirthDate(value: unknown): string | null {
   if (typeof value !== "number") {
     return null;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
+  return birthDateFormatter.format(new Date(value));
 }
 
 type StepOnePreviewProps = {

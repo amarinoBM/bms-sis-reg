@@ -25,6 +25,14 @@ export async function POST(request: Request) {
       });
     }
 
+    if (
+      current.student.honorCodeSigned === "Completed" &&
+      typeof current.student.honorCodeURL === "string" &&
+      current.student.honorCodeURL.trim()
+    ) {
+      return { honorCodeURL: current.student.honorCodeURL };
+    }
+
     const email = String(current.student.email ?? current.student.parent_email ?? "");
     if (!email) {
       throw new AppError({

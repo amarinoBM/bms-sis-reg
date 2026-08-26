@@ -1,0 +1,18 @@
+{
+  "lint": true,
+  "deadCode": true,
+  "ignore": {
+    "files": [
+      ".github/**",
+      "tests/**",
+      "**/*.test.ts",
+      "**/*.spec.ts"
+    ],
+    "overrides": [
+      {
+        "files": ["src/server/connectors/backendless/write-client.ts"],
+        "rules": ["react-doctor/server-sequential-independent-await"]
+      }
+    ]
+  }
+}

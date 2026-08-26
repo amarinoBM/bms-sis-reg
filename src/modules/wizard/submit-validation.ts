@@ -19,6 +19,16 @@ function hasText(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function hasCloseContactId(student: Record<string, unknown>): boolean {
+  const raw = typeof student.contact_id === "string" ? student.contact_id.trim() : "";
+  if (!raw) {
+    return false;
+  }
+
+  const suffix = raw.startsWith("cont_") ? raw.slice(5) : raw;
+  return suffix.length >= 16 && /^[A-Za-z0-9]+$/.test(suffix);
+}
+
 function hasEthnicity(student: Record<string, unknown>): boolean {
   return ETHNICITY_KEYS.some((key) => student[key] === true);
 }
@@ -56,6 +66,11 @@ function hasBehaviorCoverage(student: Record<string, unknown>): boolean {
 }
 
 const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
+  {
+    key: "contact_id",
+    label: "Student enrollment link",
+    isMissing: (student) => !hasCloseContactId(student),
+  },
   {
     key: "Ethnicity",
     label: "Ethnicity",

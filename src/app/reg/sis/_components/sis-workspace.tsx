@@ -19,8 +19,8 @@ import {
 } from "@/modules/wizard/step-schemas";
 import { INITIAL_ACTIVE_STEP, type WizardStepId } from "@/modules/wizard/steps";
 import { getMainProgressStatuses } from "@/modules/wizard/progress";
+import { fetchApi } from "@/lib/client-api";
 import type { StudentLoadResult } from "@/modules/students/types";
-import type { ApiResponse } from "@/server/http/api-envelope";
 
 type SisWorkspaceProps = {
   leadId: string;
@@ -44,17 +44,13 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
         lead_id: leadId,
         student_name: name,
       });
-      const response = await fetch(`/api/students/load?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const body = (await response.json()) as ApiResponse<StudentLoadResult>;
+      const body = await fetchApi<StudentLoadResult>(
+        `/api/students/load?${params.toString()}`,
+        { cache: "no-store" },
+      );
 
-      if (!body.success) {
-        throw new Error(body.error.message);
-      }
-
-      setPayload(body.data);
-      setStudentName(body.data.studentInfo.studentName);
+      setPayload(body);
+      setStudentName(body.studentInfo.studentName);
       setLoadState("ready");
     } catch (error) {
       const message =
@@ -125,6 +121,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
             <div>
               {stepDefinition && (
                 <StepForm
+                  key={`${activeStepId}-${payload.studentInfo.objectId}`}
                   definition={stepDefinition}
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}

@@ -15,13 +15,17 @@ import type {
   MsStudentDirRow,
   StudentLoadResult,
 } from "@/modules/students/types";
+import {
+  normalizeStudentName,
+  pickBestEnrolledStudentRow,
+} from "@/modules/students/student-row-selection";
 
 function escapeWhereValue(value: string): string {
   return value.replace(/'/g, "''");
 }
 
 function trimStudentName(studentName: string): string {
-  return studentName.trim().replace(/%20/g, " ");
+  return normalizeStudentName(studentName);
 }
 
 function buildEnrolledWhereClause(leadId: string, studentName?: string): string {
@@ -33,6 +37,21 @@ function buildEnrolledWhereClause(leadId: string, studentName?: string): string 
   }
 
   return clause;
+}
+
+function toEnrolledStudentSummaries(rows: MsStudentDirRow[]): EnrolledStudentSummary[] {
+  const summaries: EnrolledStudentSummary[] = [];
+
+  for (const row of rows) {
+    if (row.student_name && row.objectId) {
+      summaries.push({
+        studentName: String(row.student_name),
+        objectId: String(row.objectId),
+      });
+    }
+  }
+
+  return summaries;
 }
 
 export async function findEnrolledStudents(
@@ -64,12 +83,7 @@ export async function findEnrolledStudents(
 
   const rows = (await response.json()) as MsStudentDirRow[];
 
-  return rows
-    .filter((row) => row.student_name && row.objectId)
-    .map((row) => ({
-      studentName: String(row.student_name),
-      objectId: String(row.objectId),
-    }));
+  return toEnrolledStudentSummaries(rows);
 }
 
 export async function loadStudentRecord(
@@ -102,12 +116,7 @@ export async function loadStudentRecord(
   }
 
   const rows = (await response.json()) as MsStudentDirRow[];
-  const enrolledStudents = rows
-    .filter((row) => row.student_name && row.objectId)
-    .map((row) => ({
-      studentName: String(row.student_name),
-      objectId: String(row.objectId),
-    }));
+  const enrolledStudents = toEnrolledStudentSummaries(rows);
 
   if (enrolledStudents.length === 0) {
     throw new AppError({
@@ -117,8 +126,10 @@ export async function loadStudentRecord(
   }
 
   const targetName = normalizedName ?? enrolledStudents[0].studentName;
-  const row =
-    rows.find((candidate) => String(candidate.student_name) === targetName) ?? rows[0];
+  const row = pickBestEnrolledStudentRow(
+    rows.filter((candidate) => candidate.student_name && candidate.objectId),
+    targetName,
+  );
 
   const decrypted = await decryptStudentDirRow(leadId, row, fetchImpl);
   const hydrated = hydrateUploadMetadata(decrypted);

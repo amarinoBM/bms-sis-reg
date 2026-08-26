@@ -126,8 +126,10 @@ export async function signTermsOfService(
   input: SignTosInput,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ tosURL: string }> {
-  const billing = await resolveBillingDetails(input.chargebeeId, input.student, fetchImpl);
-  const userIp = await fetchClientIp(fetchImpl);
+  const [billing, userIp] = await Promise.all([
+    resolveBillingDetails(input.chargebeeId, input.student, fetchImpl),
+    fetchClientIp(fetchImpl),
+  ]);
   const dateSigned = formatSignedDate(new Date());
 
   const copied = await copyDriveFile(

@@ -24,6 +24,14 @@ export async function POST(request: Request) {
       });
     }
 
+    if (
+      current.student.ToSBool === true &&
+      typeof current.student.ToSURL === "string" &&
+      current.student.ToSURL.trim()
+    ) {
+      return { tosURL: current.student.ToSURL };
+    }
+
     const email = String(current.student.email ?? current.student.parent_email ?? "");
     if (!email) {
       throw new AppError({
