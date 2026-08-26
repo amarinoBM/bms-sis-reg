@@ -23,6 +23,7 @@ type StepFormProps = {
   leadId: string;
   objectId: string;
   studentName: string;
+  stepId: string;
   initialValues: Record<string, unknown>;
   disabled: boolean;
   onSaved: () => Promise<void>;
@@ -51,19 +52,47 @@ export function StepForm({
   leadId,
   objectId,
   studentName,
+  stepId,
   initialValues,
   disabled,
   onSaved,
 }: StepFormProps) {
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [saving, setSaving] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
-  const readOnly = disabled;
+  const readOnly = disabled && !isEditing;
 
   useEffect(() => {
     setValues(initialValues);
+    setIsEditing(false);
   }, [initialValues]);
+
+  async function handleUnlock() {
+    setUnlocking(true);
+    try {
+      const response = await fetch("/api/students/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId,
+          objectId,
+          stepId,
+        }),
+      });
+      const body = (await response.json()) as ApiResponse<{ unlocked: boolean }>;
+      if (!body.success) {
+        throw new Error(body.error.message);
+      }
+      setIsEditing(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not unlock section.");
+    } finally {
+      setUnlocking(false);
+    }
+  }
 
   async function handleSave() {
     if (!definition.saveHandler) {
@@ -163,8 +192,13 @@ export function StepForm({
         </div>
       )}
 
-      {readOnly && (
-        <p className="mt-6 text-label text-muted-foreground">This section has been saved.</p>
+      {disabled && !isEditing && definition.saveHandler && (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <p className="text-label text-muted-foreground">This section has been saved.</p>
+          <Button variant="outline" onClick={handleUnlock} disabled={unlocking}>
+            {unlocking ? "Unlocking…" : "Edit section"}
+          </Button>
+        </div>
       )}
     </section>
   );

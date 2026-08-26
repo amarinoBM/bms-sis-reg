@@ -9,6 +9,7 @@ import { hydrateUploadMetadata } from "@/modules/students/upload-metadata";
 import { buildStudentInfoState } from "@/modules/students/student-info-state";
 import { buildStepSavePayload } from "@/modules/wizard/save-service";
 import type { SaveHandlerKey } from "@/modules/wizard/save-handlers";
+import { syncParentMapForContactSave } from "@/modules/parent-maps/sync-parent-map";
 import type {
   EnrolledStudentSummary,
   MsStudentDirRow,
@@ -143,8 +144,23 @@ export async function saveStudentStep(
   previousRow: Record<string, unknown>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ objectId: string }> {
-  const payload = buildStepSavePayload(saveStep, fields, previousRow);
-  return saveStudentRecord(leadId, objectId, payload, fetchImpl);
+  const normalizedFields = { ...fields };
+
+  if (saveStep === "save1.5" && typeof normalizedFields.share_contact === "boolean") {
+    normalizedFields.share_contact = normalizedFields.share_contact ? "Yes" : "No";
+  }
+
+  const payload = buildStepSavePayload(saveStep, normalizedFields, previousRow);
+  const result = await saveStudentRecord(leadId, objectId, payload, fetchImpl);
+
+  if (saveStep === "save1.5") {
+    const shareContact =
+      normalizedFields.share_contact === "Yes" ||
+      normalizedFields.share_contact === true;
+    await syncParentMapForContactSave(leadId, objectId, shareContact, fetchImpl);
+  }
+
+  return result;
 }
 
 export async function saveStudentRecord(

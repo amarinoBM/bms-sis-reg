@@ -4,7 +4,7 @@ import { requireBackendlessCodeUrl } from "@/config/env";
 type CloudCodeOptions = {
   service: string;
   method: string;
-  body: Record<string, unknown>;
+  body: Record<string, unknown> | string;
   fetchImpl?: typeof fetch;
 };
 

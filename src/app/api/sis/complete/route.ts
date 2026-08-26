@@ -3,6 +3,10 @@ import { z } from "zod";
 import { AppError } from "@/core/app-error";
 import { completeSisRegistration } from "@/modules/sis/complete-form";
 import { loadStudentRecord } from "@/modules/students/repository";
+import {
+  formatMissingFieldsMessage,
+  validateSubmitReadiness,
+} from "@/modules/wizard/submit-validation";
 import { runRoute } from "@/server/http/route-handler";
 
 const bodySchema = z.object({
@@ -34,6 +38,14 @@ export async function POST(request: Request) {
       throw new AppError({
         code: "INVALID_INPUT",
         message: "Terms of service must be signed before submitting.",
+      });
+    }
+
+    const readiness = validateSubmitReadiness(current.student);
+    if (!readiness.ready) {
+      throw new AppError({
+        code: "INVALID_INPUT",
+        message: formatMissingFieldsMessage(readiness.missingLabels),
       });
     }
 

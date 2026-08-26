@@ -13,9 +13,9 @@ type StepNavProps = {
 
 export function StepNav({ activeStepId, stepCompletion, onStepSelect }: StepNavProps) {
   return (
-    <nav className="rounded-lg border border-border bg-card p-4">
+    <nav className="rounded-lg border border-border bg-card p-4 lg:max-h-[70vh] lg:overflow-y-auto">
       <p className="text-label font-medium text-muted-foreground">Sections</p>
-      <ul className="mt-3 space-y-1">
+      <ul className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible lg:pb-0">
         {WIZARD_STEPS.map((step) => {
           const complete = isStepComplete(step.id, stepCompletion);
           const active = step.id === activeStepId;
@@ -26,7 +26,7 @@ export function StepNav({ activeStepId, stepCompletion, onStepSelect }: StepNavP
                 type="button"
                 onClick={() => onStepSelect(step.id)}
                 className={cn(
-                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-body transition-colors",
+                  "flex shrink-0 items-center justify-between rounded-md px-3 py-2 text-left text-body transition-colors lg:w-full",
                   active
                     ? "bg-primary/10 text-primary"
                     : "text-foreground hover:bg-muted",

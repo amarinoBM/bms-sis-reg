@@ -9,7 +9,7 @@ Parent-facing Next.js app replacing Clever `Main_Page` OTP + `SIS` wizard.
 ## Architecture
 
 - **Server-only Backendless** — `fetch()` to `BACKENDLESS_REST_URL`; no browser SDK.
-- **Writes gated** — `EXTERNAL_WRITES_ENABLED=true` required for prod writes.
+- **Writes gated** — `EXTERNAL_WRITES_ENABLED=true` required for prod saves (enabled for pilot on Vercel production).
 - **Routes** in `src/app`; app UI in `src/app/_components`; shadcn in `src/components/ui`.
 - **Modules** in `src/modules/` (otp, students, wizard) — cross-step flows in `src/server/workflows/` when needed.
 
@@ -33,7 +33,7 @@ Parent-facing Next.js app replacing Clever `Main_Page` OTP + `SIS` wizard.
 ## Safety
 
 - Do not write to production Backendless without explicit approval.
-- Keep `EXTERNAL_WRITES_ENABLED=false` until OTP + first save step are tested.
+- Enable `EXTERNAL_WRITES_ENABLED=true` on Vercel production before pilot saves.
 - Never log student PII or secrets.
 
 ## Checks

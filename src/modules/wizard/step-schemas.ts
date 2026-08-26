@@ -96,6 +96,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
       { key: "parent_phone", label: "Phone", type: "phone" },
       { key: "parent_address", label: "Address", type: "textarea" },
       { key: "parent_relation", label: "Relationship to student", type: "text" },
+      { key: "share_contact", label: "Share contact with other families", type: "checkbox" },
     ],
   },
   {
@@ -235,6 +236,12 @@ export function flattenFormValues(
   student: Record<string, unknown>,
 ): Record<string, unknown> {
   const flat: Record<string, unknown> = { ...student };
+
+  if (student.share_contact === "Yes") {
+    flat.share_contact = true;
+  } else if (student.share_contact === "No") {
+    flat.share_contact = false;
+  }
 
   const secondary = student.secondary_guardian;
   if (secondary && typeof secondary === "object" && !Array.isArray(secondary)) {

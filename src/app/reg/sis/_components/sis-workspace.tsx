@@ -129,6 +129,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
                   studentName={payload.studentInfo.studentName}
+                  stepId={activeStepId}
                   initialValues={formValues}
                   disabled={isStepDisabled(activeStepId, payload.student)}
                   onSaved={() => loadStudent(studentName)}
@@ -163,6 +164,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
                   studentName={payload.studentInfo.studentName}
+                  student={payload.student}
                   completed={payload.student.is_complete_sis === true}
                   onSubmitted={() => loadStudent(studentName)}
                 />
