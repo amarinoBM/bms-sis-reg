@@ -17,10 +17,10 @@ describe("wizard progress", () => {
     });
 
     expect(isStepComplete("1", completion)).toBe(true);
-    expect(isStepComplete("6.1", completion)).toBe(true);
-    expect(isStepComplete("10", completion)).toBe(true);
-    expect(isStepComplete("11", completion)).toBe(true);
-    expect(isStepComplete("2", completion)).toBe(false);
+    expect(isStepComplete("9", completion)).toBe(true);
+    expect(isStepComplete("13", completion)).toBe(true);
+    expect(isStepComplete("14", completion)).toBe(true);
+    expect(isStepComplete("4", completion)).toBe(false);
   });
 
   it("highlights the active main step", () => {
@@ -31,23 +31,23 @@ describe("wizard progress", () => {
   });
 
   it("does not mark future main steps complete when honor or TOS are already signed", () => {
-    const statuses = getMainProgressStatuses("3", { "10": true, "11": true });
+    const statuses = getMainProgressStatuses("5", { "13": true, "14": true });
 
     expect(statuses.find((step) => step.number === 10)?.state).toBe("upcoming");
     expect(statuses.find((step) => step.number === 11)?.state).toBe("upcoming");
     expect(statuses.find((step) => step.number === 3)?.state).toBe("current");
   });
 
-  it("marks step 9 complete when student has no IEP or 504 plan", () => {
+  it("marks step 12 complete when student has no IEP or 504 plan", () => {
     const completion = buildStepCompletionMap({ IEP_or_504_plan: false });
 
-    expect(isStepComplete("9", completion)).toBe(true);
+    expect(isStepComplete("12", completion)).toBe(true);
   });
 
   it("returns the next wizard step in order", () => {
-    expect(getNextStepId("1")).toBe("1.5");
-    expect(getNextStepId("6")).toBe("6.1");
-    expect(getWizardStepLabel("1.5")).toBe("Parent contact");
-    expect(getNextStepId("12")).toBeNull();
+    expect(getNextStepId("1")).toBe("2");
+    expect(getNextStepId("8")).toBe("9");
+    expect(getWizardStepLabel("2")).toBe("Parent contact");
+    expect(getNextStepId("15")).toBeNull();
   });
 });

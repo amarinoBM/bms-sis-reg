@@ -65,13 +65,13 @@ function shouldShowStepField(
   field: StepFieldDefinition,
   values: Record<string, unknown>,
 ): boolean {
-  if (stepId === "3") {
+  if (stepId === "5") {
     if (field.group === "Challenges" || field.key === "additional_info_behavioral_challenges") {
       return values.learning_or_behavioral_challenges === true;
     }
   }
 
-  if (stepId === "6.1" && (field.key === "CreditTransfer" || field.key === "uploadTranscript")) {
+  if (stepId === "9" && (field.key === "CreditTransfer" || field.key === "uploadTranscript")) {
     return values.transferCredit === true;
   }
 
@@ -151,7 +151,7 @@ export function StepForm({
   const visibleFields = visibleStepFields(stepId, definition.fields, activeValues);
   const fieldGroups = groupStepFields(visibleFields);
   const uploadOnlyStep = !definition.saveHandler && visibleFields.some((f) => f.type === "file");
-  const iepNotRequired = stepId === "9" && activeValues.IEP_or_504_plan !== true;
+  const iepNotRequired = stepId === "12" && activeValues.IEP_or_504_plan !== true;
   const nextStepId = getNextStepId(stepId);
 
   async function handleUnlock() {
@@ -277,7 +277,7 @@ export function StepForm({
           </div>
         ) : null}
 
-        {stepId === "1.6" ? (
+        {stepId === "3" ? (
           <SecondaryGuardiansFields
             values={activeValues}
             readOnly={readOnly}
@@ -288,7 +288,7 @@ export function StepForm({
           />
         ) : null}
 
-        {stepId === "2" ? (
+        {stepId === "4" ? (
           <InterestsFields
             values={activeValues}
             readOnly={readOnly}
@@ -296,7 +296,7 @@ export function StepForm({
           />
         ) : null}
 
-        {stepId === "5" ? (
+        {stepId === "7" ? (
           <ConfidenceScaleFields
             values={activeValues}
             readOnly={readOnly}
@@ -304,7 +304,7 @@ export function StepForm({
           />
         ) : null}
 
-        {stepId === "7" ? (
+        {stepId === "10" ? (
           <HomeStateFields
             studentName={studentName}
             values={activeValues}

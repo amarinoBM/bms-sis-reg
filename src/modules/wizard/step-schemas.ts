@@ -92,7 +92,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "1.5",
+    stepId: "2",
     saveHandler: "save1.5",
     title: "Parent contact",
     description: (name) => `Primary parent or guardian contact for ${name}.`,
@@ -112,7 +112,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "1.6",
+    stepId: "3",
     saveHandler: "save1.6",
     title: "Secondary guardians",
     description: (name) =>
@@ -122,7 +122,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "2",
+    stepId: "4",
     saveHandler: "save2",
     title: "Interests",
     description: (name) =>
@@ -130,7 +130,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     fields: [],
   },
   {
-    stepId: "3",
+    stepId: "5",
     saveHandler: "save3",
     title: "Learning profile",
     description: (name) => `Learning and behavioral challenges for ${name}.`,
@@ -154,7 +154,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "4",
+    stepId: "6",
     saveHandler: "save4",
     title: "Grade levels",
     description: (name) => `Current grade levels for ${name}.`,
@@ -165,14 +165,14 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "5",
+    stepId: "7",
     saveHandler: "save5",
     title: "Confidence",
     description: (name) => `How confident is ${name} in each area below?`,
     fields: [],
   },
   {
-    stepId: "6",
+    stepId: "8",
     saveHandler: "save6",
     title: "Prior school",
     description: (name) => `School history and learning environment for ${name}.`,
@@ -187,7 +187,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "6.1",
+    stepId: "9",
     saveHandler: "save6.1",
     title: "Transcripts",
     description: (name) => `Transcripts and credit transfer for ${name}.`,
@@ -203,7 +203,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "7",
+    stepId: "10",
     saveHandler: "save7",
     title: "Home state",
     description: () =>
@@ -211,7 +211,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     fields: [],
   },
   {
-    stepId: "8",
+    stepId: "11",
     saveHandler: "save8",
     title: "Technology & scheduling",
     description: (name) => `Technology and scheduling for ${name}.`,
@@ -234,7 +234,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     ],
   },
   {
-    stepId: "9",
+    stepId: "12",
     title: "IEP / 504 upload",
     description: (name) =>
       `Upload IEP or 504 documents for ${name}. Files are saved automatically when you upload.`,

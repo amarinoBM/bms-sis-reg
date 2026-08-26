@@ -2,9 +2,12 @@ import { z } from "zod";
 
 import { AppError } from "@/core/app-error";
 import { loadStudentRecord, saveStudentRecord } from "@/modules/students/repository";
-import { WIZARD_STEPS } from "@/modules/wizard/steps";
+import {
+  getWizardStepDisabledKey,
+  WIZARD_STEPS,
+  type WizardStepId,
+} from "@/modules/wizard/steps";
 import { runRoute } from "@/server/http/route-handler";
-import type { WizardStepId } from "@/modules/wizard/steps";
 import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
 
 const bodySchema = z.object({
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const disabledKey = `${parsed.stepId}disabled`;
+    const disabledKey = getWizardStepDisabledKey(parsed.stepId);
 
     await saveStudentRecord(parsed.leadId, parsed.objectId, {
       [disabledKey]: false,

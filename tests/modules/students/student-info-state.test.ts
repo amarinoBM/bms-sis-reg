@@ -10,7 +10,7 @@ describe("student info state", () => {
         objectId: "obj-1",
         student_name: "Noah",
         "1disabled": true,
-        "2disabled": true,
+        "1.5disabled": true,
       },
       "chargebee_abc",
     );
@@ -20,5 +20,6 @@ describe("student info state", () => {
     expect(state.stepCompletion["1"]).toBe(true);
     expect(state.stepCompletion["2"]).toBe(true);
     expect(state.disabledSteps["1"]).toBe(true);
+    expect(state.disabledSteps["1.5"]).toBe(true);
   });
 });

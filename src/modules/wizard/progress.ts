@@ -1,5 +1,9 @@
 import type { WizardStepId } from "@/modules/wizard/steps";
-import { MAIN_PROGRESS_STEPS } from "@/modules/wizard/steps";
+import {
+  MAIN_PROGRESS_STEPS,
+  getWizardStepDisabledKey,
+  wizardStepIdFromCompletionKey,
+} from "@/modules/wizard/steps";
 
 export type StepCompletionMap = Record<string, boolean>;
 
@@ -11,10 +15,6 @@ export type MainProgressStepStatus = {
   state: ProgressStepState;
 };
 
-function disabledKeyForStep(stepId: WizardStepId): string {
-  return `${stepId}disabled`;
-}
-
 export function buildStepCompletionMap(
   student: Record<string, unknown>,
 ): StepCompletionMap {
@@ -22,25 +22,28 @@ export function buildStepCompletionMap(
 
   for (const key of Object.keys(student)) {
     if (key.endsWith("disabled") && student[key] === true) {
-      const stepId = key.replace(/disabled$/, "");
-      completion[stepId] = true;
+      const completionKey = key.replace(/disabled$/, "");
+      const wizardStepId = wizardStepIdFromCompletionKey(completionKey);
+      if (wizardStepId) {
+        completion[wizardStepId] = true;
+      }
     }
   }
 
   if (student.honorCodeSigned === "Completed" || student.honorCodeSigned === true) {
-    completion["10"] = true;
+    completion["13"] = true;
   }
 
   if (student.ToSBool === true) {
-    completion["11"] = true;
+    completion["14"] = true;
   }
 
   if (student.is_complete_sis === true) {
-    completion["12"] = true;
+    completion["15"] = true;
   }
 
   if (student.IEP_or_504_plan !== true) {
-    completion["9"] = true;
+    completion["12"] = true;
   }
 
   return completion;
@@ -71,7 +74,6 @@ export function getMainProgressStatuses(
       return { number: step.number, label: step.label, state: "complete" as const };
     }
 
-    // Future main steps stay upcoming even when honor/TOS flags are already set.
     return { number: step.number, label: step.label, state: "upcoming" as const };
   });
 }
@@ -80,5 +82,5 @@ export function isStepDisabled(
   stepId: WizardStepId,
   student: Record<string, unknown>,
 ): boolean {
-  return student[disabledKeyForStep(stepId)] === true;
+  return student[getWizardStepDisabledKey(stepId)] === true;
 }

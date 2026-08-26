@@ -210,7 +210,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                 />
               )}
 
-              {activeStepId === "10" && (
+              {activeStepId === "13" && (
                 <HonorStep
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
@@ -222,7 +222,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                 />
               )}
 
-              {activeStepId === "11" && (
+              {activeStepId === "14" && (
                 <TosStep
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
@@ -234,7 +234,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                 />
               )}
 
-              {activeStepId === "12" && (
+              {activeStepId === "15" && (
                 <SubmitStep
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
@@ -247,9 +247,9 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
               )}
 
               {!stepDefinition &&
-                activeStepId !== "10" &&
-                activeStepId !== "11" &&
-                activeStepId !== "12" && (
+                activeStepId !== "13" &&
+                activeStepId !== "14" &&
+                activeStepId !== "15" && (
                   <div className="rounded-lg border border-border bg-card p-6">
                     <p className="text-body text-muted-foreground">
                       This section is not available yet.
