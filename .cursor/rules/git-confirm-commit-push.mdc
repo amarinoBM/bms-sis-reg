@@ -1,0 +1,11 @@
+---
+description: Confirm before git commit or push
+alwaysApply: true
+---
+
+# Git safety
+
+- Only create commits when Andreas explicitly asks.
+- Never force-push to main.
+- Never skip hooks unless explicitly asked.
+- Do not push unless explicitly asked.

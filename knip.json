@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/**/*.{ts,tsx}",
+    "src/components/**/*.{ts,tsx}",
+    "src/config/**/*.{ts,tsx}",
+    "src/core/**/*.{ts,tsx}",
+    "src/server/**/*.{ts,tsx}",
+    "src/modules/**/*.{ts,tsx}",
+    "src/lib/**/*.{ts,tsx}",
+    "next.config.ts",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "tests/**/*.{ts,tsx}"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    "eslint-config-next",
+    "eslint-config-prettier",
+    "tailwindcss",
+    "@tailwindcss/postcss",
+    "shadcn",
+    "tw-animate-css",
+    "@base-ui/react",
+    "tsx",
+    "lucide-react",
+    "zod"
+  ]
+}
