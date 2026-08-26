@@ -10,7 +10,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
@@ -37,6 +36,12 @@ export function StepNav({
   ).length;
   const currentMainStep =
     progressSteps.find((step) => step.state === "current") ?? progressSteps[0];
+  const activeComplete = activeStep
+    ? isStepComplete(activeStep.id, stepCompletion)
+    : false;
+  const activeSectionLabel = activeStep
+    ? `${activeIndex + 1}. ${activeStep.label}${activeComplete ? " · Complete" : ""}`
+    : "Choose a section";
 
   return (
     <div
@@ -95,9 +100,12 @@ export function StepNav({
         >
           <SelectTrigger
             id="registration-section-picker"
-            className={cn(REG_TOUCH_CLASS, "w-full min-w-0")}
+            className={cn(
+              REG_TOUCH_CLASS,
+              "w-full min-w-0 whitespace-normal text-left",
+            )}
           >
-            <SelectValue placeholder="Choose a section" />
+            <span className="min-w-0 flex-1 truncate text-left">{activeSectionLabel}</span>
           </SelectTrigger>
           <SelectContent
             align="start"
