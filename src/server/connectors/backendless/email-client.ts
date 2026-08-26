@@ -17,6 +17,33 @@ export function buildOtpEmailBody(otp: number): string {
   return buildOtpEmailHtml(otp);
 }
 
+export async function sendScheduledDocumentEmail(
+  leadId: string,
+  toEmail: string,
+  subject: string,
+  bodyHtml: string,
+  fetchImpl: typeof fetch = fetch,
+  delaySeconds = 300,
+): Promise<void> {
+  const payload: EmailFrontendPayload = {
+    status: "scheduled",
+    lead_id: leadId,
+    sender_name: EMAIL_FROM.name,
+    sender_email: EMAIL_FROM.address,
+    to: toEmail,
+    subject,
+    body_html: bodyHtml,
+    date_scheduled: String(Date.now() + delaySeconds * 1000),
+  };
+
+  await invokeCloudCode({
+    service: "uiBuilder",
+    method: "emailFrontend",
+    body: payload,
+    fetchImpl,
+  });
+}
+
 export async function sendOtpEmail(
   leadId: string,
   toEmail: string,

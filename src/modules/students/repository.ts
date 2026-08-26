@@ -7,6 +7,8 @@ import {
 } from "@/server/connectors/backendless/cloud-code-client";
 import { hydrateUploadMetadata } from "@/modules/students/upload-metadata";
 import { buildStudentInfoState } from "@/modules/students/student-info-state";
+import { buildStepSavePayload } from "@/modules/wizard/save-service";
+import type { SaveHandlerKey } from "@/modules/wizard/save-handlers";
 import type {
   EnrolledStudentSummary,
   MsStudentDirRow,
@@ -131,6 +133,18 @@ export async function loadStudentRecord(
     chargebeeId,
     enrolledStudents,
   };
+}
+
+export async function saveStudentStep(
+  leadId: string,
+  objectId: string,
+  saveStep: SaveHandlerKey,
+  fields: Record<string, unknown>,
+  previousRow: Record<string, unknown>,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ objectId: string }> {
+  const payload = buildStepSavePayload(saveStep, fields, previousRow);
+  return saveStudentRecord(leadId, objectId, payload, fetchImpl);
 }
 
 export async function saveStudentRecord(

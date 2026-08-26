@@ -2,26 +2,44 @@ import { z } from "zod";
 
 import { AppError } from "@/core/app-error";
 import { runRoute } from "@/server/http/route-handler";
-import { saveStudentRecord } from "@/modules/students/repository";
+import { saveStudentStep, loadStudentRecord } from "@/modules/students/repository";
+import { parseSaveStep } from "@/modules/wizard/save-service";
+import { unflattenFormValues } from "@/modules/wizard/step-schemas";
 
 const bodySchema = z.object({
   leadId: z.string().min(1),
   objectId: z.string().min(1),
+  saveStep: z.string().min(1),
   fields: z.record(z.string(), z.unknown()),
+  studentName: z.string().optional(),
 });
 
 export async function POST(request: Request) {
   return runRoute(async () => {
     const json = await request.json();
     const parsed = bodySchema.parse(json);
+    const saveStep = parseSaveStep(parsed.saveStep);
 
-    if (Object.keys(parsed.fields).length === 0) {
+    const current = await loadStudentRecord(
+      parsed.leadId,
+      parsed.studentName,
+    );
+
+    if (current.student.objectId !== parsed.objectId) {
       throw new AppError({
         code: "INVALID_INPUT",
-        message: "No fields provided to save.",
+        message: "Student record mismatch.",
       });
     }
 
-    return saveStudentRecord(parsed.leadId, parsed.objectId, parsed.fields);
+    const fields = unflattenFormValues(parsed.fields);
+
+    return saveStudentStep(
+      parsed.leadId,
+      parsed.objectId,
+      saveStep,
+      fields,
+      current.student,
+    );
   });
 }
