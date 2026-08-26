@@ -1,5 +1,6 @@
 import { invokeCloudCode } from "@/server/connectors/backendless/cloud-code-client";
 import { EMAIL_FROM, OTP_EMAIL_SUBJECT } from "@/config/backendless";
+import { buildOtpEmailHtml } from "@/modules/otp/email-template";
 
 type EmailFrontendPayload = {
   status: string;
@@ -13,12 +14,7 @@ type EmailFrontendPayload = {
 };
 
 export function buildOtpEmailBody(otp: number): string {
-  return [
-    `Your OTP is ${otp}`,
-    "<br><br>Please enter your OTP in the corresponding text box to access the Student Information Form.",
-    "<br>Please note that the OTP will expire in 2 hours<br><br>",
-    "Thank you!",
-  ].join("");
+  return buildOtpEmailHtml(otp);
 }
 
 export async function sendOtpEmail(

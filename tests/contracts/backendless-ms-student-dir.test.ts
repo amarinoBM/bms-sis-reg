@@ -34,7 +34,8 @@ describe("ms_student_dir helpers", () => {
   });
 
   it("matches production OTP email body copy", () => {
-    expect(buildOtpEmailBody(123456)).toContain("Your OTP is 123456");
-    expect(buildOtpEmailBody(123456)).toContain("expire in 2 hours");
+    expect(buildOtpEmailBody(123456)).toContain("123456");
+    expect(buildOtpEmailBody(123456)).toContain("2 hours");
+    expect(buildOtpEmailBody(123456)).toContain("Open registration");
   });
 });
