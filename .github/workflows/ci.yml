@@ -43,4 +43,10 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Browser smoke
+        env:
+          AUTH_SECRET: ci-browser-test-auth-secret-min-32-chars!!
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3010
+          BACKENDLESS_CODE_URL: https://api.backendless.com/ci-test-app/ci-test-code
+          BACKENDLESS_REST_URL: https://api.backendless.com/ci-test-app/ci-test-key
+          EXTERNAL_WRITES_ENABLED: "false"
         run: npm run test:browser

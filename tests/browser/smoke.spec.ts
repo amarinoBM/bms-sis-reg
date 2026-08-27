@@ -5,7 +5,9 @@ test("home page loads the BMS registration shell", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Student registration" })).toBeVisible();
   await expect(page.getByText("Open the registration link")).toBeVisible();
   await expect(page.getByRole("img", { name: "Brilliant Microschools" })).toBeVisible();
-  await expect(page.getByText("Student Registration")).toBeVisible();
+  await expect(
+    page.locator("header").getByText("Student Registration", { exact: true }),
+  ).toBeVisible();
 });
 
 test("health route returns typed success JSON", async ({ request }) => {
