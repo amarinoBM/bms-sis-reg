@@ -20,7 +20,8 @@ describe("invokeCloudCode", () => {
       "https://api.backendless.com/test-app/test-key",
     );
 
-    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
       if (url.endsWith("/users/register/guest")) {
         return new Response(JSON.stringify({ "user-token": "guest-token-abc" }), {
           status: 200,

@@ -18,7 +18,8 @@ describe("getBackendlessGuestToken", () => {
       "https://api.backendless.com/test-app/test-key",
     );
 
-    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
       if (url.endsWith("/users/register/guest")) {
         return new Response(JSON.stringify({ "user-token": "guest-token-1" }), {
           status: 200,
@@ -42,7 +43,8 @@ describe("getBackendlessGuestToken", () => {
       "https://api.backendless.com/test-app/test-key",
     );
 
-    const fetchImpl = vi.fn(async (url: string) => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
       if (url.endsWith("/users/register/guest")) {
         return new Response(JSON.stringify({ "user-token": "guest-token-2" }), {
           status: 200,
