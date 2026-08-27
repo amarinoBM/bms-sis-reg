@@ -17,7 +17,3 @@ export const HONOR_STUDENT_NAME_LABEL = "Student's Full Name";
 export const HONOR_SIGN_BUTTON_LABEL = "Sign";
 
 export const HONOR_VIEW_SIGNED_LABEL = "View Signed Code";
-
-export function typeformReminder(studentName: string): string {
-  return `Please complete the typeform above to complete ${studentName}'s information.`;
-}

@@ -5,6 +5,7 @@ import { CheckCircle2, Upload } from "lucide-react";
 
 import { ExternalLink } from "@/app/reg/_components/external-link";
 import { RegSpinner } from "@/app/reg/_components/reg-spinner";
+import { DatePicker, type DatePickerIntent } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { isAppError } from "@/core/app-error";
 import { REG_FIELD_FOCUS_CLASS, REG_FIELD_SURFACE_CLASS, REG_TOUCH_CLASS } from "@/lib/reg-ui";
-import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
+import {
+  assertUploadFileAllowed,
+  UPLOAD_FIELD_DESCRIPTION,
+} from "@/modules/uploads/upload-limits";
 import { cn } from "@/lib/utils";
 
 export const REG_UPLOAD_ACCEPT =
@@ -56,9 +60,27 @@ type FormFieldProps = {
   description?: string;
   error?: string;
   required?: boolean;
+  requirement?: FieldRequirement;
   children: ReactNode;
   className?: string;
 };
+
+export type FieldRequirement = "required" | "optional";
+
+export function FieldRequirementBadge({ kind }: { kind: FieldRequirement }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide",
+        kind === "required"
+          ? "bg-[#fdf6f3] text-[#c93410] ring-1 ring-inset ring-[#f5713c]/35"
+          : "bg-muted/60 text-muted-foreground ring-1 ring-inset ring-border/70",
+      )}
+    >
+      {kind === "required" ? "Required" : "Optional"}
+    </span>
+  );
+}
 
 export function FormField({
   id,
@@ -66,22 +88,28 @@ export function FormField({
   description,
   error,
   required,
+  requirement,
   children,
   className,
 }: FormFieldProps) {
+  const isRequired = required ?? requirement === "required";
   const { descriptionId, errorId } = buildFieldA11y({ id, description, error });
 
   return (
     <div className={cn("min-w-0 space-y-2", className)}>
-      <Label htmlFor={id} className="text-label font-medium leading-snug text-foreground break-words">
-        {label}
-        {required ? (
-          <>
-            <span className="text-destructive" aria-hidden="true"> *</span>
-            <span className="sr-only"> (required)</span>
-          </>
-        ) : null}
-      </Label>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Label htmlFor={id} className="text-label font-medium leading-snug text-foreground break-words">
+          {label}
+          {isRequired && !requirement ? (
+            <>
+              <span className="text-destructive" aria-hidden="true"> *</span>
+              <span className="sr-only"> (required)</span>
+            </>
+          ) : null}
+        </Label>
+        {requirement ? <FieldRequirementBadge kind={requirement} /> : null}
+        {isRequired && requirement ? <span className="sr-only"> (required)</span> : null}
+      </div>
       {description ? (
         <p id={descriptionId} className="max-w-prose text-label leading-relaxed text-muted-foreground break-words">
           {description}
@@ -131,6 +159,7 @@ type FormTextInputProps = {
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   maxLength?: number;
   required?: boolean;
+  requirement?: FieldRequirement;
 };
 
 export function FormTextInput({
@@ -147,14 +176,18 @@ export function FormTextInput({
   inputMode,
   maxLength,
   required,
+  requirement,
 }: FormTextInputProps) {
+  const isRequired = required ?? requirement === "required";
+
   return (
     <FormField
       id={id}
       label={label}
       description={description}
       error={error}
-      required={required}
+      required={isRequired}
+      requirement={requirement}
     >
       <Input
         id={id}
@@ -166,8 +199,8 @@ export function FormTextInput({
         autoComplete={autoComplete}
         inputMode={inputMode}
         maxLength={maxLength}
-        required={required}
-        {...controlA11yProps({ id, description, error, required })}
+        required={isRequired}
+        {...controlA11yProps({ id, description, error, required: isRequired })}
         onChange={(event) => onChange(event.target.value)}
       />
     </FormField>
@@ -185,6 +218,9 @@ type FormTextareaProps = {
   placeholder?: string;
   maxLength?: number;
   required?: boolean;
+  requirement?: FieldRequirement;
+  rows?: number;
+  className?: string;
 };
 
 export function FormTextarea({
@@ -198,24 +234,31 @@ export function FormTextarea({
   placeholder,
   maxLength,
   required,
+  requirement,
+  rows,
+  className,
 }: FormTextareaProps) {
+  const isRequired = required ?? requirement === "required";
+
   return (
     <FormField
       id={id}
       label={label}
       description={description}
       error={error}
-      required={required}
+      required={isRequired}
+      requirement={requirement}
     >
       <Textarea
         id={id}
-        className={cn(regControlClassName(disabled), "min-w-0")}
+        className={cn(regControlClassName(disabled), "min-w-0", className)}
         value={value}
         disabled={disabled}
         placeholder={placeholder}
         maxLength={maxLength}
-        required={required}
-        {...controlA11yProps({ id, description, error, required })}
+        rows={rows}
+        required={isRequired}
+        {...controlA11yProps({ id, description, error, required: isRequired })}
         onChange={(event) => onChange(event.target.value)}
       />
     </FormField>
@@ -233,6 +276,7 @@ type FormSelectProps = {
   disabled?: boolean;
   placeholder?: string;
   required?: boolean;
+  requirement?: FieldRequirement;
 };
 
 export type FormFieldOption = {
@@ -276,27 +320,31 @@ export function FormSelect({
   disabled,
   placeholder = "Select an option",
   required,
+  requirement,
 }: FormSelectProps) {
+  const isRequired = required ?? requirement === "required";
+
   return (
     <FormField
       id={id}
       label={label}
       description={description}
       error={error}
-      required={required}
+      required={isRequired}
+      requirement={requirement}
     >
       {options.length === 0 ? (
         <p className="text-label text-muted-foreground">No options available.</p>
       ) : (
         <Select
-          value={value}
+          value={value ? value : null}
           onValueChange={(next) => onChange(next ?? "")}
           disabled={disabled}
         >
           <SelectTrigger
             id={id}
             className={formSelectTriggerClass(disabled)}
-            {...controlA11yProps({ id, description, error, required })}
+            {...controlA11yProps({ id, description, error, required: isRequired })}
           >
             <SelectValue placeholder={placeholder} className="truncate" />
           </SelectTrigger>
@@ -329,6 +377,7 @@ type FormOptionSelectProps = {
   disabled?: boolean;
   placeholder?: string;
   required?: boolean;
+  requirement?: FieldRequirement;
 };
 
 export function FormOptionSelect({
@@ -342,9 +391,11 @@ export function FormOptionSelect({
   disabled,
   placeholder = "Select an option",
   required,
+  requirement,
 }: FormOptionSelectProps) {
   const normalizedOptions = normalizeFieldOptions(options);
   const selectedOption = normalizedOptions.find((option) => option.value === value);
+  const isRequired = required ?? requirement === "required";
 
   return (
     <FormField
@@ -352,20 +403,21 @@ export function FormOptionSelect({
       label={label}
       description={description}
       error={error}
-      required={required}
+      required={isRequired}
+      requirement={requirement}
     >
       {normalizedOptions.length === 0 ? (
         <p className="text-label text-muted-foreground">No options available.</p>
       ) : (
         <Select
-          value={value}
+          value={value ? value : null}
           onValueChange={(next) => onChange(next ?? "")}
           disabled={disabled}
         >
           <SelectTrigger
             id={id}
             className={formSelectTriggerClass(disabled)}
-            {...controlA11yProps({ id, description, error, required })}
+            {...controlA11yProps({ id, description, error, required: isRequired })}
           >
             <SelectValue placeholder={placeholder} className="truncate">
               {selectedOption?.label}
@@ -401,6 +453,7 @@ type FormMultiOptionSelectProps = {
   disabled?: boolean;
   placeholder?: string;
   excludeValues?: string[];
+  requirement?: FieldRequirement;
 };
 
 export function FormMultiOptionSelect({
@@ -414,6 +467,7 @@ export function FormMultiOptionSelect({
   disabled,
   placeholder = "Add an option…",
   excludeValues = [],
+  requirement,
 }: FormMultiOptionSelectProps) {
   const normalizedOptions = normalizeFieldOptions(options);
   const excluded = new Set([...value, ...excludeValues]);
@@ -421,7 +475,7 @@ export function FormMultiOptionSelect({
   const selectedOptions = normalizedOptions.filter((option) => value.includes(option.value));
 
   return (
-    <FormField id={id} label={label} description={description} error={error}>
+    <FormField id={id} label={label} description={description} error={error} requirement={requirement}>
       <Select
         value=""
         onValueChange={(next) => {
@@ -496,6 +550,7 @@ export function FormMultiOptionSelect({
 type FormCheckboxProps = {
   id: string;
   label: string;
+  description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
@@ -505,12 +560,17 @@ type FormCheckboxProps = {
 export function FormCheckbox({
   id,
   label,
+  description,
   checked,
   onChange,
   disabled,
   error,
 }: FormCheckboxProps) {
-  const errorId = error ? `${id}-error` : undefined;
+  const { descriptionId, errorId, describedBy } = buildFieldA11y({
+    id,
+    description,
+    error,
+  });
 
   return (
     <div className="min-w-0 space-y-2">
@@ -521,12 +581,22 @@ export function FormCheckbox({
           checked={checked}
           disabled={disabled}
           aria-invalid={error ? true : undefined}
-          aria-describedby={errorId}
+          aria-describedby={describedBy}
           onCheckedChange={(next) => onChange(next === true)}
         />
-        <Label htmlFor={id} className="min-w-0 py-1 text-body leading-snug break-words">
-          {label}
-        </Label>
+        <div className="min-w-0 space-y-1">
+          <Label htmlFor={id} className="min-w-0 py-1 text-body leading-snug break-words">
+            {label}
+          </Label>
+          {description ? (
+            <p
+              id={descriptionId}
+              className="max-w-prose text-label leading-relaxed text-muted-foreground break-words"
+            >
+              {description}
+            </p>
+          ) : null}
+        </div>
       </div>
       {error ? (
         <p id={errorId} className="text-label text-destructive" role="alert">
@@ -628,6 +698,8 @@ type FormDateInputProps = {
   min?: string;
   max?: string;
   required?: boolean;
+  requirement?: FieldRequirement;
+  intent?: DatePickerIntent;
 };
 
 export function FormDateInput({
@@ -641,32 +713,33 @@ export function FormDateInput({
   min,
   max,
   required,
+  requirement,
+  intent = "default",
 }: FormDateInputProps) {
+  const isRequired = required ?? requirement === "required";
+  const a11y = controlA11yProps({ id, description, error, required: isRequired });
+
   return (
     <FormField
       id={id}
       label={label}
       description={description}
       error={error}
-      required={required}
+      required={isRequired}
+      requirement={requirement}
     >
-      <input
+      <DatePicker
         id={id}
-        type="date"
         value={value}
-        disabled={disabled}
         min={min}
         max={max}
-        required={required}
-        className={cn(
-          regControlClassName(disabled),
-          "w-full min-w-0 rounded-lg border border-input px-2.5 py-1 text-base md:text-sm disabled:cursor-not-allowed disabled:opacity-50",
-          "[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80",
-          error &&
-            "border-destructive ring-2 ring-inset ring-destructive/30 aria-invalid:border-destructive",
-        )}
-        {...controlA11yProps({ id, description, error, required })}
-        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        intent={intent}
+        placeholder="Select date"
+        aria-describedby={a11y["aria-describedby"]}
+        aria-invalid={a11y["aria-invalid"]}
+        aria-required={a11y["aria-required"]}
+        onChange={onChange}
       />
     </FormField>
   );
@@ -684,12 +757,13 @@ type FormFileUploadProps = {
   uploading?: boolean;
   readOnly?: boolean;
   onFileSelect: (file: File) => void;
+  requirement?: FieldRequirement;
 };
 
 export function FormFileUpload({
   id,
   label,
-  description = "Accepted formats: PDF, JPG, PNG, or WEBP. Maximum size: 10 MB. The file saves when you upload it.",
+  description = UPLOAD_FIELD_DESCRIPTION,
   error: externalError,
   fileUrl,
   pendingFileName,
@@ -698,6 +772,7 @@ export function FormFileUpload({
   uploading = false,
   readOnly = false,
   onFileSelect,
+  requirement,
 }: FormFileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -728,6 +803,7 @@ export function FormFileUpload({
       label={label}
       description={description}
       error={displayError}
+      requirement={requirement}
     >
       <div
         className={cn(
@@ -786,10 +862,6 @@ export function FormFileUpload({
                 >
                   Open in new tab
                 </ExternalLink>
-              ) : !hasFile && !uploading ? (
-                <p className="text-label text-muted-foreground">
-                  PDF or JPG, PNG, or WEBP, up to 10 MB.
-                </p>
               ) : null}
             </div>
           </div>

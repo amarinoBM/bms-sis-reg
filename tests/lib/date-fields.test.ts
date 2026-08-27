@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fromDateInputValue, toDateInputValue } from "@/lib/date-fields";
+import { formatDateDisplay, fromDateInputValue, toDateInputValue } from "@/lib/date-fields";
 
 describe("date-fields", () => {
   it("formats epoch ms using local calendar date", () => {
@@ -30,5 +30,10 @@ describe("date-fields", () => {
   it("returns empty string for unsupported values", () => {
     expect(toDateInputValue(null)).toBe("");
     expect(toDateInputValue("not-a-date")).toBe("");
+  });
+
+  it("formats display labels for en-GB locale", () => {
+    expect(formatDateDisplay("2015-03-15")).toMatch(/15 March 2015/);
+    expect(formatDateDisplay("invalid")).toBe("");
   });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyEthnicitySelection,
   applyGenderSelection,
+  GENDER_OTHER_LABEL,
   readEthnicitySelection,
   readGenderSelection,
   readInterestsSelection,
@@ -21,6 +22,42 @@ describe("wizard field enums", () => {
     expect(fields.male).toBe(false);
     expect(fields.transgender).toBe(false);
     expect(readGenderSelection(fields)).toBe("Female");
+  });
+
+  it("keeps other_gender text when Other is selected", () => {
+    const fields: Record<string, unknown> = { other_gender: "Agender" };
+    applyGenderSelection(fields, GENDER_OTHER_LABEL);
+
+    expect(fields.female).toBe(false);
+    expect(fields.male).toBe(false);
+    expect(fields.other_gender).toBe("Agender");
+    expect(readGenderSelection(fields)).toBe(GENDER_OTHER_LABEL);
+  });
+
+  it("clears other_gender when a listed gender is selected", () => {
+    const fields: Record<string, unknown> = { other_gender: "Agender" };
+    applyGenderSelection(fields, "Male");
+
+    expect(fields.male).toBe(true);
+    expect(fields.other_gender).toBe("");
+  });
+
+  it("reads Other from stored other_gender text", () => {
+    expect(readGenderSelection({ other_gender: "Two-spirit" })).toBe(GENDER_OTHER_LABEL);
+    expect(
+      enrichFlatFormValues({ other_gender: "Two-spirit" }).gender_selection,
+    ).toBe(GENDER_OTHER_LABEL);
+  });
+
+  it("expands Other gender on save1 without boolean flags", () => {
+    const expanded = expandVirtualFormFields("save1", {
+      gender_selection: GENDER_OTHER_LABEL,
+      other_gender: "Agender",
+    });
+
+    expect(expanded.female).toBe(false);
+    expect(expanded.male).toBe(false);
+    expect(expanded.other_gender).toBe("Agender");
   });
 
   it("maps ethnicity selection to boolean columns", () => {

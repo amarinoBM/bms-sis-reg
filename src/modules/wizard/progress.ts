@@ -56,9 +56,16 @@ export function isStepComplete(
   return completion[stepId] === true;
 }
 
+function isMainProgressStepComplete(
+  stepIds: WizardStepId[],
+  completion: StepCompletionMap,
+): boolean {
+  return stepIds.every((stepId) => isStepComplete(stepId, completion));
+}
+
 export function getMainProgressStatuses(
   activeStepId: WizardStepId,
-  _completion: StepCompletionMap,
+  completion: StepCompletionMap,
 ): MainProgressStepStatus[] {
   const activeMainStep = MAIN_PROGRESS_STEPS.find((step) =>
     step.stepIds.includes(activeStepId),
@@ -66,11 +73,13 @@ export function getMainProgressStatuses(
   const activeNumber = activeMainStep?.number ?? 1;
 
   return MAIN_PROGRESS_STEPS.map((step) => {
+    const saved = isMainProgressStepComplete(step.stepIds, completion);
+
     if (step.number === activeNumber) {
       return { number: step.number, label: step.label, state: "current" as const };
     }
 
-    if (step.number < activeNumber) {
+    if (saved) {
       return { number: step.number, label: step.label, state: "complete" as const };
     }
 

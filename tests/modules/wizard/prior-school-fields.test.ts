@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   learningExperienceHint,
   learningExperienceLabel,
+  learningSampleDescription,
+  learningSampleLabel,
   priorSchoolNameLabel,
+  priorSchoolStepDescription,
   readIepOr504Plan,
   readLearningCenterBool,
   shouldAskLastSchoolAttendance,
@@ -17,8 +20,13 @@ describe("prior school labels", () => {
       "Can you briefly describe Madilyn’s past learning experience during the last 12 months?",
     );
     expect(learningExperienceHint("Madilyn")).toBe(
-      "What type of learning philosophy or curriculum was used, what Madilyn liked/disliked, where Madilyn thrived/struggled..",
+      "For example: curriculum style, what Madilyn enjoyed or found difficult, and where they thrived or struggled.",
     );
+    expect(learningSampleLabel("Madilyn")).toBe("Upload a sample of Madilyn's current learning");
+    expect(learningSampleDescription("Madilyn")).toBe(
+      "A recent assignment, project, or writing sample helps us see where Madilyn is today.",
+    );
+    expect(priorSchoolStepDescription("Madilyn")).toContain("recent learning");
   });
 });
 

@@ -1,8 +1,17 @@
 import type { StepFieldDefinition } from "@/modules/wizard/step-schemas";
+import { PTO_COPY, SHARE_CONTACT_COPY } from "@/modules/wizard/parent-guardian-copy";
+import {
+  computerSystemLabel,
+  LENGTH_OF_STAYING_HINT,
+  lengthOfStayingLabel,
+  preferredStudentEmailLabel,
+  startingDateLabel,
+} from "@/modules/wizard/technology-scheduling-copy";
 
 export type FieldLayout = "full" | "half";
 
 export type FieldUiHints = {
+  label?: string;
   placeholder?: string;
   hint?: string;
   autoComplete?: string;
@@ -68,6 +77,9 @@ const FIELD_UI_HINTS: Record<string, FieldUiHints> = {
     selectPlaceholder: "Select relationship",
     layout: "half",
   },
+  share_contact: {
+    hint: SHARE_CONTACT_COPY.hint,
+  },
   parent_address: {
     placeholder: "Street, city, state, ZIP",
     hint: "Match official school records when possible.",
@@ -99,7 +111,7 @@ const FIELD_UI_HINTS: Record<string, FieldUiHints> = {
     hint: "A few sentences is enough.",
   },
   school_like_to_see: {
-    placeholder: "What matters most to your family this year?",
+    placeholder: "Optional — anything you wished had been different",
   },
   additional_info_behavioral_challenges: {
     placeholder: "Anything else we should know to support them",
@@ -120,14 +132,36 @@ const FIELD_UI_HINTS: Record<string, FieldUiHints> = {
   },
   length_of_staying: {
     selectPlaceholder: "Select expected duration",
+    hint: LENGTH_OF_STAYING_HINT,
     layout: "half",
+  },
+  PTO: {
+    hint: PTO_COPY.description,
   },
 };
 
-export function getFieldUiHints(field: StepFieldDefinition): FieldUiHints {
+export function getFieldUiHints(
+  field: StepFieldDefinition,
+  context?: { studentName?: string },
+): FieldUiHints {
   const defaults = FIELD_UI_HINTS[field.key] ?? {};
+  const studentName = context?.studentName?.trim();
+
+  let label = defaults.label;
+  if (studentName) {
+    if (field.key === "email") {
+      label = preferredStudentEmailLabel(studentName);
+    } else if (field.key === "computer_system") {
+      label = computerSystemLabel(studentName);
+    } else if (field.key === "starting_date") {
+      label = startingDateLabel(studentName);
+    } else if (field.key === "length_of_staying") {
+      label = lengthOfStayingLabel(studentName);
+    }
+  }
 
   return {
+    label,
     placeholder: field.placeholder ?? defaults.placeholder,
     hint: defaults.hint,
     autoComplete: defaults.autoComplete,

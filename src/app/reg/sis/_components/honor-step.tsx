@@ -5,9 +5,11 @@ import { toast } from "sonner";
 
 import { FormTextInput } from "@/app/reg/_components/form-fields";
 import { SectionSavedActions } from "@/app/reg/_components/section-saved-actions";
+import { DocumentPreviewDialog } from "@/app/reg/_components/document-preview-dialog";
 import { ExternalLink } from "@/app/reg/_components/external-link";
 import { Button } from "@/components/ui/button";
 import {
+  HONOR_DOCUMENT_PREVIEW_URL,
   HONOR_DOCUMENT_TEMPLATE_ID,
   buildDriveViewUrl,
 } from "@/config/document-templates";
@@ -21,7 +23,6 @@ import {
   HONOR_SIGN_BUTTON_LABEL,
   HONOR_STUDENT_NAME_LABEL,
   HONOR_VIEW_SIGNED_LABEL,
-  typeformReminder,
 } from "@/modules/honor/honor-code-copy";
 import { getNextStepId, getWizardStepLabel } from "@/modules/wizard/steps";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
@@ -106,7 +107,6 @@ export function HonorStep({
   if (signed) {
     return (
       <div className="space-y-4">
-        <p className="text-body text-muted-foreground">{typeformReminder(studentName)}</p>
         <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
             <h2 className="text-section font-semibold text-[#32325d]">{HONOR_CODE_TITLE}</h2>
@@ -145,7 +145,6 @@ export function HonorStep({
 
   return (
     <div className="space-y-4">
-      <p className="text-body text-muted-foreground">{typeformReminder(studentName)}</p>
       <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
           <h2 className="text-section font-semibold text-[#32325d]">{HONOR_CODE_TITLE}</h2>
@@ -156,9 +155,12 @@ export function HonorStep({
 
           <p className="text-body text-foreground">
             {HONOR_CODE_VIEW_PREFIX}{" "}
-            <ExternalLink href={honorDocumentUrl} className="text-primary underline">
-              {HONOR_CODE_VIEW_LINK_LABEL}
-            </ExternalLink>
+            <DocumentPreviewDialog
+              title={HONOR_CODE_TITLE}
+              previewUrl={HONOR_DOCUMENT_PREVIEW_URL}
+              viewUrl={honorDocumentUrl}
+              triggerLabel={HONOR_CODE_VIEW_LINK_LABEL}
+            />
           </p>
 
           <p className="text-body text-foreground">{HONOR_CODE_SIGN_INSTRUCTION}</p>

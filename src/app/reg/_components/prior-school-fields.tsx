@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import {
+  FieldRequirementBadge,
   FormFileUpload,
   FormOptionSelect,
   FormTextarea,
@@ -128,7 +129,7 @@ export function PriorSchoolFields({
     <div className="space-y-6">
       <fieldset className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4">
         <legend className="px-1 text-label font-medium text-foreground">
-          Learning ENVIRONMENT for the past 12 months
+          Learning environment (past 12 months)
         </legend>
         <FormOptionSelect
           id="learning_environment_past_12_months"
@@ -152,7 +153,7 @@ export function PriorSchoolFields({
 
       <fieldset className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4">
         <legend className="px-1 text-label font-medium text-foreground">
-          Learning EXPERIENCE for the past 12 months
+          Learning experience (past 12 months)
         </legend>
         <FormTextarea
           id="learning_experiece_past_12_months"
@@ -161,6 +162,8 @@ export function PriorSchoolFields({
           value={String(values.learning_experiece_past_12_months ?? "")}
           disabled={readOnly}
           required
+          rows={7}
+          className="min-h-44 field-sizing-fixed"
           error={fieldErrors.learning_experiece_past_12_months}
           onChange={(value) => onChange("learning_experiece_past_12_months", value)}
         />
@@ -233,51 +236,61 @@ export function PriorSchoolFields({
         onChange={(value) => onChange("school_like_to_see", value)}
       />
 
-      <div className="space-y-3">
-        <p className="text-label font-medium text-foreground">{iepQuestionLabel(studentName)}</p>
-        <div className="flex flex-wrap gap-3">
-          <ChoiceButton
-            selected={hasIep === true}
-            disabled={readOnly}
-            onClick={() => setHasIep(true)}
-          >
-            Yes
-          </ChoiceButton>
-          <ChoiceButton
-            selected={hasIep === false}
-            disabled={readOnly}
-            onClick={() => setHasIep(false)}
-          >
-            No
-          </ChoiceButton>
+      <fieldset className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4">
+        <legend className="px-1 text-label font-medium text-foreground">IEP or 504 plan</legend>
+        <div className="space-y-3">
+          <p className="text-label font-medium text-foreground">{iepQuestionLabel(studentName)}</p>
+          <div className="flex flex-wrap gap-3">
+            <ChoiceButton
+              selected={hasIep === true}
+              disabled={readOnly}
+              onClick={() => setHasIep(true)}
+            >
+              Yes
+            </ChoiceButton>
+            <ChoiceButton
+              selected={hasIep === false}
+              disabled={readOnly}
+              onClick={() => setHasIep(false)}
+            >
+              No
+            </ChoiceButton>
+          </div>
         </div>
-      </div>
 
-      {hasIep === true ? (
+        {hasIep === true ? (
+          <FormFileUpload
+            id="upload_copy_EIP_504_plan"
+            label={IEP_UPLOAD_LABEL}
+            error={fieldErrors.upload_copy_EIP_504_plan}
+            fileUrl={iepPlanUrl}
+            pendingFileName={pendingIepPlanName}
+            uploadedFileName={uploadedIepPlanName}
+            uploading={uploadingIepPlan}
+            readOnly={readOnly || !onUploadIepPlan}
+            onFileSelect={(file) => onUploadIepPlan?.(file)}
+          />
+        ) : null}
+      </fieldset>
+
+      <fieldset className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4">
+        <legend className="flex items-center gap-2 px-1 text-label font-medium text-foreground">
+          Current learning sample
+          <FieldRequirementBadge kind="optional" />
+        </legend>
         <FormFileUpload
-          id="upload_copy_EIP_504_plan"
-          label={IEP_UPLOAD_LABEL}
-          error={fieldErrors.upload_copy_EIP_504_plan}
-          fileUrl={iepPlanUrl}
-          pendingFileName={pendingIepPlanName}
-          uploadedFileName={uploadedIepPlanName}
-          uploading={uploadingIepPlan}
-          readOnly={readOnly || !onUploadIepPlan}
-          onFileSelect={(file) => onUploadIepPlan?.(file)}
+          id="upload_student_curreny_learning"
+          label={learningSampleLabel(studentName)}
+          description={learningSampleDescription(studentName)}
+          fileUrl={learningSampleUrl}
+          pendingFileName={pendingLearningSampleName}
+          uploadedFileName={uploadedLearningSampleName}
+          uploading={uploadingLearningSample}
+          readOnly={readOnly || !onUploadLearningSample}
+          requirement="optional"
+          onFileSelect={(file) => onUploadLearningSample?.(file)}
         />
-      ) : null}
-
-      <FormFileUpload
-        id="upload_student_curreny_learning"
-        label={learningSampleLabel(studentName)}
-        description={learningSampleDescription(studentName)}
-        fileUrl={learningSampleUrl}
-        pendingFileName={pendingLearningSampleName}
-        uploadedFileName={uploadedLearningSampleName}
-        uploading={uploadingLearningSample}
-        readOnly={readOnly || !onUploadLearningSample}
-        onFileSelect={(file) => onUploadLearningSample?.(file)}
-      />
+      </fieldset>
     </div>
   );
 }

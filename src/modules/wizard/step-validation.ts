@@ -6,7 +6,7 @@ import {
   isValidPhone,
 } from "@/lib/field-validation";
 import { CONFIDENCE_FIELD_DEFINITIONS } from "@/modules/wizard/confidence-scale";
-import { readGenderSelection, readEthnicitySelection } from "@/modules/wizard/field-options";
+import { readGenderSelection, GENDER_OTHER_LABEL, readEthnicitySelection } from "@/modules/wizard/field-options";
 import {
   guardianContactHasValues,
   guardianFlatKey,
@@ -102,7 +102,7 @@ function validateStep1(values: Record<string, unknown>): StepFieldErrors {
   if (!hasText(readGenderSelection(values))) {
     setError(errors, "gender_selection", requiredFieldError("Gender"));
   }
-  if (readGenderSelection(values) === "Other" && !hasText(values.other_gender)) {
+  if (readGenderSelection(values) === GENDER_OTHER_LABEL && !hasText(values.other_gender)) {
     setError(errors, "other_gender", requiredFieldError("Other gender"));
   }
   if (!hasText(readEthnicitySelection(values))) {
@@ -303,7 +303,7 @@ function validateStep11(values: Record<string, unknown>): StepFieldErrors {
     setError(errors, "starting_date", requiredFieldError("Starting date"));
   }
   if (!hasText(values.length_of_staying)) {
-    setError(errors, "length_of_staying", requiredFieldError("Length of stay"));
+    setError(errors, "length_of_staying", requiredFieldError("Planned length of stay"));
   }
 
   return errors;

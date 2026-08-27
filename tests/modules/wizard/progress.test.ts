@@ -5,7 +5,7 @@ import {
   getMainProgressStatuses,
   isStepComplete,
 } from "@/modules/wizard/progress";
-import { INITIAL_ACTIVE_STEP, getNextStepId, getWizardStepLabel } from "@/modules/wizard/steps";
+import { INITIAL_ACTIVE_STEP, getNextStepId, getPreviousStepId, getWizardStepLabel } from "@/modules/wizard/steps";
 
 describe("wizard progress", () => {
   it("marks disabled flags and honor/TOS completion", () => {
@@ -30,11 +30,11 @@ describe("wizard progress", () => {
     expect(statuses[1].state).toBe("upcoming");
   });
 
-  it("does not mark future main steps complete when honor or TOS are already signed", () => {
+  it("marks saved main parts complete even when viewing an earlier section", () => {
     const statuses = getMainProgressStatuses("5", { "13": true, "14": true });
 
-    expect(statuses.find((step) => step.number === 10)?.state).toBe("upcoming");
-    expect(statuses.find((step) => step.number === 11)?.state).toBe("upcoming");
+    expect(statuses.find((step) => step.number === 10)?.state).toBe("complete");
+    expect(statuses.find((step) => step.number === 11)?.state).toBe("complete");
     expect(statuses.find((step) => step.number === 3)?.state).toBe("current");
   });
 
@@ -49,5 +49,7 @@ describe("wizard progress", () => {
     expect(getNextStepId("8")).toBe("9");
     expect(getWizardStepLabel("2")).toBe("Parent contact");
     expect(getNextStepId("15")).toBeNull();
+    expect(getPreviousStepId("2")).toBe("1");
+    expect(getPreviousStepId("1")).toBeNull();
   });
 });

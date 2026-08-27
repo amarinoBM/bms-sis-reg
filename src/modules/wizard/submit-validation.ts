@@ -210,6 +210,12 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
     isMissing: (student) => !hasText(student.home_state),
   },
   {
+    key: "student_email",
+    label: "Preferred student email",
+    stepId: "11",
+    isMissing: (student) => !hasText(student.email),
+  },
+  {
     key: "honorCodeSigned",
     label: "Sign the Honor Code",
     stepId: "13",

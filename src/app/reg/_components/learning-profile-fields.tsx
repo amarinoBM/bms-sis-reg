@@ -202,6 +202,8 @@ export function LearningProfileFields({
             label={additionalBehavioralInfoLabel(studentName)}
             value={String(values.additional_info_behavioral_challenges ?? "")}
             disabled={readOnly}
+            rows={7}
+            className="min-h-44 field-sizing-fixed"
             placeholder="Share context, accommodations, or strategies that work at home."
             onChange={(value) => onChange("additional_info_behavioral_challenges", value)}
           />

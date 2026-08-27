@@ -44,9 +44,9 @@ export function ConfidenceScaleFields({
           value={readConfidenceValue(values[field.key])}
           options={CONFIDENCE_OPTIONS}
           disabled={readOnly}
-          placeholder="Select confidence level"
-          required
-          error={fieldErrors[field.key]}
+        placeholder="Select confidence level"
+        requirement="required"
+        error={fieldErrors[field.key]}
           onChange={(value) => onChange(field.key, value)}
         />
       ))}

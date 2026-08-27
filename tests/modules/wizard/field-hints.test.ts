@@ -30,4 +30,15 @@ describe("field-hints", () => {
   it("defaults layout to full", () => {
     expect(getFieldUiHints(field("parent_address")).layout).toBe("full");
   });
+
+  it("returns student-specific labels for technology step fields", () => {
+    const hints = getFieldUiHints(field("computer_system", "select"), {
+      studentName: "Josiah",
+    });
+
+    expect(hints.label).toBe("What computer system will Josiah be using?");
+    expect(getFieldUiHints(field("length_of_staying", "select"), {
+      studentName: "Josiah",
+    }).hint).toContain("late June");
+  });
 });

@@ -40,21 +40,50 @@ describe("student row selection", () => {
 });
 
 describe("SISCompletedForm result parsing", () => {
-  it("treats null and explicit failure as unsuccessful", () => {
-    expect(isSisCompletedFormSuccess(null)).toBe(false);
-    expect(isSisCompletedFormSuccess({ success: false })).toBe(false);
-    expect(isSisCompletedFormSuccess({ error: "duplicate" })).toBe(false);
+  it("treats null as success for legacy Cloud Code", () => {
+    expect(isSisCompletedFormSuccess(null)).toBe(true);
+    expect(isSisCompletedFormSuccess(undefined)).toBe(true);
+  });
+
+  it("treats downstream Cloud Code failures as success for the parent", () => {
+    expect(isSisCompletedFormSuccess({ success: false, stage: "slack_notification" })).toBe(
+      true,
+    );
+    expect(
+      isSisCompletedFormSuccess({
+        success: false,
+        stage: "google_or_close_credentials_note",
+      }),
+    ).toBe(true);
+    expect(isSisCompletedFormSuccess({ error: "duplicate" })).toBe(true);
+  });
+
+  it("hard-fails only identity guard results", () => {
+    expect(
+      isSisCompletedFormSuccess({
+        success: false,
+        stage: "student_identity_guard",
+        error: "Student identity evidence is missing or ambiguous",
+      }),
+    ).toBe(false);
   });
 
   it("accepts truthy success payloads", () => {
     expect(isSisCompletedFormSuccess({ success: true })).toBe(true);
     expect(isSisCompletedFormSuccess({ ok: true })).toBe(true);
+    expect(isSisCompletedFormSuccess({ success: true, stage: "complete" })).toBe(true);
+    expect(isSisCompletedFormSuccess({ success: true, stage: "already_complete" })).toBe(
+      true,
+    );
   });
 
-  it("formats failure messages for parents", () => {
-    expect(formatSisCompletedFormFailure({ message: "contact_missing" })).toBe(
-      "contact_missing",
-    );
-    expect(formatSisCompletedFormFailure(null)).toContain("help@brilliantmicroschool.org");
+  it("formats identity failures with a help contact", () => {
+    expect(
+      formatSisCompletedFormFailure({
+        success: false,
+        stage: "student_identity_guard",
+        error: "Contact identity evidence is malformed or conflicting",
+      }),
+    ).toContain("help@brilliantmicroschool.org");
   });
 });

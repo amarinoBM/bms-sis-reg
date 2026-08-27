@@ -5,15 +5,35 @@ import { toast } from "sonner";
 
 import { FormTextInput } from "@/app/reg/_components/form-fields";
 import { SectionSavedActions } from "@/app/reg/_components/section-saved-actions";
-import { getWizardStepLabel } from "@/modules/wizard/steps";
-import { DocumentReviewPanel } from "@/app/reg/_components/document-review-panel";
+import { DocumentPreviewDialog } from "@/app/reg/_components/document-preview-dialog";
 import { ExternalLink } from "@/app/reg/_components/external-link";
 import { Button } from "@/components/ui/button";
 import {
   TOS_DOCUMENT_PREVIEW_URL,
   TOS_DOCUMENT_TEMPLATE_ID,
+  buildDriveViewUrl,
 } from "@/config/document-templates";
+import {
+  TOS_COPPA_BODY,
+  TOS_HIGHLIGHT_BULLETS,
+  TOS_HIGHLIGHTS_HEADING,
+  TOS_GUIDED_STUDY_BULLET,
+  TOS_INTRO,
+  TOS_PARENT_NAME_LABEL,
+  TOS_PRIVACY_LINK_LABEL,
+  TOS_PRIVACY_PREFIX,
+  TOS_PRIVACY_URL,
+  TOS_READ_FULL_LABEL,
+  TOS_SIGN_BUTTON_LABEL,
+  TOS_SIGN_INSTRUCTION,
+  TOS_SUMMER_BULLET,
+  TOS_SUMMER_HEADING,
+  TOS_TITLE,
+  TOS_VIEW_SIGNED_LABEL,
+} from "@/modules/tos/tos-copy";
+import { getWizardStepLabel } from "@/modules/wizard/steps";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { cn } from "@/lib/utils";
 import { postApi } from "@/lib/client-api";
 
 import type { WizardStepId } from "@/modules/wizard/steps";
@@ -38,17 +58,13 @@ export function TosStep({
   onGoToStep,
 }: TosStepProps) {
   const [parentSignature, setParentSignature] = useState("");
-  const [hasReviewedDocument, setHasReviewedDocument] = useState(false);
   const [signing, setSigning] = useState(false);
+  const tosDocumentUrl = buildDriveViewUrl(TOS_DOCUMENT_TEMPLATE_ID);
+  const nextStepId: WizardStepId = "15";
 
   async function handleSign() {
-    if (!hasReviewedDocument) {
-      toast.error("Please read the terms and confirm before signing.");
-      return;
-    }
-
     if (!parentSignature.trim()) {
-      toast.error("Enter your signature.");
+      toast.error("Enter your name before signing.");
       return;
     }
 
@@ -71,64 +87,114 @@ export function TosStep({
 
   if (signed) {
     return (
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="text-section font-semibold text-foreground">Terms of service</h2>
-        <p className="mt-6 text-body text-foreground">
-          {tosURL ? (
-            <>
-              Signed.{" "}
-              <ExternalLink href={tosURL} className="text-primary underline">
-                View signed terms
-              </ExternalLink>
-            </>
-          ) : (
-            <>
-              Signed. If you need a copy, email{" "}
-              <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
-                help@brilliantmicroschool.org
-              </a>
-              .
-            </>
-          )}
-        </p>
-        <SectionSavedActions
-          message="Terms of service signed."
-          onNext={() => onGoToStep("12")}
-          nextLabel={`Next: ${getWizardStepLabel("12")}`}
-        />
+      <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
+          <h2 className="text-section font-semibold text-[#32325d]">{TOS_TITLE}</h2>
+        </div>
+        <div className="space-y-6 p-6">
+          <p className="text-body text-foreground">
+            {tosURL ? (
+              <>
+                Signed.{" "}
+                <ExternalLink href={tosURL} className="text-primary underline">
+                  {TOS_VIEW_SIGNED_LABEL}
+                </ExternalLink>
+              </>
+            ) : (
+              <>
+                Signed. If you need a copy, email{" "}
+                <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
+                  help@brilliantmicroschool.org
+                </a>
+                .
+              </>
+            )}
+          </p>
+          <SectionSavedActions
+            message="Terms of service signed."
+            onNext={() => onGoToStep(nextStepId)}
+            nextLabel={`Next: ${getWizardStepLabel(nextStepId)}`}
+          />
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="rounded-lg border border-border bg-card p-6">
-      <h2 className="text-section font-semibold text-foreground">Terms of service</h2>
-      <p className="mt-2 text-body text-muted-foreground">
-        Read the terms of service for {studentName}, then sign as the enrolling parent or guardian.
-      </p>
+    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
+        <h2 className="text-section font-semibold text-[#32325d]">{TOS_TITLE}</h2>
+      </div>
 
-      <DocumentReviewPanel
-        title="terms of service"
-        templateFileId={TOS_DOCUMENT_TEMPLATE_ID}
-        previewUrl={TOS_DOCUMENT_PREVIEW_URL}
-        onReviewedChange={setHasReviewedDocument}
-      />
+      <div className="space-y-6 p-6">
+        <p className="text-body text-foreground">{TOS_INTRO}</p>
 
-      <div className="mt-6 space-y-4">
+        <div className="space-y-3">
+          <p className="text-body font-medium text-foreground">{TOS_HIGHLIGHTS_HEADING}</p>
+          <ul className="list-disc space-y-3 pl-5 text-body leading-relaxed text-foreground">
+            {TOS_HIGHLIGHT_BULLETS.map((bullet) => (
+              <li key={bullet}>{bullet}</li>
+            ))}
+            <li>{TOS_GUIDED_STUDY_BULLET}</li>
+          </ul>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-body font-medium text-foreground">{TOS_SUMMER_HEADING}</p>
+          <ul className="list-disc space-y-2 pl-5 text-body leading-relaxed text-foreground">
+            <li>{TOS_SUMMER_BULLET}</li>
+          </ul>
+        </div>
+
+        <p className="text-body text-foreground">
+          {TOS_PRIVACY_PREFIX}{" "}
+          <ExternalLink href={TOS_PRIVACY_URL} className="font-semibold text-primary underline">
+            {TOS_PRIVACY_LINK_LABEL}
+          </ExternalLink>
+          .
+        </p>
+
+        <p className="text-body leading-relaxed text-foreground">{TOS_COPPA_BODY}</p>
+
+        <DocumentPreviewDialog
+          title={TOS_TITLE}
+          previewUrl={TOS_DOCUMENT_PREVIEW_URL}
+          viewUrl={tosDocumentUrl}
+          triggerLabel={TOS_READ_FULL_LABEL}
+          triggerVariant="button"
+          description="Scroll through the document, then close this window to return to the form."
+        />
+
+        <p className="text-body text-foreground">{TOS_SIGN_INSTRUCTION}</p>
+
         <FormTextInput
           id="tos-parent-signature"
-          label="Parent signature (type your full name)"
+          label={TOS_PARENT_NAME_LABEL}
           value={parentSignature}
           onChange={setParentSignature}
         />
-        <Button
-          className={REG_TOUCH_CLASS}
-          onClick={handleSign}
-          disabled={signing || !hasReviewedDocument || !parentSignature.trim()}
-          aria-busy={signing}
-        >
-          {signing ? "Signing…" : "Sign terms of service"}
-        </Button>
+
+        <div className="flex justify-center">
+          <Button
+            className={cn(REG_TOUCH_CLASS, "bg-[#32325d] hover:bg-[#32325d]/90")}
+            onClick={handleSign}
+            disabled={signing || !parentSignature.trim()}
+            aria-busy={signing}
+          >
+            {signing ? "Signing…" : TOS_SIGN_BUTTON_LABEL}
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-3 border-t border-border pt-6">
+          <Button
+            type="button"
+            variant="outline"
+            className={REG_TOUCH_CLASS}
+            onClick={() => onGoToStep("13")}
+          >
+            Back
+          </Button>
+        </div>
       </div>
     </section>
   );

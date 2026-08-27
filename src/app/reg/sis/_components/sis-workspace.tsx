@@ -12,6 +12,16 @@ import { StudentPicker } from "@/app/reg/sis/_components/student-picker";
 import { SubmitStep } from "@/app/reg/sis/_components/submit-step";
 import { TosStep } from "@/app/reg/sis/_components/tos-step";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { isStepDisabled } from "@/modules/wizard/progress";
 import {
   flattenFormValues,
@@ -43,6 +53,8 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [payload, setPayload] = useState<StudentLoadResult | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [switchDialogOpen, setSwitchDialogOpen] = useState(false);
+  const [pendingStudentName, setPendingStudentName] = useState<string | null>(null);
   const loadRequestIdRef = useRef(0);
 
   const loadStudent = useCallback(
@@ -112,17 +124,23 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
     void loadStudent(initialStudentName);
   }, [initialStudentName, loadStudent]);
 
-  const handleStudentChange = (nextStudentName: string) => {
+  const handleStudentChangeRequest = (nextStudentName: string) => {
     if (nextStudentName === studentName) {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Switch to ${nextStudentName}? You will return to the first section for that student.`,
-    );
-    if (!confirmed) {
+    setPendingStudentName(nextStudentName);
+    setSwitchDialogOpen(true);
+  };
+
+  function confirmStudentSwitch() {
+    const nextStudentName = pendingStudentName;
+    if (!nextStudentName) {
       return;
     }
+
+    setSwitchDialogOpen(false);
+    setPendingStudentName(null);
 
     const params = new URLSearchParams({
       lead_id: leadId,
@@ -132,7 +150,14 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
     setStudentName(nextStudentName);
     setActiveStepId(INITIAL_ACTIVE_STEP);
     void loadStudent(nextStudentName);
-  };
+  }
+
+  function handleSwitchDialogOpenChange(open: boolean) {
+    setSwitchDialogOpen(open);
+    if (!open) {
+      setPendingStudentName(null);
+    }
+  }
 
   const progressSteps = useMemo(
     () =>
@@ -147,16 +172,26 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
 
   return (
     <div className="space-y-6 md:space-y-8">
-      <div>
-        <h1 className="text-title font-semibold text-foreground">Student Information</h1>
-        <p className="mt-2 text-body text-muted-foreground">
-          Complete each section to finish registration for your student.
-        </p>
-        {isRefreshing && (
-          <p className="mt-2 text-label text-muted-foreground" role="status" aria-live="polite">
-            Updating your saved information…
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-title font-semibold text-foreground">Student Information</h1>
+          <p className="mt-2 text-body text-muted-foreground">
+            Complete each section to finish registration for your student.
           </p>
-        )}
+          {isRefreshing && (
+            <p className="mt-2 text-label text-muted-foreground" role="status" aria-live="polite">
+              Updating your saved information…
+            </p>
+          )}
+        </div>
+        {loadState === "ready" && payload ? (
+          <StudentPicker
+            students={payload.enrolledStudents}
+            selectedStudentName={studentName}
+            selectedObjectId={payload.studentInfo.objectId}
+            onStudentChange={handleStudentChangeRequest}
+          />
+        ) : null}
       </div>
 
       {loadState === "loading" && <LoadingPanel />}
@@ -180,12 +215,24 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
 
       {loadState === "ready" && payload && (
         <>
-          <StudentPicker
-            students={payload.enrolledStudents}
-            selectedStudentName={studentName}
-            selectedObjectId={payload.studentInfo.objectId}
-            onStudentChange={handleStudentChange}
-          />
+          <AlertDialog open={switchDialogOpen} onOpenChange={handleSwitchDialogOpenChange}>
+            <AlertDialogContent size="default" className="max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Switch to {pendingStudentName ?? "this student"}?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will return to the first section for that student.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmStudentSwitch}>
+                  Switch student
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <StepNav
             activeStepId={activeStepId}

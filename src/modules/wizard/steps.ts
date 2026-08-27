@@ -36,7 +36,7 @@ export const WIZARD_STEPS: WizardStepDefinition[] = [
   { id: "7", label: "Confidence", completionKey: "5", saveHandler: "save5" },
   { id: "8", label: "Prior school", completionKey: "6", saveHandler: "save6" },
   { id: "9", label: "Transcripts", completionKey: "6.1", saveHandler: "save6.1" },
-  { id: "10", label: "State & vaccines", completionKey: "7", saveHandler: "save7" },
+  { id: "10", label: "State", completionKey: "7", saveHandler: "save7" },
   { id: "11", label: "Technology", completionKey: "8", saveHandler: "save8" },
   { id: "12", label: "IEP / 504", completionKey: "9" },
   { id: "13", label: "Honor code", completionKey: "10" },
@@ -51,7 +51,7 @@ export const MAIN_PROGRESS_STEPS = [
   { number: 4, label: "Grades", stepIds: ["6"] as WizardStepId[] },
   { number: 5, label: "Confidence", stepIds: ["7"] as WizardStepId[] },
   { number: 6, label: "School history", stepIds: ["8", "9"] as WizardStepId[] },
-  { number: 7, label: "State rules", stepIds: ["10"] as WizardStepId[] },
+  { number: 7, label: "State", stepIds: ["10"] as WizardStepId[] },
   { number: 8, label: "Technology", stepIds: ["11"] as WizardStepId[] },
   { number: 9, label: "IEP / 504", stepIds: ["12"] as WizardStepId[] },
   { number: 10, label: "Honor code", stepIds: ["13"] as WizardStepId[] },
@@ -88,4 +88,13 @@ export function getNextStepId(stepId: WizardStepId): WizardStepId | null {
   }
 
   return WIZARD_STEPS[index + 1].id;
+}
+
+export function getPreviousStepId(stepId: WizardStepId): WizardStepId | null {
+  const index = WIZARD_STEPS.findIndex((step) => step.id === stepId);
+  if (index <= 0) {
+    return null;
+  }
+
+  return WIZARD_STEPS[index - 1].id;
 }

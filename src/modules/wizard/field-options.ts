@@ -1,10 +1,15 @@
 /** Display labels match the legacy Clever / UI Builder SIS controls. */
 
+import { hasText } from "@/lib/field-validation";
+
+export const GENDER_OTHER_LABEL = "Other";
+
 export const GENDER_OPTIONS = [
   "Female",
   "Male",
   "Transgender",
   "Gender Variant/Non-Conforming",
+  GENDER_OTHER_LABEL,
   "Prefer not to say",
 ] as const;
 
@@ -178,16 +183,34 @@ const ETHNICITY_KEY_TO_LABEL: Record<string, string> = {
 };
 
 export function readGenderSelection(student: Record<string, unknown>): string {
+  const virtualSelection = student.gender_selection;
+  if (typeof virtualSelection === "string" && virtualSelection.trim()) {
+    return virtualSelection.trim();
+  }
+
   for (const key of GENDER_BOOLEAN_KEYS) {
     if (student[key] === true) {
       return GENDER_KEY_TO_LABEL[key] ?? "";
     }
   }
 
+  if (hasText(student.other_gender)) {
+    return GENDER_OTHER_LABEL;
+  }
+
   return "";
 }
 
+export function isOtherGenderSelected(student: Record<string, unknown>): boolean {
+  return readGenderSelection(student) === GENDER_OTHER_LABEL;
+}
+
 export function readEthnicitySelection(student: Record<string, unknown>): string {
+  const virtualSelection = student.ethnicity_selection;
+  if (typeof virtualSelection === "string" && virtualSelection.trim()) {
+    return virtualSelection.trim();
+  }
+
   for (const key of ETHNICITY_BOOLEAN_KEYS) {
     if (student[key] === true) {
       return ETHNICITY_KEY_TO_LABEL[key] ?? "";
@@ -203,6 +226,10 @@ export function applyGenderSelection(
 ): void {
   for (const key of GENDER_BOOLEAN_KEYS) {
     fields[key] = false;
+  }
+
+  if (selection === GENDER_OTHER_LABEL) {
+    return;
   }
 
   const key = GENDER_LABEL_TO_KEY[selection];

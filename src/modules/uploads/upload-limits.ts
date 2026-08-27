@@ -2,6 +2,11 @@ import { AppError } from "@/core/app-error";
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+/** Shared UI copy for registration file uploads. */
+export const UPLOAD_FORMAT_HINT = "PDF, JPG, PNG, or WEBP up to 10 MB.";
+
+export const UPLOAD_FIELD_DESCRIPTION = `${UPLOAD_FORMAT_HINT} The file saves when you upload it.`;
+
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "image/jpeg",

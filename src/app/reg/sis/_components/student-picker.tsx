@@ -1,12 +1,16 @@
-import { Label } from "@/components/ui/label";
+"use client";
+
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { EnrolledStudentSummary } from "@/modules/students/types";
 
@@ -23,47 +27,72 @@ export function StudentPicker({
   selectedObjectId,
   onStudentChange,
 }: StudentPickerProps) {
+  const [open, setOpen] = useState(false);
+
   if (students.length <= 1) {
     return (
-      <p className="min-w-0 text-body text-muted-foreground break-words">
-        Student: <span className="font-medium text-foreground">{selectedStudentName}</span>
+      <p className="text-label text-muted-foreground">
+        Registering{" "}
+        <span className="font-medium text-foreground">{selectedStudentName}</span>
       </p>
     );
   }
 
-  const selectedValue =
-    selectedObjectId && students.some((student) => student.objectId === selectedObjectId)
-      ? selectedObjectId
-      : (students.find((student) => student.studentName === selectedStudentName)?.objectId ??
-        "");
-
   return (
-    <div className="space-y-2">
-      <Label htmlFor="student-picker">Select student</Label>
-      <Select
-        value={selectedValue}
-        items={students.map((student) => ({
-          value: student.objectId,
-          label: student.studentName,
-        }))}
-        onValueChange={(value) => {
-          const nextStudent = students.find((student) => student.objectId === value);
-          if (nextStudent) {
-            onStudentChange(nextStudent.studentName);
+    <Popover open={open} onOpenChange={setOpen}>
+      <p className="text-label text-muted-foreground sm:text-right">
+        Registering{" "}
+        <span className="font-medium text-foreground">{selectedStudentName}</span>
+        <span className="mx-1.5 text-muted-foreground/60">·</span>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto min-h-0 px-0 py-0 text-label font-normal text-muted-foreground underline-offset-2 hover:text-foreground"
+            />
           }
-        }}
-      >
-        <SelectTrigger id="student-picker" className={cn(REG_TOUCH_CLASS, "w-full max-w-md min-w-0")}>
-          <SelectValue placeholder="Choose a student" />
-        </SelectTrigger>
-        <SelectContent align="start" alignItemWithTrigger={false} sideOffset={8} className="min-w-[var(--anchor-width)] w-max max-w-[min(100vw-3rem,var(--available-width))]">
-          {students.map((student) => (
-            <SelectItem key={student.objectId} value={student.objectId}>
-              {student.studentName}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+        >
+          Switch student
+        </PopoverTrigger>
+      </p>
+      <PopoverContent align="end" className="w-72 p-3">
+        <PopoverHeader className="px-1">
+          <PopoverTitle className="text-sm">Switch student</PopoverTitle>
+          <PopoverDescription>
+            You will return to the first section for the other student.
+          </PopoverDescription>
+        </PopoverHeader>
+        <ul className="mt-2 space-y-1">
+          {students.map((student) => {
+            const isSelected =
+              student.objectId === selectedObjectId ||
+              student.studentName === selectedStudentName;
+
+            return (
+              <li key={student.objectId}>
+                <button
+                  type="button"
+                  className={cn(
+                    "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
+                    isSelected
+                      ? "bg-muted font-medium text-foreground"
+                      : "text-foreground hover:bg-muted/70",
+                  )}
+                  onClick={() => {
+                    setOpen(false);
+                    if (!isSelected) {
+                      onStudentChange(student.studentName);
+                    }
+                  }}
+                >
+                  {student.studentName}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }

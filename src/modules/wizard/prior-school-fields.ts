@@ -42,12 +42,16 @@ export function learningExperienceLabel(studentName: string): string {
   return `Can you briefly describe ${studentName}’s past learning experience during the last 12 months?`;
 }
 
+export function priorSchoolStepDescription(studentName: string): string {
+  return `Tell us about ${studentName}'s recent learning — where they've been, what worked, and what you'd change.`;
+}
+
 export function learningExperienceHint(studentName: string): string {
-  return `What type of learning philosophy or curriculum was used, what ${studentName} liked/disliked, where ${studentName} thrived/struggled..`;
+  return `For example: curriculum style, what ${studentName} enjoyed or found difficult, and where they thrived or struggled.`;
 }
 
 export function schoolLikeToSeeLabel(studentName: string): string {
-  return `If applicable, what would you have liked to see more/less of in ${studentName}'s previous educational establishment?`;
+  return `What would you have liked to see more or less of at ${studentName}'s previous school?`;
 }
 
 export function iepQuestionLabel(studentName: string): string {
@@ -55,11 +59,11 @@ export function iepQuestionLabel(studentName: string): string {
 }
 
 export function learningSampleLabel(studentName: string): string {
-  return `exemplifies ${studentName}'s current learning?`;
+  return `Upload a sample of ${studentName}'s current learning`;
 }
 
 export function learningSampleDescription(studentName: string): string {
-  return `Feel free to upload a copy so that we can better understand how to serve ${studentName}`;
+  return `A recent assignment, project, or writing sample helps us see where ${studentName} is today.`;
 }
 
 export const IEP_UPLOAD_LABEL = "Upload a copy of the IEP Plan";

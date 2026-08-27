@@ -6,7 +6,6 @@ import {
   HONOR_PARENT_NAME_LABEL,
   HONOR_SIGN_BUTTON_LABEL,
   HONOR_STUDENT_NAME_LABEL,
-  typeformReminder,
 } from "@/modules/honor/honor-code-copy";
 
 describe("honor code copy", () => {
@@ -16,8 +15,5 @@ describe("honor code copy", () => {
     expect(HONOR_PARENT_NAME_LABEL).toBe("Parent's Full Name");
     expect(HONOR_STUDENT_NAME_LABEL).toBe("Student's Full Name");
     expect(HONOR_SIGN_BUTTON_LABEL).toBe("Sign");
-    expect(typeformReminder("Madilyn")).toBe(
-      "Please complete the typeform above to complete Madilyn's information.",
-    );
   });
 });

@@ -30,6 +30,11 @@ export async function copyDriveFile(
   });
 }
 
+/** Clever sends `JSON.stringify(copyFile.id)` — a JSON string, not `{ sourceFileID }`. */
+export function buildDriveAllowAccessBody(sourceFileId: string): string {
+  return JSON.stringify(sourceFileId);
+}
+
 export async function allowDriveFileAccess(
   sourceFileId: string,
   fetchImpl: typeof fetch = fetch,
@@ -37,7 +42,7 @@ export async function allowDriveFileAccess(
   return invokeCloudCode({
     service: "uiBuilder",
     method: "GDriveAllowFileAccessByFileIDFrontEnd",
-    body: { sourceFileID: sourceFileId },
+    body: buildDriveAllowAccessBody(sourceFileId),
     fetchImpl,
   });
 }

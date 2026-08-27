@@ -57,3 +57,27 @@ function formatLocalDateInput(date: Date): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+/** Parse `YYYY-MM-DD` to a local calendar `Date` (undefined when invalid). */
+export function parseDateInputIso(value: string): Date | undefined {
+  const ms = fromDateInputValue(value);
+  if (ms === null) {
+    return undefined;
+  }
+
+  return new Date(ms);
+}
+
+/** Format `YYYY-MM-DD` for display in registration forms. */
+export function formatDateDisplay(value: string): string {
+  const date = parseDateInputIso(value);
+  if (!date) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}

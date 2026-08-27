@@ -4,13 +4,15 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import {
   FormCheckbox,
+  FormSelect,
   FormTextarea,
   FormTextInput,
 } from "@/app/reg/_components/form-fields";
+import { ExternalLink } from "@/app/reg/_components/external-link";
 import { RegSpinner } from "@/app/reg/_components/reg-spinner";
 import { Button } from "@/components/ui/button";
 import { fetchApi } from "@/lib/client-api";
-import { REG_FIELD_FOCUS_CLASS, REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { US_STATE_OPTIONS } from "@/modules/wizard/field-options";
 import {
   HOME_STATE_COPY,
@@ -80,33 +82,34 @@ function ChoiceButton({
   );
 }
 
-function RequirementCard({
-  primaryLine,
-  linkUrl,
-  linkLabel,
+function RequirementsList({
+  displays,
 }: {
-  primaryLine: string;
-  linkUrl?: string;
-  linkLabel?: string;
+  displays: StateRegDto["requirementDisplays"];
 }) {
   return (
-    <div className="flex gap-3 rounded-md border border-border bg-[#fdf6f3] px-3 py-2">
-      <div className="mt-1 size-3 shrink-0 rounded-sm bg-[#f5713c]" aria-hidden />
-      <div className="text-body text-foreground">
-        {linkUrl ? (
-          <a
-            href={linkUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-[#32325d] underline-offset-4 hover:underline"
-          >
-            {linkLabel ?? primaryLine}
-          </a>
-        ) : (
-          <p>{primaryLine}</p>
-        )}
-      </div>
-    </div>
+    <ul className="space-y-2.5">
+      {displays.map((display) => (
+        <li key={display.primaryLine} className="flex gap-3 text-body leading-relaxed text-foreground">
+          <span
+            className="mt-2 size-1.5 shrink-0 rounded-full bg-[#f5713c]"
+            aria-hidden="true"
+          />
+          <span className="min-w-0">
+            {display.linkUrl ? (
+              <ExternalLink
+                href={display.linkUrl}
+                className="font-medium text-[#32325d] underline underline-offset-4 hover:text-[#f5713c]"
+              >
+                {display.linkLabel ?? display.primaryLine}
+              </ExternalLink>
+            ) : (
+              display.primaryLine
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -261,47 +264,26 @@ export function HomeStateFields({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <p className="text-body text-muted-foreground">{HOME_STATE_COPY.intro}</p>
-        <p className="text-label text-[#537fb4]">
+      <div className="space-y-3 rounded-lg border border-[#f5713c]/20 bg-[#fdf6f3]/80 px-4 py-3">
+        <p className="text-body leading-relaxed text-foreground">{HOME_STATE_COPY.intro}</p>
+        <p className="text-label leading-relaxed text-[#537fb4]">
           {HOME_STATE_COPY.travelLead}
           <span className="font-medium text-foreground">{studentName}</span>
           {HOME_STATE_COPY.travelTail}
         </p>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="home_state" className="text-label font-medium text-foreground">
-          {HOME_STATE_COPY.fieldLabel}
-        </label>
-        <select
-          id="home_state"
-          value={homeState}
-          disabled={readOnly}
-          aria-invalid={fieldErrors.home_state ? true : undefined}
-          aria-describedby={fieldErrors.home_state ? "home_state-error" : undefined}
-          onChange={(event) => handleHomeStateChange(event.target.value)}
-          className={cn(
-            REG_TOUCH_CLASS,
-            REG_FIELD_FOCUS_CLASS,
-            "flex w-full rounded-md border border-input bg-background px-3 py-2 text-body",
-            readOnly && "cursor-not-allowed opacity-60",
-            fieldErrors.home_state && "border-destructive ring-2 ring-inset ring-destructive/30",
-          )}
-        >
-          <option value="">Select a state</option>
-          {US_STATE_OPTIONS.map((state) => (
-            <option key={state} value={state}>
-              {state}
-            </option>
-          ))}
-        </select>
-        {fieldErrors.home_state ? (
-          <p id="home_state-error" className="text-label text-destructive" role="alert">
-            {fieldErrors.home_state}
-          </p>
-        ) : null}
-      </div>
+      <FormSelect
+        id="home_state"
+        label={HOME_STATE_COPY.fieldLabel}
+        value={homeState}
+        options={[...US_STATE_OPTIONS]}
+        disabled={readOnly}
+        placeholder="Select a state"
+        error={fieldErrors.home_state}
+        requirement="required"
+        onChange={handleHomeStateChange}
+      />
 
       {loadingStateReg ? (
         <div
@@ -328,24 +310,15 @@ export function HomeStateFields({
       ) : null}
 
       {showRequirementsPanel && stateReg ? (
-        <div className="space-y-4">
-          <p className="text-label font-medium text-foreground">
+        <fieldset className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4">
+          <legend className="px-1 text-label font-medium text-foreground">
             {HOME_STATE_COPY.requirementsHeading}
-          </p>
+          </legend>
 
-          <div className="space-y-2">
-            {stateReg.requirementDisplays.map((display) => (
-              <RequirementCard
-                key={display.primaryLine}
-                primaryLine={display.primaryLine}
-                linkUrl={display.linkUrl}
-                linkLabel={display.linkLabel}
-              />
-            ))}
-          </div>
+          <RequirementsList displays={stateReg.requirementDisplays} />
 
           {stateReg.showAnnualEvaluationNote ? (
-            <p className="text-body text-muted-foreground">
+            <p className="rounded-md border border-border/60 bg-background/80 px-3 py-2 text-body text-muted-foreground">
               {homeState} asks families to do one nationally-normed diagnostic per year. We
               provide this for you, but make sure {studentName} participates in our diagnostic
               when the time comes!
@@ -354,38 +327,42 @@ export function HomeStateFields({
 
           <p className="text-body text-muted-foreground">
             {HOME_STATE_COPY.studyInformationLead}
-            <a
-              href={hsldaPath ? `https://hslda.org/legal/${hsldaPath}` : undefined}
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-[#32325d] underline-offset-4 hover:underline"
-            >
-              {HOME_STATE_COPY.studyInformationLink}
-            </a>
+            {hsldaPath ? (
+              <ExternalLink
+                href={`https://hslda.org/legal/${hsldaPath}`}
+                className="font-semibold text-[#32325d] underline underline-offset-4 hover:text-[#f5713c]"
+              >
+                {HOME_STATE_COPY.studyInformationLink}
+              </ExternalLink>
+            ) : (
+              <span className="font-semibold text-foreground">
+                {HOME_STATE_COPY.studyInformationLink}
+              </span>
+            )}
           </p>
 
-          <div className="space-y-2">
+          <div className="space-y-3 border-t border-border/60 pt-4">
             <p className="text-label font-medium text-foreground">
               {HOME_STATE_COPY.paperworkPrompt}
             </p>
             <div className="flex flex-wrap gap-3">
-            <ChoiceButton
-              selected={paperworkYesSelected}
-              disabled={readOnly}
-              onClick={handlePaperworkYes}
-            >
-              {HOME_STATE_COPY.paperworkYes}
-            </ChoiceButton>
-            <ChoiceButton
-              selected={paperworkNoSelected}
-              disabled={readOnly}
-              onClick={handlePaperworkNo}
-            >
-              {HOME_STATE_COPY.paperworkNo}
-            </ChoiceButton>
+              <ChoiceButton
+                selected={paperworkYesSelected}
+                disabled={readOnly}
+                onClick={handlePaperworkYes}
+              >
+                {HOME_STATE_COPY.paperworkYes}
+              </ChoiceButton>
+              <ChoiceButton
+                selected={paperworkNoSelected}
+                disabled={readOnly}
+                onClick={handlePaperworkNo}
+              >
+                {HOME_STATE_COPY.paperworkNo}
+              </ChoiceButton>
+            </div>
           </div>
-          </div>
-        </div>
+        </fieldset>
       ) : null}
 
       {showFloridaVaccineSection ? (

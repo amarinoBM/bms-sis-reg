@@ -1,17 +1,16 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import type { MainProgressStepStatus } from "@/modules/wizard/progress";
 import type { WizardStepId } from "@/modules/wizard/steps";
-import { WIZARD_STEPS } from "@/modules/wizard/steps";
-import { isStepComplete } from "@/modules/wizard/progress";
-import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  WIZARD_STEPS,
+  getNextStepId,
+  getPreviousStepId,
+} from "@/modules/wizard/steps";
+import { isStepComplete } from "@/modules/wizard/progress";
+import { Button } from "@/components/ui/button";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
 
@@ -35,14 +34,9 @@ export function StepNav({
   const completedCount = WIZARD_STEPS.filter((step) =>
     isStepComplete(step.id, stepCompletion),
   ).length;
-  const currentMainStep =
-    progressSteps.find((step) => step.state === "current") ?? progressSteps[0];
-  const activeComplete = activeStep
-    ? isStepComplete(activeStep.id, stepCompletion)
-    : false;
-  const activeSectionLabel = activeStep
-    ? `${activeIndex + 1}. ${activeStep.label}${activeComplete ? " · Complete" : ""}`
-    : "Choose a section";
+  const previousStepId = getPreviousStepId(activeStepId);
+  const nextStepId = getNextStepId(activeStepId);
+  const activeComplete = activeStep ? isStepComplete(activeStep.id, stepCompletion) : false;
 
   return (
     <div
@@ -57,77 +51,86 @@ export function StepNav({
           Registration progress
         </p>
         <p className="text-label text-muted-foreground">
-          {completedCount} of {WIZARD_STEPS.length} sections complete
+          {completedCount} of {WIZARD_STEPS.length} sections saved
         </p>
       </div>
 
-      {currentMainStep ? (
-        <p className="mt-2 text-body font-semibold text-foreground">
-          Part {currentMainStep.number} of {progressSteps.length}: {currentMainStep.label}
-        </p>
-      ) : null}
-
       {progressSteps.length > 0 ? (
-        <ol className="mt-3 flex min-w-0 gap-1" aria-hidden="true">
-          {progressSteps.map((step) => (
-            <li
-              key={step.number}
-              className={cn(
-                "h-1.5 min-w-0 flex-1 rounded-full",
-                step.state === "complete" && "bg-primary/70",
-                step.state === "current" && "bg-primary",
-                step.state === "upcoming" && "bg-muted",
-              )}
-            />
-          ))}
-        </ol>
+        <div className="mt-3 space-y-1">
+          <p className="text-label text-muted-foreground">Overall parts</p>
+          <ol className="flex min-w-0 gap-1" aria-label="Overall registration parts">
+            {progressSteps.map((step) => (
+              <li
+                key={step.number}
+                className={cn(
+                  "h-1.5 min-w-0 flex-1 rounded-full",
+                  step.state === "complete" && "bg-primary/75",
+                  step.state === "current" && "bg-primary",
+                  step.state === "upcoming" && "bg-muted",
+                )}
+                title={`${step.label}${step.state === "complete" ? " · saved" : ""}`}
+              />
+            ))}
+          </ol>
+        </div>
       ) : null}
 
-      <div className="mt-4 space-y-2">
-        <Label htmlFor="registration-section-picker" className="text-label font-medium">
-          Current section
-        </Label>
-        <p className="text-label text-muted-foreground">
-          Section {activeIndex + 1} of {WIZARD_STEPS.length}
-          {activeStep ? ` · ${activeStep.label}` : ""}
-        </p>
-        <Select
-          value={activeStepId}
-          onValueChange={(value) => {
-            if (value) {
-              onStepSelect(value as WizardStepId);
-            }
-          }}
-        >
-          <SelectTrigger
-            id="registration-section-picker"
-            className={cn(
-              REG_TOUCH_CLASS,
-              "w-full min-w-0 whitespace-normal text-left",
-            )}
-          >
-            <SelectValue placeholder="Choose a section" className="truncate text-left">
-              {activeSectionLabel}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent
-            align="start"
-            alignItemWithTrigger={false}
-            sideOffset={8}
-            className="min-w-[var(--anchor-width)] w-max max-w-[min(100vw-2rem,var(--available-width))]"
-          >
-            {WIZARD_STEPS.map((step, index) => {
-              const complete = isStepComplete(step.id, stepCompletion);
+      <ol
+        className="mt-3 flex min-w-0 gap-0.5"
+        aria-label="Section completion"
+      >
+        {WIZARD_STEPS.map((step, index) => {
+          const saved = isStepComplete(step.id, stepCompletion);
+          const isCurrent = step.id === activeStepId;
 
-              return (
-                <SelectItem key={step.id} value={step.id}>
-                  {index + 1}. {step.label}
-                  {complete ? " · Complete" : ""}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+          return (
+            <li
+              key={step.id}
+              className={cn(
+                "h-2 min-w-0 flex-1 rounded-sm first:rounded-l-full last:rounded-r-full",
+                saved && !isCurrent && "bg-primary/80",
+                isCurrent && "bg-primary ring-2 ring-primary/25 ring-offset-1 ring-offset-card",
+                !saved && !isCurrent && "bg-muted",
+              )}
+              title={`Section ${index + 1}: ${step.label}${saved ? " · saved" : ""}`}
+            />
+          );
+        })}
+      </ol>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-body font-semibold text-foreground">
+            Section {activeIndex + 1} of {WIZARD_STEPS.length}
+            {activeStep ? ` · ${activeStep.label}` : ""}
+          </p>
+          <p className="mt-1 text-label text-muted-foreground">
+            {activeComplete ? "Saved" : "Not saved yet"}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(REG_TOUCH_CLASS, "min-w-[7.5rem]")}
+            disabled={!previousStepId}
+            onClick={() => previousStepId && onStepSelect(previousStepId)}
+          >
+            <ChevronLeft className="size-4" aria-hidden="true" />
+            Previous
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(REG_TOUCH_CLASS, "min-w-[7.5rem]")}
+            disabled={!nextStepId}
+            onClick={() => nextStepId && onStepSelect(nextStepId)}
+          >
+            Next
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
       </div>
     </div>
   );

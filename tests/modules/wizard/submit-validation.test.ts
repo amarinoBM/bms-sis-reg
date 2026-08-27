@@ -41,6 +41,7 @@ describe("submit validation", () => {
       learning_environment_past_12_months: "Homeschool with parent",
       learning_experiece_past_12_months: "Great",
       home_state: "FL",
+      email: "noah@example.com",
       uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
       honorCodeSigned: "Completed",
       ToSBool: true,
@@ -48,6 +49,37 @@ describe("submit validation", () => {
     });
 
     expect(result.ready).toBe(true);
+  });
+
+  it("flags missing preferred student email", () => {
+    const result = validateSubmitReadiness({
+      contact_id: "cont_abcdefghijklmnop",
+      student_name: "Noah",
+      student_last_name: "Moore",
+      student_birth_date: Date.now(),
+      most_interested_in: "Technology and Computing",
+      interests: ["Sports"],
+      learning_or_behavioral_challenges: false,
+      parent_name: "James",
+      parent_last_name: "Moore",
+      parent_email: "james@example.com",
+      parent_phone: "555-0100",
+      parent_address: "123 Main St",
+      math_grade_level: "Grade 6",
+      ela_grade_level: "Grade 6",
+      science_grade_level: "Grade 6",
+      learning_environment_past_12_months: "Homeschool with parent",
+      learning_experiece_past_12_months: "Great",
+      home_state: "FL",
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+      honorCodeSigned: "Completed",
+      ToSBool: true,
+      Caucasian: true,
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.missingLabels).toContain("Preferred student email");
+    expect(result.missingItems.some((item) => item.stepId === "11")).toBe(true);
   });
 });
 

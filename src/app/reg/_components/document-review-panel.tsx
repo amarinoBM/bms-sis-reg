@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 
-import { ExternalLink } from "@/app/reg/_components/external-link";
-import { buttonVariants } from "@/components/ui/button-variants";
+import { DocumentPreviewDialog } from "@/app/reg/_components/document-preview-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { buildDriveViewUrl } from "@/config/document-templates";
-import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
-import { cn } from "@/lib/utils";
 
 type DocumentReviewPanelProps = {
   title: string;
@@ -34,20 +31,17 @@ export function DocumentReviewPanel({
     <div className="mt-4 space-y-3">
       <div className="rounded-md border border-border bg-muted/30 p-4 space-y-3">
         <p className="text-body text-foreground">
-          Read the full {title} before signing. Open it in a new tab, then return here to
-          confirm and sign.
+          Read the full {title} before signing. Open it here, then return to confirm and
+          sign.
         </p>
-        <ExternalLink
-          href={buildDriveViewUrl(templateFileId)}
-          className={cn(buttonVariants({ variant: "outline" }), REG_TOUCH_CLASS)}
-        >
-          Read {title}
-        </ExternalLink>
-        <p className="text-label text-muted-foreground">
-          <ExternalLink href={previewUrl} className="text-primary underline">
-            Alternate preview link
-          </ExternalLink>
-        </p>
+        <DocumentPreviewDialog
+          title={title}
+          previewUrl={previewUrl}
+          viewUrl={buildDriveViewUrl(templateFileId)}
+          triggerLabel={`Read ${title}`}
+          triggerVariant="button"
+          description="Scroll through the document, then close this window to return to the form."
+        />
       </div>
       <div className="flex items-start gap-2">
         <Checkbox

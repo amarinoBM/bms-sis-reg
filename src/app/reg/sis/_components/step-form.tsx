@@ -42,7 +42,13 @@ import { cn } from "@/lib/utils";
 import { postApi, postFormApi } from "@/lib/client-api";
 import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
 import { fieldLayoutClass, getFieldUiHints } from "@/modules/wizard/field-hints";
+import { getFieldRequirement } from "@/modules/wizard/field-requirements";
 import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
+import {
+  applyEthnicitySelection,
+  applyGenderSelection,
+  isOtherGenderSelected,
+} from "@/modules/wizard/field-options";
 import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
 import {
   type StepFieldErrors,
@@ -71,10 +77,13 @@ function fieldValue(values: Record<string, unknown>, key: string): unknown {
 }
 
 function shouldShowStepField(
-  _stepId: WizardStepId,
-  _field: StepFieldDefinition,
-  _values: Record<string, unknown>,
+  stepId: WizardStepId,
+  field: StepFieldDefinition,
+  values: Record<string, unknown>,
 ): boolean {
+  if (stepId === "1" && field.key === "other_gender") {
+    return isOtherGenderSelected(values);
+  }
   return true;
 }
 
@@ -276,7 +285,23 @@ export function StepForm({
   }
 
   function updateValue(key: string, value: unknown) {
-    setValues((current) => ({ ...current, [key]: value }));
+    setValues((current) => {
+      const next = { ...current, [key]: value };
+
+      if (key === "gender_selection") {
+        const selection = typeof value === "string" ? value : "";
+        applyGenderSelection(next, selection);
+        next.gender_selection = selection;
+      }
+
+      if (key === "ethnicity_selection") {
+        const selection = typeof value === "string" ? value : "";
+        applyEthnicitySelection(next, selection);
+        next.ethnicity_selection = selection;
+      }
+
+      return next;
+    });
     if (fieldErrors[key]) {
       setFieldErrors((current) => {
         const next = { ...current };
@@ -467,9 +492,11 @@ export function StepForm({
                     <div key={field.key} className={cn("min-w-0", fieldLayoutClass("full"))}>
                       <FieldControl
                         field={field}
+                        studentName={studentName}
                         value={fieldValue(activeValues, field.key)}
                         readOnly={readOnly}
                         error={fieldErrors[field.key]}
+                        requirement={getFieldRequirement(stepId, field.key, activeValues)}
                         uploading={uploadingKey === field.key}
                         pendingFileName={
                           pendingUpload?.key === field.key
@@ -492,13 +519,15 @@ export function StepForm({
               {group.fields.map((field) => (
                 <div
                   key={field.key}
-                  className={cn("min-w-0", fieldLayoutClass(getFieldUiHints(field).layout))}
+                  className={cn("min-w-0", fieldLayoutClass(getFieldUiHints(field, { studentName }).layout))}
                 >
                   <FieldControl
                     field={field}
+                    studentName={studentName}
                     value={fieldValue(activeValues, field.key)}
                     readOnly={readOnly}
                     error={fieldErrors[field.key]}
+                    requirement={getFieldRequirement(stepId, field.key, activeValues)}
                     uploading={uploadingKey === field.key}
                     pendingFileName={
                       pendingUpload?.key === field.key
@@ -576,9 +605,11 @@ export function StepForm({
 
 type FieldControlProps = {
   field: StepFieldDefinition;
+  studentName: string;
   value: unknown;
   readOnly: boolean;
   error?: string;
+  requirement?: "required" | "optional";
   uploading: boolean;
   pendingFileName?: string;
   uploadedFileName?: string;
@@ -588,23 +619,26 @@ type FieldControlProps = {
 
 function FieldControl({
   field,
+  studentName,
   value,
   readOnly,
   error,
+  requirement,
   uploading,
   pendingFileName,
   uploadedFileName,
   onChange,
   onUpload,
 }: FieldControlProps) {
-  const ui = getFieldUiHints(field);
+  const ui = getFieldUiHints(field, { studentName });
+  const label = ui.label ?? field.label;
 
   if (field.type === "multiselect") {
     const selected = Array.isArray(value) ? value.map(String) : [];
 
     return (
       <FormCheckboxGroup
-        legend={field.label}
+        legend={label}
         idPrefix={field.key}
         options={field.options ?? []}
         value={selected}
@@ -619,7 +653,8 @@ function FieldControl({
     return (
       <FormCheckbox
         id={field.key}
-        label={field.label}
+        label={label}
+        description={ui.hint}
         checked={Boolean(value)}
         disabled={readOnly}
         error={error}
@@ -632,9 +667,10 @@ function FieldControl({
     return (
       <FormTextarea
         id={field.key}
-        label={field.label}
+        label={label}
         description={ui.hint}
         error={error}
+        requirement={requirement}
         value={String(value ?? "")}
         disabled={readOnly}
         placeholder={ui.placeholder}
@@ -647,9 +683,10 @@ function FieldControl({
     return (
       <FormSelect
         id={field.key}
-        label={field.label}
+        label={label}
         description={ui.hint}
         error={error}
+        requirement={requirement}
         value={value ? String(value) : ""}
         options={field.options ?? []}
         disabled={readOnly}
@@ -663,8 +700,9 @@ function FieldControl({
     return (
       <FormFileUpload
         id={field.key}
-        label={field.label}
+        label={label}
         error={error}
+        requirement={requirement}
         fileUrl={value ? String(value) : null}
         pendingFileName={pendingFileName}
         uploadedFileName={uploadedFileName}
@@ -679,9 +717,17 @@ function FieldControl({
     return (
       <FormDateInput
         id={field.key}
-        label={field.label}
+        label={label}
         description={ui.hint}
         error={error}
+        requirement={requirement}
+        intent={
+          field.key === "student_birth_date"
+            ? "birth"
+            : field.key === "starting_date"
+              ? "start"
+              : "default"
+        }
         value={toDateInputValue(value)}
         disabled={readOnly}
         onChange={(next) => onChange(fromDateInputValue(next))}
@@ -693,10 +739,11 @@ function FieldControl({
     return (
       <FormTextInput
         id={field.key}
-        label={field.label}
+        label={label}
         description={ui.hint}
         type="email"
         error={error}
+        requirement={requirement}
         value={String(value ?? "")}
         disabled={readOnly}
         placeholder={ui.placeholder}
@@ -710,10 +757,11 @@ function FieldControl({
     return (
       <FormTextInput
         id={field.key}
-        label={field.label}
+        label={label}
         description={ui.hint}
         type="tel"
         error={error}
+        requirement={requirement}
         value={String(value ?? "")}
         disabled={readOnly}
         placeholder={ui.placeholder}
@@ -730,6 +778,7 @@ function FieldControl({
       label={field.label}
       description={ui.hint}
       error={error}
+      requirement={requirement}
       value={String(value ?? "")}
       disabled={readOnly}
       placeholder={ui.placeholder}

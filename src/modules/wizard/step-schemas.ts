@@ -9,6 +9,9 @@ import {
 } from "@/modules/wizard/field-options";
 import { enrichFlatFormValues } from "@/modules/wizard/field-normalization";
 import { collectGuardianContactsFromFlat } from "@/modules/wizard/guardian-contact";
+import { PTO_COPY, SHARE_CONTACT_COPY } from "@/modules/wizard/parent-guardian-copy";
+import { priorSchoolStepDescription } from "@/modules/wizard/prior-school-fields";
+import { technologySchedulingStepDescription } from "@/modules/wizard/technology-scheduling-copy";
 
 export type StepFieldType =
   | "text"
@@ -66,8 +69,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "1",
     saveHandler: "save1",
     title: "General information",
-    description: (name) =>
-      `Help us get to know ${name}. Fields marked with * are required.`,
+    description: (name) => `Help us get to know ${name}.`,
     fields: [
       { key: "student_name", label: "Student first name", type: "text" },
       { key: "student_nick_name", label: "Nickname", type: "text" },
@@ -103,7 +105,11 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
         type: "select",
         options: [...PARENT_RELATION_OPTIONS],
       },
-      { key: "share_contact", label: "Share contact with other families", type: "checkbox" },
+      {
+        key: "share_contact",
+        label: SHARE_CONTACT_COPY.label,
+        type: "checkbox",
+      },
     ],
   },
   {
@@ -113,28 +119,28 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     description: (name) =>
       `Add any additional guardians for ${name}. You can include up to two.`,
     fields: [
-      { key: "PTO", label: "Interested in PTO", type: "checkbox" },
+      { key: "PTO", label: PTO_COPY.label, type: "checkbox" },
     ],
   },
   {
     stepId: "4",
     saveHandler: "save2",
     title: "The most important question of all",
-    description: (name) => `What is ${name} most interested in? *`,
+    description: (name) => `What is ${name} most interested in?`,
     fields: [],
   },
   {
     stepId: "5",
     saveHandler: "save3",
     title: "Learning profile",
-    description: (name) => `Does ${name} have any learning or behavioral challenges? *`,
+    description: (name) => `Does ${name} have any learning or behavioral challenges?`,
     fields: [],
   },
   {
     stepId: "6",
     saveHandler: "save4",
     title: "Grade levels",
-    description: (name) => `Current grade levels for ${name}.`,
+    description: (name) => `Where is ${name} working in each subject?`,
     fields: [
       { key: "math_grade_level", label: "Math", type: "select", options: GRADE_OPTIONS },
       { key: "ela_grade_level", label: "English language arts (ELA)", type: "select", options: GRADE_OPTIONS },
@@ -152,7 +158,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "8",
     saveHandler: "save6",
     title: "Prior school",
-    description: (name) => `If our microschool is a good fit for ${name}'s learning environment`,
+    description: priorSchoolStepDescription,
     fields: [],
   },
   {
@@ -175,9 +181,9 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "11",
     saveHandler: "save8",
     title: "Technology & scheduling",
-    description: (name) => `Technology and scheduling for ${name}.`,
+    description: technologySchedulingStepDescription,
     fields: [
-      { key: "email", label: "Preferred student email address", type: "email" },
+      { key: "email", label: "Preferred student email", type: "email" },
       {
         key: "computer_system",
         label: "Computer system",
@@ -187,7 +193,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
       { key: "starting_date", label: "Starting date", type: "date" },
       {
         key: "length_of_staying",
-        label: "Length of stay",
+        label: "Planned length of stay",
         type: "select",
         options: [...LENGTH_OF_STAYING_OPTIONS],
       },
