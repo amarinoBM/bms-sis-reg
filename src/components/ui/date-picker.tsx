@@ -132,19 +132,23 @@ export function DatePicker({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} triggerId={id}>
       <PopoverTrigger
         id={id}
-        type="button"
-        disabled={disabled}
-        aria-describedby={ariaDescribedBy}
-        aria-invalid={ariaInvalid}
-        aria-required={ariaRequired}
-        className={cn(
-          "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-card px-2.5 py-1 text-left text-base shadow-sm outline-none select-none focus-visible:border-input focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-inset aria-invalid:ring-destructive/30 md:text-sm dark:bg-card/90",
-          REG_TOUCH_CLASS,
-          className,
-        )}
+        render={
+          <button
+            type="button"
+            disabled={disabled}
+            aria-describedby={ariaDescribedBy}
+            aria-invalid={ariaInvalid}
+            aria-required={ariaRequired}
+            className={cn(
+              "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-card px-2.5 py-1 text-left text-base shadow-sm outline-none select-none focus-visible:border-input focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-inset aria-invalid:ring-destructive/30 md:text-sm dark:bg-card/90",
+              REG_TOUCH_CLASS,
+              className,
+            )}
+          />
+        }
       >
         <span className={cn("truncate", !displayValue && "text-muted-foreground")}>
           {displayValue || placeholder}
