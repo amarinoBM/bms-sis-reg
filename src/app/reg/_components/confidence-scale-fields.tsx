@@ -1,14 +1,14 @@
 "use client";
 
-import { FormOptionSelect, type FormFieldOption } from "@/app/reg/_components/form-fields";
+import { FormQuestionnaireSingleChoice } from "@/app/reg/_components/form-fields";
 import {
   CONFIDENCE_FIELD_DEFINITIONS,
   CONFIDENCE_SCALE_OPTIONS,
 } from "@/modules/wizard/confidence-scale";
 
-const CONFIDENCE_OPTIONS: FormFieldOption[] = CONFIDENCE_SCALE_OPTIONS.map((option) => ({
+const CONFIDENCE_OPTIONS = CONFIDENCE_SCALE_OPTIONS.map((option) => ({
   value: option.value,
-  label: `${option.value} — ${option.shortLabel}`,
+  label: option.shortLabel,
   description: option.description,
 }));
 
@@ -37,16 +37,16 @@ export function ConfidenceScaleFields({
       </p>
 
       {CONFIDENCE_FIELD_DEFINITIONS.map((field) => (
-        <FormOptionSelect
+        <FormQuestionnaireSingleChoice
           key={field.key}
           id={field.key}
           label={field.label}
           value={readConfidenceValue(values[field.key])}
           options={CONFIDENCE_OPTIONS}
           disabled={readOnly}
-        placeholder="Select confidence level"
-        requirement="required"
-        error={fieldErrors[field.key]}
+          shortcuts="numbers"
+          requirement="required"
+          error={fieldErrors[field.key]}
           onChange={(value) => onChange(field.key, value)}
         />
       ))}

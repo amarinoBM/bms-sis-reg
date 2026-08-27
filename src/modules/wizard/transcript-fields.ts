@@ -13,6 +13,38 @@ export const TRANSCRIPT_DELIVERY_OPTIONS = [
 
 export type TranscriptDeliveryOption = (typeof TRANSCRIPT_DELIVERY_OPTIONS)[number];
 
+/** Parent-facing labels — `value` must stay the legacy Clever strings saved to `uploadTranscript`. */
+export const TRANSCRIPT_DELIVERY_CHOICES: ReadonlyArray<{
+  value: TranscriptDeliveryOption;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: TRANSCRIPT_DELIVERY_UPLOAD,
+    label: "I'll upload records myself",
+    description:
+      "You already have transcripts, report cards, or grade reports and can upload them here.",
+  },
+  {
+    value: TRANSCRIPT_DELIVERY_SCHOOL,
+    label: "Ask BMS to request records from the school",
+    description:
+      "$50 fee — we contact the prior school and collect official records for you. No upload needed.",
+  },
+];
+
+export function transcriptDeliveryQuestionLabel(): string {
+  return "How should we get prior school records?";
+}
+
+export function transcriptStepIntro(studentName: string): string {
+  return `We need records from ${studentName}'s prior school(s) to review coursework or placement. Choose how you'd like to provide them.`;
+}
+
+export function transcriptSchoolRequestNote(): string {
+  return "We'll contact the prior school on your behalf. A $50 processing fee applies. You don't need to upload files here.";
+}
+
 export function readTranscriptFiles(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value

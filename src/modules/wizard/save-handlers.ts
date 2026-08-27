@@ -80,7 +80,6 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
   ],
   save8: [
     "computer_system",
-    "email",
     "length_of_staying",
     "starting_date",
   ],

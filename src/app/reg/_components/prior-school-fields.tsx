@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import {
   FieldRequirementBadge,
   FormFileUpload,
-  FormOptionSelect,
+  FormQuestionnaireSingleChoice,
   FormTextarea,
   FormTextInput,
   type FormFieldOption,
@@ -15,7 +15,7 @@ import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
 import {
   IEP_UPLOAD_LABEL,
-  LEARNING_ENVIRONMENT_OPTIONS,
+  LEARNING_ENVIRONMENT_CHOICES,
   iepQuestionLabel,
   learningEnvironmentLabel,
   learningExperienceHint,
@@ -33,9 +33,10 @@ import {
   shouldShowLastSchoolFields,
 } from "@/modules/wizard/prior-school-fields";
 
-const ENVIRONMENT_OPTIONS: FormFieldOption[] = LEARNING_ENVIRONMENT_OPTIONS.map((option) => ({
-  value: option,
-  label: option,
+const ENVIRONMENT_OPTIONS: FormFieldOption[] = LEARNING_ENVIRONMENT_CHOICES.map((option) => ({
+  value: option.value,
+  label: option.value,
+  description: option.description,
 }));
 
 function ChoiceButton({
@@ -131,13 +132,13 @@ export function PriorSchoolFields({
         <legend className="px-1 text-label font-medium text-foreground">
           Learning environment (past 12 months)
         </legend>
-        <FormOptionSelect
+        <FormQuestionnaireSingleChoice
           id="learning_environment_past_12_months"
           label={learningEnvironmentLabel(studentName)}
           value={learningEnvironment}
           options={ENVIRONMENT_OPTIONS}
           disabled={readOnly}
-          placeholder="Select an option"
+          shortcuts="letters"
           required
           error={fieldErrors.learning_environment_past_12_months}
           onChange={(value) => {
@@ -287,7 +288,6 @@ export function PriorSchoolFields({
           uploadedFileName={uploadedLearningSampleName}
           uploading={uploadingLearningSample}
           readOnly={readOnly || !onUploadLearningSample}
-          requirement="optional"
           onFileSelect={(file) => onUploadLearningSample?.(file)}
         />
       </fieldset>

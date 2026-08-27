@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -46,10 +45,9 @@ export function StudentPicker({
         <span className="mx-1.5 text-muted-foreground/60">·</span>
         <PopoverTrigger
           render={
-            <Button
+            <button
               type="button"
-              variant="link"
-              className="h-auto min-h-0 px-0 py-0 text-label font-normal text-muted-foreground underline-offset-2 hover:text-foreground"
+              className="text-label font-medium text-primary underline underline-offset-2 hover:text-primary/80"
             />
           }
         >

@@ -4,7 +4,6 @@ import {
   computerSystemLabel,
   LENGTH_OF_STAYING_HINT,
   lengthOfStayingLabel,
-  preferredStudentEmailLabel,
   startingDateLabel,
 } from "@/modules/wizard/technology-scheduling-copy";
 
@@ -116,12 +115,6 @@ const FIELD_UI_HINTS: Record<string, FieldUiHints> = {
   additional_info_behavioral_challenges: {
     placeholder: "Anything else we should know to support them",
   },
-  email: {
-    placeholder: "student@example.com",
-    autoComplete: "email",
-    hint: "Used for student logins and classroom tools.",
-    layout: "half",
-  },
   computer_system: {
     selectPlaceholder: "Select device type",
     layout: "half",
@@ -149,9 +142,7 @@ export function getFieldUiHints(
 
   let label = defaults.label;
   if (studentName) {
-    if (field.key === "email") {
-      label = preferredStudentEmailLabel(studentName);
-    } else if (field.key === "computer_system") {
+    if (field.key === "computer_system") {
       label = computerSystemLabel(studentName);
     } else if (field.key === "starting_date") {
       label = startingDateLabel(studentName);

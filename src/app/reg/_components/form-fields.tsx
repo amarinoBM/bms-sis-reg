@@ -17,6 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Questionnaire,
+  QuestionnaireChoice,
+  QuestionnaireChoiceDescription,
+  QuestionnaireChoices,
+  QuestionnaireItem,
+} from "@/components/ui/questionnaire";
 import { Textarea } from "@/components/ui/textarea";
 import { isAppError } from "@/core/app-error";
 import { REG_FIELD_FOCUS_CLASS, REG_FIELD_SURFACE_CLASS, REG_TOUCH_CLASS } from "@/lib/reg-ui";
@@ -61,6 +68,7 @@ type FormFieldProps = {
   error?: string;
   required?: boolean;
   requirement?: FieldRequirement;
+  labelAssociatesWith?: "control" | "group";
   children: ReactNode;
   className?: string;
 };
@@ -71,10 +79,10 @@ export function FieldRequirementBadge({ kind }: { kind: FieldRequirement }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide",
+        "inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[0.625rem] font-normal leading-tight text-muted-foreground/75",
         kind === "required"
-          ? "bg-[#fdf6f3] text-[#c93410] ring-1 ring-inset ring-[#f5713c]/35"
-          : "bg-muted/60 text-muted-foreground ring-1 ring-inset ring-border/70",
+          ? "bg-[#fdf6f3]/50 text-[#c93410]/75"
+          : "bg-muted/30 text-muted-foreground/70",
       )}
     >
       {kind === "required" ? "Required" : "Optional"}
@@ -89,16 +97,23 @@ export function FormField({
   error,
   required,
   requirement,
+  labelAssociatesWith = "control",
   children,
   className,
 }: FormFieldProps) {
   const isRequired = required ?? requirement === "required";
   const { descriptionId, errorId } = buildFieldA11y({ id, description, error });
+  const labelId = labelAssociatesWith === "group" ? `${id}-label` : undefined;
+  const groupDescribedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className={cn("min-w-0 space-y-2", className)}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Label htmlFor={id} className="text-label font-medium leading-snug text-foreground break-words">
+        <Label
+          id={labelId}
+          htmlFor={labelAssociatesWith === "control" ? id : undefined}
+          className="text-label font-medium leading-snug text-foreground break-words"
+        >
           {label}
           {isRequired && !requirement ? (
             <>
@@ -120,7 +135,13 @@ export function FormField({
           {error}
         </p>
       ) : null}
-      {children}
+      {labelAssociatesWith === "group" ? (
+        <div role="group" aria-labelledby={labelId} aria-describedby={groupDescribedBy}>
+          {children}
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }
@@ -438,6 +459,99 @@ export function FormOptionSelect({
       {selectedOption?.description ? (
         <p className="text-label text-muted-foreground">{selectedOption.description}</p>
       ) : null}
+    </FormField>
+  );
+}
+
+type FormQuestionnaireSingleChoiceProps = {
+  id: string;
+  label: string;
+  description?: string;
+  error?: string;
+  value: string;
+  options: string[] | FormFieldOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  required?: boolean;
+  requirement?: FieldRequirement;
+  shortcuts?: "letters" | "numbers";
+};
+
+export function FormQuestionnaireSingleChoice({
+  id,
+  label,
+  description,
+  error,
+  value,
+  options,
+  onChange,
+  disabled,
+  required,
+  requirement,
+  shortcuts = "numbers",
+}: FormQuestionnaireSingleChoiceProps) {
+  const normalizedOptions = normalizeFieldOptions(options);
+  const isRequired = required ?? requirement === "required";
+  const questionnaireItems = [
+    {
+      name: id,
+      required: isRequired,
+      choices: normalizedOptions.map((option) => ({
+        value: option.value,
+        disabled: disabled ?? false,
+      })),
+    },
+  ];
+
+  return (
+    <FormField
+      id={id}
+      label={label}
+      description={description}
+      error={error}
+      required={isRequired}
+      requirement={requirement}
+      labelAssociatesWith="group"
+    >
+      {normalizedOptions.length === 0 ? (
+        <p className="text-label text-muted-foreground">No options available.</p>
+      ) : (
+        <Questionnaire
+          items={questionnaireItems}
+          shortcuts={shortcuts}
+          className="gap-0"
+          onSubmit={(event) => event.preventDefault()}
+        >
+          <QuestionnaireItem
+            name={id}
+            required={isRequired}
+            invalid={Boolean(error)}
+            disabled={disabled}
+            className="gap-0"
+          >
+            <QuestionnaireChoices>
+              {normalizedOptions.map((option) => (
+                <QuestionnaireChoice
+                  key={option.value}
+                  value={option.value}
+                  checked={value === option.value}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    if (event.target.checked) {
+                      onChange(option.value);
+                    }
+                  }}
+                >
+                  <span className="font-medium">{option.label}</span>
+                  {option.description ? (
+                    <QuestionnaireChoiceDescription>{option.description}</QuestionnaireChoiceDescription>
+                  ) : null}
+                </QuestionnaireChoice>
+              ))}
+            </QuestionnaireChoices>
+          </QuestionnaireItem>
+        </Questionnaire>
+      )}
     </FormField>
   );
 }

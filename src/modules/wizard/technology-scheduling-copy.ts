@@ -3,11 +3,7 @@
  */
 
 export function technologySchedulingStepDescription(studentName: string): string {
-  return `Set up ${studentName}'s email, device, and school calendar for the year ahead.`;
-}
-
-export function preferredStudentEmailLabel(studentName: string): string {
-  return `What email should ${studentName} use for school?`;
+  return `Set up ${studentName}'s device and school calendar for the year ahead.`;
 }
 
 export function computerSystemLabel(studentName: string): string {

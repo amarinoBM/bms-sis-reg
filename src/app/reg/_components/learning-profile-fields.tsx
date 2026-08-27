@@ -174,6 +174,8 @@ export function LearningProfileFields({
               label="Other"
               value={String(values.other_behavioral_challenges ?? "")}
               disabled={readOnly}
+              rows={4}
+              className="min-h-28 field-sizing-fixed"
               placeholder="Describe any other learning or behavioral challenge"
               onChange={(value) => onChange("other_behavioral_challenges", value)}
             />

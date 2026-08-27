@@ -57,7 +57,7 @@ export function HonorStep({
   const [signing, setSigning] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const studentSignature = studentSignatureOverride ?? studentName;
-  const nextStepId = getNextStepId("13");
+  const nextStepId = getNextStepId("12");
   const honorDocumentUrl = buildDriveViewUrl(HONOR_DOCUMENT_TEMPLATE_ID);
 
   async function handleSign() {
@@ -216,7 +216,7 @@ export function HonorStep({
               type="button"
               variant="outline"
               className={REG_TOUCH_CLASS}
-              onClick={() => onGoToStep("12")}
+              onClick={() => onGoToStep("11")}
             >
               Back
             </Button>

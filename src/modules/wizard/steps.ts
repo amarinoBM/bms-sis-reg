@@ -14,11 +14,10 @@ export type WizardStepId =
   | "11"
   | "12"
   | "13"
-  | "14"
-  | "15";
+  | "14";
 
 export type WizardStepDefinition = {
-  /** Sequential id used in the UI and navigation (1–15). */
+  /** Sequential id used in the UI and navigation (1–14). */
   id: WizardStepId;
   label: string;
   /** Backendless `{completionKey}disabled` flag prefix (legacy save-step keys). */
@@ -38,10 +37,9 @@ export const WIZARD_STEPS: WizardStepDefinition[] = [
   { id: "9", label: "Transcripts", completionKey: "6.1", saveHandler: "save6.1" },
   { id: "10", label: "State", completionKey: "7", saveHandler: "save7" },
   { id: "11", label: "Technology", completionKey: "8", saveHandler: "save8" },
-  { id: "12", label: "IEP / 504", completionKey: "9" },
-  { id: "13", label: "Honor code", completionKey: "10" },
-  { id: "14", label: "Terms of service", completionKey: "11" },
-  { id: "15", label: "Submit", completionKey: "12" },
+  { id: "12", label: "Honor code", completionKey: "10" },
+  { id: "13", label: "Terms of service", completionKey: "11" },
+  { id: "14", label: "Submit", completionKey: "12" },
 ];
 
 export const MAIN_PROGRESS_STEPS = [
@@ -53,10 +51,9 @@ export const MAIN_PROGRESS_STEPS = [
   { number: 6, label: "School history", stepIds: ["8", "9"] as WizardStepId[] },
   { number: 7, label: "State", stepIds: ["10"] as WizardStepId[] },
   { number: 8, label: "Technology", stepIds: ["11"] as WizardStepId[] },
-  { number: 9, label: "IEP / 504", stepIds: ["12"] as WizardStepId[] },
-  { number: 10, label: "Honor code", stepIds: ["13"] as WizardStepId[] },
-  { number: 11, label: "Terms", stepIds: ["14"] as WizardStepId[] },
-  { number: 12, label: "Submit", stepIds: ["15"] as WizardStepId[] },
+  { number: 9, label: "Honor code", stepIds: ["12"] as WizardStepId[] },
+  { number: 10, label: "Terms", stepIds: ["13"] as WizardStepId[] },
+  { number: 11, label: "Submit", stepIds: ["14"] as WizardStepId[] },
 ];
 
 export const INITIAL_ACTIVE_STEP: WizardStepId = "1";

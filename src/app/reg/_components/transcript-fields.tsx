@@ -4,7 +4,7 @@ import {
   FormCheckbox,
   FormFileUpload,
   FormMultiOptionSelect,
-  FormOptionSelect,
+  FormQuestionnaireSingleChoice,
   type FormFieldOption,
 } from "@/app/reg/_components/form-fields";
 import { CREDIT_TRANSFER_SUBJECTS } from "@/modules/wizard/credit-transfer-subjects";
@@ -13,12 +13,17 @@ import {
   readTranscriptDeliveryChoice,
   readTranscriptFiles,
   readTransferCreditFlag,
+  TRANSCRIPT_DELIVERY_CHOICES,
   TRANSCRIPT_DELIVERY_OPTIONS,
+  transcriptDeliveryQuestionLabel,
+  transcriptSchoolRequestNote,
+  transcriptStepIntro,
 } from "@/modules/wizard/transcript-fields";
 
-const DELIVERY_OPTIONS: FormFieldOption[] = TRANSCRIPT_DELIVERY_OPTIONS.map((option) => ({
-  value: option,
-  label: option,
+const DELIVERY_OPTIONS: FormFieldOption[] = TRANSCRIPT_DELIVERY_CHOICES.map((choice) => ({
+  value: choice.value,
+  label: choice.label,
+  description: choice.description,
 }));
 
 const CREDIT_SUBJECT_OPTIONS: FormFieldOption[] = CREDIT_TRANSFER_SUBJECTS.map((subject) => ({
@@ -62,18 +67,18 @@ export function TranscriptFields({
       <div className="space-y-1">
         <p className="text-label font-medium text-foreground">Credit Transfer Request</p>
         <p className="text-body leading-relaxed text-muted-foreground">
-          Please share any records or transcripts from {studentName}&apos;s prior school(s).
+          {transcriptStepIntro(studentName)}
         </p>
       </div>
 
-      <FormOptionSelect
+      <FormQuestionnaireSingleChoice
         id="uploadTranscript"
-        label="How will you share records?"
+        label={transcriptDeliveryQuestionLabel()}
         value={deliveryChoice ?? ""}
         options={DELIVERY_OPTIONS}
         disabled={readOnly}
-        placeholder="Select an option"
-        required
+        shortcuts="letters"
+        requirement="required"
         error={fieldErrors.uploadTranscript}
         onChange={(value) => onChange("uploadTranscript", value)}
       />
@@ -95,9 +100,7 @@ export function TranscriptFields({
 
       {deliveryChoice === TRANSCRIPT_DELIVERY_OPTIONS[1] ? (
         <div className="rounded-lg border border-border/80 bg-muted/20 p-4 text-body text-muted-foreground">
-          We will request records from your student&apos;s prior school. A{" "}
-          <span className="font-medium text-foreground">$50 processing fee</span> applies for this
-          service. You do not need to upload files here.
+          {transcriptSchoolRequestNote()}
         </div>
       ) : null}
 

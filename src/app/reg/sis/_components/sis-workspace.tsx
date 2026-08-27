@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -28,7 +28,6 @@ import {
   getStepFormDefinition,
 } from "@/modules/wizard/step-schemas";
 import { INITIAL_ACTIVE_STEP, type WizardStepId } from "@/modules/wizard/steps";
-import { getMainProgressStatuses } from "@/modules/wizard/progress";
 import { fetchApi } from "@/lib/client-api";
 import {
   handleRegSessionExpiry,
@@ -159,14 +158,6 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
     }
   }
 
-  const progressSteps = useMemo(
-    () =>
-      payload
-        ? getMainProgressStatuses(activeStepId, payload.studentInfo.stepCompletion)
-        : [],
-    [activeStepId, payload],
-  );
-
   const formValues = payload ? flattenFormValues(payload.student) : {};
   const stepDefinition = getStepFormDefinition(activeStepId);
 
@@ -237,7 +228,6 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
           <StepNav
             activeStepId={activeStepId}
             stepCompletion={payload.studentInfo.stepCompletion}
-            progressSteps={progressSteps}
             onStepSelect={setActiveStepId}
           />
 
@@ -257,7 +247,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                 />
               )}
 
-              {activeStepId === "13" && (
+              {activeStepId === "12" && (
                 <HonorStep
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
@@ -274,7 +264,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                 />
               )}
 
-              {activeStepId === "14" && (
+              {activeStepId === "13" && (
                 <TosStep
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
@@ -286,7 +276,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                 />
               )}
 
-              {activeStepId === "15" && (
+              {activeStepId === "14" && (
                 <SubmitStep
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
@@ -299,9 +289,9 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
               )}
 
               {!stepDefinition &&
+                activeStepId !== "12" &&
                 activeStepId !== "13" &&
-                activeStepId !== "14" &&
-                activeStepId !== "15" && (
+                activeStepId !== "14" && (
                   <div className="rounded-lg border border-border bg-card p-6">
                     <p className="text-body text-muted-foreground">
                       This section is not available yet.

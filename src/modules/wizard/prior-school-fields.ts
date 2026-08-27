@@ -11,6 +11,36 @@ export const LEARNING_ENVIRONMENT_OPTIONS = [
 
 export type LearningEnvironmentOption = (typeof LEARNING_ENVIRONMENT_OPTIONS)[number];
 
+export const LEARNING_ENVIRONMENT_CHOICES: ReadonlyArray<{
+  value: LearningEnvironmentOption;
+  description: string;
+}> = [
+  {
+    value: "Homeschool with parent",
+    description: "Parent-led instruction at home",
+  },
+  {
+    value: "Homeschool co-op, pod, or microschool",
+    description: "Small group, co-op, pod, or microschool",
+  },
+  {
+    value: "Physical private school",
+    description: "In-person private school",
+  },
+  {
+    value: "Virtual private school",
+    description: "Online private school",
+  },
+  {
+    value: "Physical public/charter school",
+    description: "In-person public or charter school",
+  },
+  {
+    value: "Virtual public/charter school",
+    description: "Online public or charter school",
+  },
+];
+
 const SCHOOL_ATTENDANCE_ENVIRONMENTS = new Set<LearningEnvironmentOption>([
   "Physical private school",
   "Virtual private school",

@@ -161,7 +161,6 @@ export function StepForm({
   const visibleFields = visibleStepFields(stepId, definition.fields, activeValues);
   const fieldGroups = groupStepFields(visibleFields);
   const uploadOnlyStep = !definition.saveHandler && visibleFields.some((f) => f.type === "file");
-  const iepNotRequired = stepId === "12" && activeValues.IEP_or_504_plan !== true;
   const nextStepId = getNextStepId(stepId);
 
   async function handleUnlock() {
@@ -311,6 +310,24 @@ export function StepForm({
     }
   }
 
+  function updateValues(updates: Record<string, unknown>) {
+    setValues((current) => {
+      const next = { ...current, ...updates };
+      return next;
+    });
+
+    const clearedErrorKeys = Object.keys(updates).filter((key) => fieldErrors[key]);
+    if (clearedErrorKeys.length > 0) {
+      setFieldErrors((current) => {
+        const next = { ...current };
+        for (const key of clearedErrorKeys) {
+          delete next[key];
+        }
+        return next;
+      });
+    }
+  }
+
   function handleRemoveSecondGuardian() {
     const clearedFields = GUARDIAN_CONTACT_FIELD_KEYS.reduce<
       Record<string, unknown>
@@ -337,13 +354,6 @@ export function StepForm({
       <div className="space-y-6 p-6">
         {Object.keys(fieldErrors).length > 0 ? (
           <FormValidationSummary fieldErrors={fieldErrors} />
-        ) : null}
-
-        {iepNotRequired ? (
-          <div className="rounded-md border border-border bg-muted/30 p-4 text-body text-muted-foreground">
-            You indicated that {studentName} does not have an IEP or 504 plan. No document upload
-            is required for this section.
-          </div>
         ) : null}
 
         {stepId === "3" ? (
@@ -472,14 +482,11 @@ export function StepForm({
             readOnly={readOnly}
             fieldErrors={fieldErrors}
             onChange={updateValue}
+            onFieldsChange={updateValues}
           />
         ) : null}
 
         {fieldGroups.map((group, groupIndex) => {
-          if (iepNotRequired) {
-            return null;
-          }
-
           if (group.legend) {
             return (
               <fieldset
@@ -570,14 +577,12 @@ export function StepForm({
           </div>
         )}
 
-        {(sectionComplete && (definition.saveHandler || uploadOnlyStep)) || iepNotRequired ? (
+        {(sectionComplete && (definition.saveHandler || uploadOnlyStep)) ? (
           <SectionSavedActions
           message={
-            iepNotRequired
-              ? "No IEP or 504 document is required."
-              : definition.saveHandler
-                ? "This section has been saved."
-                : "This section is complete."
+            definition.saveHandler
+              ? "This section has been saved."
+              : "This section is complete."
           }
           onEdit={
             definition.saveHandler && sectionComplete

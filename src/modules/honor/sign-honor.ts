@@ -5,6 +5,7 @@ import {
   copyDriveFile,
   docsBatchUpdate,
   HONOR_TEMPLATE,
+  normalizeDriveFileId,
 } from "@/server/connectors/backendless/sis-cloud-code";
 import { sendScheduledDocumentEmail } from "@/server/connectors/backendless/email-client";
 import { buildHonorSignedEmailHtml } from "@/modules/email/bms-email-template";
@@ -42,7 +43,7 @@ export async function signHonorCode(
     fetchImpl,
   );
 
-  const fileId = String(copied.id ?? "");
+  const fileId = normalizeDriveFileId(copied.id);
   if (!fileId) {
     throw new Error("Honor template copy did not return a file id.");
   }

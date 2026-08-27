@@ -35,6 +35,7 @@ type HomeStateFieldsProps = {
   readOnly: boolean;
   fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
+  onFieldsChange?: (updates: Record<string, unknown>) => void;
 };
 
 type StateRegsResponse = {
@@ -152,6 +153,7 @@ export function HomeStateFields({
   readOnly,
   fieldErrors = {},
   onChange,
+  onFieldsChange,
 }: HomeStateFieldsProps) {
   const homeState = readString(values.home_state);
   const paperworkYesSelected =
@@ -183,6 +185,7 @@ export function HomeStateFields({
     }
 
     let cancelled = false;
+    setStateReg(null);
     setLoadingStateReg(true);
     setStateRegError(null);
 
@@ -218,12 +221,23 @@ export function HomeStateFields({
   }, [vaccineValue]);
 
   function handleHomeStateChange(value: string) {
-    onChange("home_state", value);
-    onChange("determining_required_paperwork_home_state", "");
-    onChange("vaccine_situation", "");
-    onChange("submit_step_up", false);
-    onChange("step_up_id", "");
-    onChange("student_award_id", "");
+    const updates: Record<string, unknown> = {
+      home_state: value,
+      determining_required_paperwork_home_state: "",
+      vaccine_situation: "",
+      submit_step_up: false,
+      step_up_id: "",
+      student_award_id: "",
+    };
+
+    if (onFieldsChange) {
+      onFieldsChange(updates);
+    } else {
+      for (const [key, fieldValue] of Object.entries(updates)) {
+        onChange(key, fieldValue);
+      }
+    }
+
     setShowExemptionInput(false);
   }
 
@@ -309,8 +323,11 @@ export function HomeStateFields({
         </div>
       ) : null}
 
-      {showRequirementsPanel && stateReg ? (
-        <fieldset className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4">
+      {showRequirementsPanel && stateReg && !loadingStateReg ? (
+        <fieldset
+          key={stateReg.stateName}
+          className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4"
+        >
           <legend className="px-1 text-label font-medium text-foreground">
             {HOME_STATE_COPY.requirementsHeading}
           </legend>

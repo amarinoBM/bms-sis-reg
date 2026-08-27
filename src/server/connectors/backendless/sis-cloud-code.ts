@@ -3,6 +3,15 @@ import { invokeCloudCode } from "@/server/connectors/backendless/cloud-code-clie
 const HONOR_TEMPLATE_ID = "1leXqbMKzIwI2EXnavTZX-XKMajr0m2TMqpkmV-5-hj8";
 const TOS_TEMPLATE_ID = "1WKFdWXqTCNfdpy9WfpzXyLwM_rrsSEV1aiRHIg_4Ztg";
 
+export function normalizeDriveFileId(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim() : String(value ?? "").trim();
+  if (raw.length >= 2 && raw.startsWith("\"") && raw.endsWith("\"")) {
+    return raw.slice(1, -1).trim();
+  }
+
+  return raw;
+}
+
 function buildReplaceRequests(replacements: Record<string, string>) {
   return Object.entries(replacements).map(([placeholder, replaceText]) => ({
     replaceAllText: {
@@ -30,9 +39,9 @@ export async function copyDriveFile(
   });
 }
 
-/** Clever sends `JSON.stringify(copyFile.id)` — a JSON string, not `{ sourceFileID }`. */
+/** Clever sends `JSON.stringify(fileId)` as the HTTP body — one encoding via `invokeCloudCode`. */
 export function buildDriveAllowAccessBody(sourceFileId: string): string {
-  return JSON.stringify(sourceFileId);
+  return sourceFileId.trim();
 }
 
 export async function allowDriveFileAccess(

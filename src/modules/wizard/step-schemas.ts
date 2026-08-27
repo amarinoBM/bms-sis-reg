@@ -183,7 +183,6 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     title: "Technology & scheduling",
     description: technologySchedulingStepDescription,
     fields: [
-      { key: "email", label: "Preferred student email", type: "email" },
       {
         key: "computer_system",
         label: "Computer system",
@@ -197,15 +196,6 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
         type: "select",
         options: [...LENGTH_OF_STAYING_OPTIONS],
       },
-    ],
-  },
-  {
-    stepId: "12",
-    title: "IEP / 504 upload",
-    description: (name) =>
-      `Upload IEP or 504 documents for ${name}. Files are saved automatically when you upload.`,
-    fields: [
-      { key: "upload_copy_EIP_504_plan", label: "IEP / 504 document", type: "file", uploadType: "iep" },
     ],
   },
 ];

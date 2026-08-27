@@ -2,7 +2,6 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import type { MainProgressStepStatus } from "@/modules/wizard/progress";
 import type { WizardStepId } from "@/modules/wizard/steps";
 import {
   WIZARD_STEPS,
@@ -17,7 +16,6 @@ import { cn } from "@/lib/utils";
 type StepNavProps = {
   activeStepId: WizardStepId;
   stepCompletion: Record<string, boolean>;
-  progressSteps: MainProgressStepStatus[];
   onStepSelect: (stepId: WizardStepId) => void;
   className?: string;
 };
@@ -25,7 +23,6 @@ type StepNavProps = {
 export function StepNav({
   activeStepId,
   stepCompletion,
-  progressSteps,
   onStepSelect,
   className,
 }: StepNavProps) {
@@ -55,26 +52,6 @@ export function StepNav({
         </p>
       </div>
 
-      {progressSteps.length > 0 ? (
-        <div className="mt-3 space-y-1">
-          <p className="text-label text-muted-foreground">Overall parts</p>
-          <ol className="flex min-w-0 gap-1" aria-label="Overall registration parts">
-            {progressSteps.map((step) => (
-              <li
-                key={step.number}
-                className={cn(
-                  "h-1.5 min-w-0 flex-1 rounded-full",
-                  step.state === "complete" && "bg-primary/75",
-                  step.state === "current" && "bg-primary",
-                  step.state === "upcoming" && "bg-muted",
-                )}
-                title={`${step.label}${step.state === "complete" ? " · saved" : ""}`}
-              />
-            ))}
-          </ol>
-        </div>
-      ) : null}
-
       <ol
         className="mt-3 flex min-w-0 gap-0.5"
         aria-label="Section completion"
@@ -88,15 +65,18 @@ export function StepNav({
               key={step.id}
               className={cn(
                 "h-2 min-w-0 flex-1 rounded-sm first:rounded-l-full last:rounded-r-full",
-                saved && !isCurrent && "bg-primary/80",
-                isCurrent && "bg-primary ring-2 ring-primary/25 ring-offset-1 ring-offset-card",
-                !saved && !isCurrent && "bg-muted",
+                isCurrent && "bg-primary ring-2 ring-primary/30 ring-offset-1 ring-offset-card",
+                !isCurrent && saved && "bg-primary/35",
+                !isCurrent && !saved && "bg-muted",
               )}
-              title={`Section ${index + 1}: ${step.label}${saved ? " · saved" : ""}`}
+              title={`Section ${index + 1}: ${step.label}${saved ? " · saved" : ""}${isCurrent ? " · current" : ""}`}
             />
           );
         })}
       </ol>
+      <p className="mt-2 text-label text-muted-foreground">
+        Highlighted bar = where you are now. Lighter fill = saved elsewhere.
+      </p>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">

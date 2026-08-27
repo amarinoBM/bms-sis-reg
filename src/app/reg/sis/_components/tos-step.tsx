@@ -60,7 +60,7 @@ export function TosStep({
   const [parentSignature, setParentSignature] = useState("");
   const [signing, setSigning] = useState(false);
   const tosDocumentUrl = buildDriveViewUrl(TOS_DOCUMENT_TEMPLATE_ID);
-  const nextStepId: WizardStepId = "15";
+  const nextStepId: WizardStepId = "14";
 
   async function handleSign() {
     if (!parentSignature.trim()) {
@@ -190,7 +190,7 @@ export function TosStep({
             type="button"
             variant="outline"
             className={REG_TOUCH_CLASS}
-            onClick={() => onGoToStep("13")}
+            onClick={() => onGoToStep("12")}
           >
             Back
           </Button>

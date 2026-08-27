@@ -21,7 +21,7 @@ const STEP_REQUIRED_FIELDS: Partial<Record<WizardStepId, readonly string[]>> = {
     "parent_relation",
   ],
   "6": ["math_grade_level", "ela_grade_level", "science_grade_level"],
-  "11": ["email", "computer_system", "starting_date", "length_of_staying"],
+  "11": ["computer_system", "starting_date", "length_of_staying"],
 };
 
 const STEP_OPTIONAL_FIELDS: Partial<Record<WizardStepId, readonly string[]>> = {

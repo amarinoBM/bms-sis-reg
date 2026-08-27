@@ -288,11 +288,6 @@ function validateStep10(values: Record<string, unknown>): StepFieldErrors {
 function validateStep11(values: Record<string, unknown>): StepFieldErrors {
   const errors: StepFieldErrors = {};
 
-  if (!hasText(values.email)) {
-    setError(errors, "email", requiredFieldError("Preferred student email address"));
-  } else if (!isValidEmail(String(values.email))) {
-    setError(errors, "email", "Enter a valid email address.");
-  }
   if (!hasText(values.computer_system)) {
     setError(errors, "computer_system", requiredFieldError("Computer system"));
   }

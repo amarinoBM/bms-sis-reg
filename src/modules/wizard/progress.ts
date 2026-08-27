@@ -31,19 +31,15 @@ export function buildStepCompletionMap(
   }
 
   if (student.honorCodeSigned === "Completed" || student.honorCodeSigned === true) {
-    completion["13"] = true;
+    completion["12"] = true;
   }
 
   if (student.ToSBool === true) {
-    completion["14"] = true;
+    completion["13"] = true;
   }
 
   if (student.is_complete_sis === true) {
-    completion["15"] = true;
-  }
-
-  if (student.IEP_or_504_plan !== true) {
-    completion["12"] = true;
+    completion["14"] = true;
   }
 
   return completion;

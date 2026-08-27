@@ -7,6 +7,7 @@ import {
   allowDriveFileAccess,
   copyDriveFile,
   docsBatchUpdate,
+  normalizeDriveFileId,
   TOS_TEMPLATE,
 } from "@/server/connectors/backendless/sis-cloud-code";
 
@@ -140,7 +141,7 @@ export async function signTermsOfService(
     fetchImpl,
   );
 
-  const fileId = String(copied.id ?? "");
+  const fileId = normalizeDriveFileId(copied.id);
   if (!fileId) {
     throw new Error("TOS template copy did not return a file id.");
   }
