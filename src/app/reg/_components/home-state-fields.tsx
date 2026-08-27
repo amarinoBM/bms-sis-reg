@@ -26,6 +26,11 @@ import {
   shouldShowFloridaStepUpSection,
   shouldShowFloridaVaccineSection,
 } from "@/modules/state-regs/state-regs-logic";
+import {
+  EMPTY_STATE_REGS_LOAD,
+  resolveStateRegsView,
+  type StateRegsLoadState,
+} from "@/modules/state-regs/state-regs-load-view";
 import type { StateRegDto } from "@/modules/state-regs/types";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +46,67 @@ type HomeStateFieldsProps = {
 type StateRegsResponse = {
   stateReg: StateRegDto | null;
 };
+
+function useStateRegs(homeState: string, retryNonce: number) {
+  const [loadState, setLoadState] = useState<StateRegsLoadState>(EMPTY_STATE_REGS_LOAD);
+
+  useEffect(() => {
+    const trimmedHomeState = homeState.trim();
+
+    if (!trimmedHomeState) {
+      setLoadState(EMPTY_STATE_REGS_LOAD);
+      return;
+    }
+
+    const controller = new AbortController();
+    const requestedState = trimmedHomeState;
+
+    setLoadState({
+      targetState: requestedState,
+      status: "loading",
+      data: null,
+      error: null,
+    });
+
+    fetchApi<StateRegsResponse>(
+      `/api/state-regs?state=${encodeURIComponent(requestedState)}`,
+      { signal: controller.signal },
+    )
+      .then((response) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setLoadState({
+          targetState: requestedState,
+          status: "success",
+          data: response.stateReg,
+          error: null,
+        });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setLoadState({
+          targetState: requestedState,
+          status: "error",
+          data: null,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not load state requirements.",
+        });
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [homeState, retryNonce]);
+
+  return resolveStateRegsView(homeState, loadState);
+}
 
 function readString(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -147,6 +213,125 @@ function SituationCard({
   );
 }
 
+function StateRequirementsSlot({
+  homeState,
+  studentName,
+  isLoading,
+  stateReg,
+  error,
+  readOnly,
+  paperworkYesSelected,
+  paperworkNoSelected,
+  onRetry,
+  onPaperworkYes,
+  onPaperworkNo,
+}: {
+  homeState: string;
+  studentName: string;
+  isLoading: boolean;
+  stateReg: StateRegDto | null;
+  error: string | null;
+  readOnly: boolean;
+  paperworkYesSelected: boolean;
+  paperworkNoSelected: boolean;
+  onRetry: () => void;
+  onPaperworkYes: () => void;
+  onPaperworkNo: () => void;
+}) {
+  const showRequirementsPanel = Boolean(stateReg?.showRequirementsPanel);
+  const showSlot = isLoading || error || showRequirementsPanel;
+
+  if (!showSlot) {
+    return null;
+  }
+
+  const hsldaPath = hsldaLegalPath(homeState);
+
+  return (
+    <div
+      className="rounded-lg border border-border/80 bg-muted/25 p-4"
+      aria-busy={isLoading || undefined}
+    >
+      {isLoading ? (
+        <div className="flex min-h-24 items-center gap-2 text-body text-muted-foreground" role="status">
+          <RegSpinner className="size-4" />
+          Loading state requirements…
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="space-y-2">
+          <p className="text-body text-destructive">{error}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className={REG_TOUCH_CLASS}
+            onClick={onRetry}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : null}
+
+      {showRequirementsPanel && stateReg && !isLoading ? (
+        <fieldset className="space-y-4">
+          <legend className="px-1 text-label font-medium text-foreground">
+            {HOME_STATE_COPY.requirementsHeading}
+          </legend>
+
+          <RequirementsList displays={stateReg.requirementDisplays} />
+
+          {stateReg.showAnnualEvaluationNote ? (
+            <p className="rounded-md border border-border/60 bg-background/80 px-3 py-2 text-body text-muted-foreground">
+              {homeState} asks families to do one nationally-normed diagnostic per year. We
+              provide this for you, but make sure {studentName} participates in our diagnostic
+              when the time comes!
+            </p>
+          ) : null}
+
+          <p className="text-body text-muted-foreground">
+            {HOME_STATE_COPY.studyInformationLead}
+            {hsldaPath ? (
+              <ExternalLink
+                href={`https://hslda.org/legal/${hsldaPath}`}
+                className="font-semibold text-[#32325d] underline underline-offset-4 hover:text-[#f5713c]"
+              >
+                {HOME_STATE_COPY.studyInformationLink}
+              </ExternalLink>
+            ) : (
+              <span className="font-semibold text-foreground">
+                {HOME_STATE_COPY.studyInformationLink}
+              </span>
+            )}
+          </p>
+
+          <div className="space-y-3 border-t border-border/60 pt-4">
+            <p className="text-label font-medium text-foreground">
+              {HOME_STATE_COPY.paperworkPrompt}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <ChoiceButton
+                selected={paperworkYesSelected}
+                disabled={readOnly}
+                onClick={onPaperworkYes}
+              >
+                {HOME_STATE_COPY.paperworkYes}
+              </ChoiceButton>
+              <ChoiceButton
+                selected={paperworkNoSelected}
+                disabled={readOnly}
+                onClick={onPaperworkNo}
+              >
+                {HOME_STATE_COPY.paperworkNo}
+              </ChoiceButton>
+            </div>
+          </div>
+        </fieldset>
+      ) : null}
+    </div>
+  );
+}
+
 export function HomeStateFields({
   studentName,
   values,
@@ -164,63 +349,28 @@ export function HomeStateFields({
   const submitStepUp = readBoolean(values.submit_step_up);
   const stepUpDeclined = values.submit_step_up === false;
 
-  const [stateReg, setStateReg] = useState<StateRegDto | null>(null);
-  const [loadingStateReg, setLoadingStateReg] = useState(false);
-  const [stateRegError, setStateRegError] = useState<string | null>(null);
   const [stateRegRetryNonce, setStateRegRetryNonce] = useState(0);
   const [showExemptionInput, setShowExemptionInput] = useState(() =>
     isCustomVaccineSituation(vaccineValue),
   );
 
+  const { isLoading: loadingStateReg, stateReg, error: stateRegError } = useStateRegs(
+    homeState,
+    stateRegRetryNonce,
+  );
+
   const showFloridaVaccineSection = shouldShowFloridaVaccineSection(homeState);
   const showFloridaStepUpSection = shouldShowFloridaStepUpSection(homeState);
-  const showRequirementsPanel = Boolean(stateReg?.showRequirementsPanel);
-
-  useEffect(() => {
-    if (!homeState) {
-      setStateReg(null);
-      setStateRegError(null);
-      setLoadingStateReg(false);
-      return;
-    }
-
-    let cancelled = false;
-    setStateReg(null);
-    setLoadingStateReg(true);
-    setStateRegError(null);
-
-    fetchApi<StateRegsResponse>(
-      `/api/state-regs?state=${encodeURIComponent(homeState)}`,
-    )
-      .then((response) => {
-        if (!cancelled) {
-          setStateReg(response.stateReg);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setStateReg(null);
-          setStateRegError(
-            error instanceof Error ? error.message : "Could not load state requirements.",
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingStateReg(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [homeState, stateRegRetryNonce]);
 
   useEffect(() => {
     setShowExemptionInput(isCustomVaccineSituation(vaccineValue));
   }, [vaccineValue]);
 
   function handleHomeStateChange(value: string) {
+    if (value === homeState) {
+      return;
+    }
+
     const updates: Record<string, unknown> = {
       home_state: value,
       determining_required_paperwork_home_state: "",
@@ -274,8 +424,6 @@ export function HomeStateFields({
     onChange("student_award_id", "");
   }
 
-  const hsldaPath = homeState ? hsldaLegalPath(homeState) : "";
-
   return (
     <div className="space-y-6">
       <div className="space-y-3 rounded-lg border border-[#f5713c]/20 bg-[#fdf6f3]/80 px-4 py-3">
@@ -299,87 +447,20 @@ export function HomeStateFields({
         onChange={handleHomeStateChange}
       />
 
-      {loadingStateReg ? (
-        <div
-          className="flex items-center gap-2 text-body text-muted-foreground"
-          role="status"
-        >
-          <RegSpinner className="size-4" />
-          Loading state requirements…
-        </div>
-      ) : null}
-
-      {stateRegError ? (
-        <div className="space-y-2">
-          <p className="text-body text-destructive">{stateRegError}</p>
-          <Button
-            type="button"
-            variant="outline"
-            className={REG_TOUCH_CLASS}
-            onClick={() => setStateRegRetryNonce((current) => current + 1)}
-          >
-            Try again
-          </Button>
-        </div>
-      ) : null}
-
-      {showRequirementsPanel && stateReg && !loadingStateReg ? (
-        <fieldset
-          key={stateReg.stateName}
-          className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4"
-        >
-          <legend className="px-1 text-label font-medium text-foreground">
-            {HOME_STATE_COPY.requirementsHeading}
-          </legend>
-
-          <RequirementsList displays={stateReg.requirementDisplays} />
-
-          {stateReg.showAnnualEvaluationNote ? (
-            <p className="rounded-md border border-border/60 bg-background/80 px-3 py-2 text-body text-muted-foreground">
-              {homeState} asks families to do one nationally-normed diagnostic per year. We
-              provide this for you, but make sure {studentName} participates in our diagnostic
-              when the time comes!
-            </p>
-          ) : null}
-
-          <p className="text-body text-muted-foreground">
-            {HOME_STATE_COPY.studyInformationLead}
-            {hsldaPath ? (
-              <ExternalLink
-                href={`https://hslda.org/legal/${hsldaPath}`}
-                className="font-semibold text-[#32325d] underline underline-offset-4 hover:text-[#f5713c]"
-              >
-                {HOME_STATE_COPY.studyInformationLink}
-              </ExternalLink>
-            ) : (
-              <span className="font-semibold text-foreground">
-                {HOME_STATE_COPY.studyInformationLink}
-              </span>
-            )}
-          </p>
-
-          <div className="space-y-3 border-t border-border/60 pt-4">
-            <p className="text-label font-medium text-foreground">
-              {HOME_STATE_COPY.paperworkPrompt}
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <ChoiceButton
-                selected={paperworkYesSelected}
-                disabled={readOnly}
-                onClick={handlePaperworkYes}
-              >
-                {HOME_STATE_COPY.paperworkYes}
-              </ChoiceButton>
-              <ChoiceButton
-                selected={paperworkNoSelected}
-                disabled={readOnly}
-                onClick={handlePaperworkNo}
-              >
-                {HOME_STATE_COPY.paperworkNo}
-              </ChoiceButton>
-            </div>
-          </div>
-        </fieldset>
+      {homeState ? (
+        <StateRequirementsSlot
+          homeState={homeState}
+          studentName={studentName}
+          isLoading={loadingStateReg}
+          stateReg={stateReg}
+          error={stateRegError}
+          readOnly={readOnly}
+          paperworkYesSelected={paperworkYesSelected}
+          paperworkNoSelected={paperworkNoSelected}
+          onRetry={() => setStateRegRetryNonce((current) => current + 1)}
+          onPaperworkYes={handlePaperworkYes}
+          onPaperworkNo={handlePaperworkNo}
+        />
       ) : null}
 
       {showFloridaVaccineSection ? (
