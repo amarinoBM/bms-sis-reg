@@ -73,7 +73,7 @@ export function FormField({
 
   return (
     <div className={cn("min-w-0 space-y-2", className)}>
-      <Label htmlFor={id} className="text-label font-medium text-foreground break-words">
+      <Label htmlFor={id} className="text-label font-medium leading-snug text-foreground break-words">
         {label}
         {required ? (
           <>
@@ -83,7 +83,7 @@ export function FormField({
         ) : null}
       </Label>
       {description ? (
-        <p id={descriptionId} className="text-label text-muted-foreground break-words">
+        <p id={descriptionId} className="max-w-prose text-label leading-relaxed text-muted-foreground break-words">
           {description}
         </p>
       ) : null}
@@ -569,7 +569,7 @@ export function FormCheckboxGroup({
     <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 bg-muted/25 p-4" aria-describedby={describedBy}>
       <legend className="text-label font-medium text-foreground break-words">{legend}</legend>
       {description ? (
-        <p id={descriptionId} className="text-label text-muted-foreground break-words">
+        <p id={descriptionId} className="max-w-prose text-label leading-relaxed text-muted-foreground break-words">
           {description}
         </p>
       ) : null}

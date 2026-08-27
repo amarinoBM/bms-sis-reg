@@ -301,8 +301,10 @@ export function StepForm({
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
-        <h2 className="text-section font-semibold text-foreground">{definition.title}</h2>
-        <p className="mt-1.5 text-body leading-relaxed text-muted-foreground">
+        <h2 className="text-section font-semibold tracking-tight text-foreground">
+          {definition.title}
+        </h2>
+        <p className="mt-1.5 max-w-3xl text-pretty text-body leading-relaxed text-muted-foreground">
           {definition.description(studentName)}
         </p>
       </div>
