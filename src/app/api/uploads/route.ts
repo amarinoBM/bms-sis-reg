@@ -50,6 +50,7 @@ export async function POST(request: Request) {
       file,
       parentName,
       studentName,
+      currentRow: current.student,
     });
   }, request);
 }

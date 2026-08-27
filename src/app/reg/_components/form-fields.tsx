@@ -235,6 +235,36 @@ type FormSelectProps = {
   required?: boolean;
 };
 
+export type FormFieldOption = {
+  value: string;
+  label: string;
+  description?: string;
+};
+
+function normalizeFieldOptions(options: string[] | FormFieldOption[]): FormFieldOption[] {
+  return options.map((option) =>
+    typeof option === "string" ? { value: option, label: option } : option,
+  );
+}
+
+const formSelectContentClass =
+  "min-w-[var(--anchor-width)] w-max max-w-[min(100vw-3rem,var(--available-width))]";
+
+function formSelectTriggerClass(disabled?: boolean) {
+  return cn(regControlClassName(disabled), "w-full min-w-0");
+}
+
+function SelectOptionItem({ option }: { option: FormFieldOption }) {
+  return (
+    <SelectItem value={option.value}>
+      <span className="font-medium">{option.label}</span>
+      {option.description ? (
+        <span className="text-muted-foreground">{option.description}</span>
+      ) : null}
+    </SelectItem>
+  );
+}
+
 export function FormSelect({
   id,
   label,
@@ -265,7 +295,7 @@ export function FormSelect({
         >
           <SelectTrigger
             id={id}
-            className={cn(regControlClassName(disabled), "w-full min-w-0")}
+            className={formSelectTriggerClass(disabled)}
             {...controlA11yProps({ id, description, error, required })}
           >
             <SelectValue placeholder={placeholder} className="truncate" />
@@ -274,7 +304,7 @@ export function FormSelect({
             align="start"
             alignItemWithTrigger={false}
             sideOffset={8}
-            className="min-w-[var(--anchor-width)] w-max max-w-[min(100vw-3rem,var(--available-width))]"
+            className={formSelectContentClass}
           >
             {options.map((option) => (
               <SelectItem key={option} value={option}>
@@ -283,6 +313,181 @@ export function FormSelect({
             ))}
           </SelectContent>
         </Select>
+      )}
+    </FormField>
+  );
+}
+
+type FormOptionSelectProps = {
+  id: string;
+  label: string;
+  description?: string;
+  error?: string;
+  value: string;
+  options: FormFieldOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  required?: boolean;
+};
+
+export function FormOptionSelect({
+  id,
+  label,
+  description,
+  error,
+  value,
+  options,
+  onChange,
+  disabled,
+  placeholder = "Select an option",
+  required,
+}: FormOptionSelectProps) {
+  const normalizedOptions = normalizeFieldOptions(options);
+  const selectedOption = normalizedOptions.find((option) => option.value === value);
+
+  return (
+    <FormField
+      id={id}
+      label={label}
+      description={description}
+      error={error}
+      required={required}
+    >
+      {normalizedOptions.length === 0 ? (
+        <p className="text-label text-muted-foreground">No options available.</p>
+      ) : (
+        <Select
+          value={value}
+          onValueChange={(next) => onChange(next ?? "")}
+          disabled={disabled}
+        >
+          <SelectTrigger
+            id={id}
+            className={formSelectTriggerClass(disabled)}
+            {...controlA11yProps({ id, description, error, required })}
+          >
+            <SelectValue placeholder={placeholder} className="truncate">
+              {selectedOption?.label}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent
+            align="start"
+            alignItemWithTrigger={false}
+            sideOffset={8}
+            className={formSelectContentClass}
+          >
+            {normalizedOptions.map((option) => (
+              <SelectOptionItem key={option.value} option={option} />
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      {selectedOption?.description ? (
+        <p className="text-label text-muted-foreground">{selectedOption.description}</p>
+      ) : null}
+    </FormField>
+  );
+}
+
+type FormMultiOptionSelectProps = {
+  id: string;
+  label: string;
+  description?: string;
+  error?: string;
+  value: string[];
+  options: FormFieldOption[];
+  onChange: (value: string[]) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  excludeValues?: string[];
+};
+
+export function FormMultiOptionSelect({
+  id,
+  label,
+  description,
+  error,
+  value,
+  options,
+  onChange,
+  disabled,
+  placeholder = "Add an option…",
+  excludeValues = [],
+}: FormMultiOptionSelectProps) {
+  const normalizedOptions = normalizeFieldOptions(options);
+  const excluded = new Set([...value, ...excludeValues]);
+  const availableOptions = normalizedOptions.filter((option) => !excluded.has(option.value));
+  const selectedOptions = normalizedOptions.filter((option) => value.includes(option.value));
+
+  return (
+    <FormField id={id} label={label} description={description} error={error}>
+      <Select
+        value=""
+        onValueChange={(next) => {
+          if (!next || value.includes(next)) {
+            return;
+          }
+          onChange([...value, next]);
+        }}
+        disabled={disabled || availableOptions.length === 0}
+      >
+        <SelectTrigger
+          id={id}
+          className={formSelectTriggerClass(disabled)}
+          {...controlA11yProps({ id, description, error })}
+        >
+          <SelectValue
+            placeholder={
+              availableOptions.length === 0 ? "All options selected" : placeholder
+            }
+            className="truncate"
+          />
+        </SelectTrigger>
+        <SelectContent
+          align="start"
+          alignItemWithTrigger={false}
+          sideOffset={8}
+          className={formSelectContentClass}
+        >
+          {availableOptions.map((option) => (
+            <SelectOptionItem key={option.value} option={option} />
+          ))}
+        </SelectContent>
+      </Select>
+
+      {selectedOptions.length > 0 ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {selectedOptions.map((option) => {
+            const optionId = `${id}-${option.value.replace(/\s+/g, "-")}`;
+
+            return (
+              <div key={option.value} className="flex min-w-0 items-start gap-3">
+                <Checkbox
+                  id={optionId}
+                  className="mt-0.5 size-5 shrink-0 after:-inset-x-4 after:-inset-y-3"
+                  checked={true}
+                  disabled={disabled}
+                  onCheckedChange={(next) => {
+                    if (next !== true) {
+                      onChange(value.filter((item) => item !== option.value));
+                    }
+                  }}
+                />
+                <Label htmlFor={optionId} className="min-w-0 py-1 text-body leading-snug break-words">
+                  <span className="font-medium text-foreground">{option.label}</span>
+                  {option.description ? (
+                    <span className="mt-0.5 block text-label text-muted-foreground">
+                      {option.description}
+                    </span>
+                  ) : null}
+                </Label>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="mt-2 text-label text-muted-foreground">Nothing selected yet.</p>
       )}
     </FormField>
   );
@@ -323,7 +528,7 @@ type FormCheckboxGroupProps = {
   legend: string;
   description?: string;
   error?: string;
-  options: string[];
+  options: string[] | FormFieldOption[];
   value: string[];
   onChange: (value: string[]) => void;
   disabled?: boolean;
@@ -340,6 +545,7 @@ export function FormCheckboxGroup({
   disabled,
   idPrefix,
 }: FormCheckboxGroupProps) {
+  const normalizedOptions = normalizeFieldOptions(options);
   const { descriptionId, errorId, describedBy } = buildFieldA11y({
     id: idPrefix,
     description,
@@ -360,12 +566,12 @@ export function FormCheckboxGroup({
         </p>
       ) : null}
       <div className="space-y-2">
-        {options.map((option, index) => {
+        {normalizedOptions.map((option, index) => {
           const optionId = `${idPrefix}-${index}`;
-          const checked = value.includes(option);
+          const checked = value.includes(option.value);
 
           return (
-            <div key={option} className="flex min-w-0 items-start gap-3">
+            <div key={option.value} className="flex min-w-0 items-start gap-3">
               <Checkbox
                 id={optionId}
                 className="mt-0.5 size-5 shrink-0 after:-inset-x-4 after:-inset-y-3"
@@ -373,17 +579,22 @@ export function FormCheckboxGroup({
                 disabled={disabled}
                 onCheckedChange={(next) => {
                   if (next === true) {
-                    onChange([...value, option]);
+                    onChange([...value, option.value]);
                     return;
                   }
-                  onChange(value.filter((item) => item !== option));
+                  onChange(value.filter((item) => item !== option.value));
                 }}
               />
               <Label
                 htmlFor={optionId}
                 className="min-w-0 py-1 text-body leading-snug break-words"
               >
-                {option}
+                <span className="font-medium text-foreground">{option.label}</span>
+                {option.description ? (
+                  <span className="mt-0.5 block text-label text-muted-foreground">
+                    {option.description}
+                  </span>
+                ) : null}
               </Label>
             </div>
           );

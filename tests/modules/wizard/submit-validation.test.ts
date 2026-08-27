@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { TRANSCRIPT_DELIVERY_SCHOOL } from "@/modules/wizard/transcript-fields";
 import { SAVE_HANDLERS } from "@/modules/wizard/save-handlers";
 import { pickSaveStepFields } from "@/modules/wizard/save-service";
 import {
@@ -40,6 +41,7 @@ describe("submit validation", () => {
       learning_environment_past_12_months: "Homeschool with parent",
       learning_experiece_past_12_months: "Great",
       home_state: "FL",
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
       honorCodeSigned: "Completed",
       ToSBool: true,
       Caucasian: true,

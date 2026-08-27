@@ -21,6 +21,8 @@ export function buildUploadMetadataFromUrl(
   return { id, type: "drive" };
 }
 
+import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
+
 export function hydrateUploadMetadata(row: Record<string, unknown>): Record<string, unknown> {
   const hydrated = { ...row };
 
@@ -40,7 +42,16 @@ export function hydrateUploadMetadata(row: Record<string, unknown>): Record<stri
     );
   }
 
-  if (!hydrated.transcriptMetaData && hydrated.uploadTranscript) {
+  const transcriptFiles = readTranscriptFiles(hydrated.transcriptFiles);
+  if (!hydrated.transcriptMetaData && transcriptFiles[0]) {
+    hydrated.transcriptMetaData = buildUploadMetadataFromUrl(transcriptFiles[0]);
+  }
+
+  if (
+    !hydrated.transcriptMetaData &&
+    typeof hydrated.uploadTranscript === "string" &&
+    hydrated.uploadTranscript.startsWith("http")
+  ) {
     hydrated.transcriptMetaData = buildUploadMetadataFromUrl(String(hydrated.uploadTranscript));
   }
 

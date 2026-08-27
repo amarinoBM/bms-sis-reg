@@ -215,6 +215,11 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   leadId={leadId}
                   objectId={payload.studentInfo.objectId}
                   studentName={payload.studentInfo.studentName}
+                  parentName={
+                    typeof payload.student.parent_name === "string"
+                      ? payload.student.parent_name
+                      : undefined
+                  }
                   signed={payload.student.honorCodeSigned === "Completed"}
                   honorCodeURL={payload.student.honorCodeURL as string | undefined}
                   onSigned={refreshStudent}

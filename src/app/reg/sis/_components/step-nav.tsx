@@ -10,6 +10,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
@@ -105,7 +106,9 @@ export function StepNav({
               "w-full min-w-0 whitespace-normal text-left",
             )}
           >
-            <span className="min-w-0 flex-1 truncate text-left">{activeSectionLabel}</span>
+            <SelectValue placeholder="Choose a section" className="truncate text-left">
+              {activeSectionLabel}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent
             align="start"

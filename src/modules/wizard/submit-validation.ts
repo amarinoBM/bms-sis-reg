@@ -1,4 +1,20 @@
 import type { WizardStepId } from "@/modules/wizard/steps";
+import {
+  LEARNING_DISABILITY_FIELDS,
+  LEARNING_EXPRESSION_FIELDS,
+  LEARNING_PROFILE_TEXT_FIELDS,
+} from "@/modules/wizard/learning-profile";
+import {
+  hasTranscriptDeliveryChoice,
+  isFamilyTranscriptDelivery,
+  readCreditTransferSubjects,
+  readTranscriptFiles,
+  readTransferCreditFlag,
+} from "@/modules/wizard/transcript-fields";
+import {
+  readIepOr504Plan,
+  shouldShowLastSchoolFields,
+} from "@/modules/wizard/prior-school-fields";
 
 const ETHNICITY_KEYS = [
   "African_American",
@@ -42,21 +58,9 @@ function hasBehaviorCoverage(student: Record<string, unknown>): boolean {
   }
 
   const behaviorKeys = [
-    "ADHD",
-    "anxiety",
-    "asperger",
-    "auditory_processing_disorder",
-    "austism_spectrum_discorder",
-    "behavioral_issues",
-    "depression",
-    "Dyslexia",
-    "Dysgraphia",
-    "Dyscalculia",
-    "language_processing_disorder",
-    "nonverbal_learning_disorder",
-    "other_behavioral_challenges",
-    "visual_perceptual_or_visual_motor_defecit",
-    "additional_info_behavioral_challenges",
+    ...LEARNING_DISABILITY_FIELDS.map((field) => field.key),
+    ...LEARNING_EXPRESSION_FIELDS.map((field) => field.key),
+    ...LEARNING_PROFILE_TEXT_FIELDS,
   ];
 
   return behaviorKeys.some((key) => {
@@ -172,18 +176,35 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
     isMissing: (student) => !hasText(student.learning_experiece_past_12_months),
   },
   {
-    key: "upload_copy_EIP_504_plan",
-    label: "Upload IEP / 504 plan",
-    stepId: "12",
+    key: "student_last_school_name",
+    label: "Last school name",
+    stepId: "8",
     isMissing: (student) =>
-      student.IEP_or_504_plan === true && !hasText(student.upload_copy_EIP_504_plan),
+      shouldShowLastSchoolFields(student) && !hasText(student.student_last_school_name),
+  },
+  {
+    key: "upload_copy_EIP_504_plan",
+    label: "Upload a copy of the IEP Plan",
+    stepId: "8",
+    isMissing: (student) =>
+      readIepOr504Plan(student.IEP_or_504_plan) === true &&
+      !hasText(student.upload_copy_EIP_504_plan),
   },
   {
     key: "CreditTransfer",
     label: "Credit transfer subjects",
     stepId: "9",
     isMissing: (student) =>
-      student.transferCredit === true && !hasText(student.CreditTransfer),
+      readTransferCreditFlag(student.transferCredit) &&
+      readCreditTransferSubjects(student.CreditTransfer).length === 0,
+  },
+  {
+    key: "transcriptFiles",
+    label: "Transcript upload",
+    stepId: "9",
+    isMissing: (student) =>
+      isFamilyTranscriptDelivery(student.uploadTranscript) &&
+      readTranscriptFiles(student.transcriptFiles).length === 0,
   },
   {
     key: "home_state",
@@ -205,10 +226,9 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
   },
   {
     key: "uploadTranscript",
-    label: "Transcript for credit transfer",
+    label: "Transcript delivery preference",
     stepId: "9",
-    isMissing: (student) =>
-      student.transferCredit === true && !hasText(student.uploadTranscript),
+    isMissing: (student) => !hasTranscriptDeliveryChoice(student.uploadTranscript),
   },
 ];
 

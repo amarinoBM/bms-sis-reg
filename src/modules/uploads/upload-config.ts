@@ -29,8 +29,7 @@ export const UPLOAD_FIELD_MAP: Record<UploadType, UploadFieldMapping> = {
     fileNamePrefix: "Learning_",
   },
   transcript: {
-    fieldKey: "uploadTranscript",
-    extraFieldKey: "transcriptFiles",
+    fieldKey: "transcriptFiles",
     fileNamePrefix: "Transcript_",
   },
   iep: {

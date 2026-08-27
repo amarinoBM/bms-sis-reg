@@ -31,6 +31,8 @@ export type StepFieldDefinition = {
   uploadType?: "birth_cert" | "student_pic" | "learning" | "transcript" | "iep";
   /** Groups consecutive checkboxes under one fieldset legend. */
   group?: string;
+  /** Shown under the fieldset legend (set on the first field in the group). */
+  groupDescription?: string;
 };
 
 export type StepFormDefinition = {
@@ -57,15 +59,6 @@ const GRADE_OPTIONS = [
   "Grade 12",
   "NA",
   "Graduating",
-];
-
-const LEARNING_ENV_OPTIONS = [
-  "Homeschool with parent",
-  "Homeschool co-op, pod, or microschool",
-  "Physical private school",
-  "Virtual private school",
-  "Physical public/charter school",
-  "Virtual public/charter school",
 ];
 
 export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
@@ -126,34 +119,16 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
   {
     stepId: "4",
     saveHandler: "save2",
-    title: "Interests",
-    description: (name) =>
-      `Search and pick ${name}'s top interest, then add any other interests.`,
+    title: "The most important question of all",
+    description: (name) => `What is ${name} most interested in? *`,
     fields: [],
   },
   {
     stepId: "5",
     saveHandler: "save3",
     title: "Learning profile",
-    description: (name) => `Learning and behavioral challenges for ${name}.`,
-    fields: [
-      { key: "learning_or_behavioral_challenges", label: "Has learning or behavioral challenges", type: "checkbox" },
-      { key: "ADHD", label: "ADHD", type: "checkbox", group: "Challenges" },
-      { key: "Dyslexia", label: "Dyslexia", type: "checkbox", group: "Challenges" },
-      { key: "Dyscalculia", label: "Dyscalculia", type: "checkbox", group: "Challenges" },
-      { key: "Dysgraphia", label: "Dysgraphia", type: "checkbox", group: "Challenges" },
-      { key: "anxiety", label: "Anxiety", type: "checkbox", group: "Challenges" },
-      { key: "depression", label: "Depression", type: "checkbox", group: "Challenges" },
-      { key: "asperger", label: "Asperger’s", type: "checkbox", group: "Challenges" },
-      { key: "austism_spectrum_discorder", label: "Autism spectrum disorder", type: "checkbox", group: "Challenges" },
-      { key: "behavioral_issues", label: "Behavioral issues", type: "checkbox", group: "Challenges" },
-      { key: "auditory_processing_disorder", label: "Auditory processing disorder", type: "checkbox", group: "Challenges" },
-      { key: "language_processing_disorder", label: "Language processing disorder", type: "checkbox", group: "Challenges" },
-      { key: "nonverbal_learning_disorder", label: "Nonverbal learning disorder", type: "checkbox", group: "Challenges" },
-      { key: "visual_perceptual_or_visual_motor_defecit", label: "Visual perceptual / visual motor deficit", type: "checkbox", group: "Challenges" },
-      { key: "other_behavioral_challenges", label: "Other", type: "checkbox", group: "Challenges" },
-      { key: "additional_info_behavioral_challenges", label: "Additional information", type: "textarea" },
-    ],
+    description: (name) => `Does ${name} have any learning or behavioral challenges? *`,
+    fields: [],
   },
   {
     stepId: "6",
@@ -177,32 +152,16 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     stepId: "8",
     saveHandler: "save6",
     title: "Prior school",
-    description: (name) => `School history and learning environment for ${name}.`,
-    fields: [
-      { key: "student_last_school_name", label: "Last school name", type: "text" },
-      { key: "student_last_school_address", label: "Last school address", type: "textarea" },
-      { key: "learning_environment_past_12_months", label: "Learning environment (past 12 months)", type: "select", options: LEARNING_ENV_OPTIONS },
-      { key: "learning_experiece_past_12_months", label: "Learning experience notes", type: "textarea" },
-      { key: "school_like_to_see", label: "What would you like to see from school?", type: "textarea" },
-      { key: "IEP_or_504_plan", label: "Has IEP or 504 plan", type: "checkbox" },
-      { key: "upload_student_curreny_learning", label: "Learning sample upload", type: "file", uploadType: "learning" },
-    ],
+    description: (name) => `If our microschool is a good fit for ${name}'s learning environment`,
+    fields: [],
   },
   {
     stepId: "9",
     saveHandler: "save6.1",
-    title: "Transcripts",
-    description: (name) => `Transcripts and credit transfer for ${name}.`,
-    fields: [
-      { key: "transferCredit", label: "Request credit transfer", type: "checkbox" },
-      {
-        key: "CreditTransfer",
-        label: "Subjects or credits to transfer",
-        type: "textarea",
-        placeholder: "List courses or credits you want reviewed",
-      },
-      { key: "uploadTranscript", label: "Transcript upload", type: "file", uploadType: "transcript" },
-    ],
+    title: "Previous Learning Information",
+    description: (name) =>
+      `Please share any records or transcripts from ${name}'s prior school(s).`,
+    fields: [],
   },
   {
     stepId: "10",
@@ -225,7 +184,6 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
         type: "select",
         options: [...COMPUTER_SYSTEM_OPTIONS],
       },
-      { key: "electives", label: "Electives", type: "textarea" },
       { key: "starting_date", label: "Starting date", type: "date" },
       {
         key: "length_of_staying",

@@ -1,4 +1,7 @@
 import { uploadFileToDrive } from "@/server/connectors/backendless/sis-cloud-code";
+import {
+  readTranscriptFiles,
+} from "@/modules/wizard/transcript-fields";
 import { saveStudentRecord } from "@/modules/students/repository";
 import {
   buildDriveFileUrl,
@@ -14,6 +17,7 @@ type UploadStudentFileInput = {
   file: File;
   parentName: string;
   studentName: string;
+  currentRow?: Record<string, unknown>;
 };
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -57,16 +61,17 @@ export async function uploadStudentFile(
   }
 
   const driveUrl = buildDriveFileUrl(fileId);
-  const savePayload: Record<string, unknown> = {
-    [mapping.fieldKey]: driveUrl,
-  };
+  const savePayload: Record<string, unknown> = {};
 
-  if (mapping.metadataKey) {
-    savePayload[mapping.metadataKey] = metadata;
-  }
+  if (input.uploadType === "transcript") {
+    const existingFiles = readTranscriptFiles(input.currentRow?.transcriptFiles);
+    savePayload.transcriptFiles = [...existingFiles, driveUrl];
+  } else {
+    savePayload[mapping.fieldKey] = driveUrl;
 
-  if (mapping.extraFieldKey) {
-    savePayload[mapping.extraFieldKey] = driveUrl;
+    if (mapping.metadataKey) {
+      savePayload[mapping.metadataKey] = metadata;
+    }
   }
 
   if (mapping.marksStepDisabled) {

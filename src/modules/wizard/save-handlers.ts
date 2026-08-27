@@ -1,3 +1,5 @@
+import { LEARNING_PROFILE_SAVE3_KEYS } from "@/modules/wizard/learning-profile";
+
 export type SaveHandlerKey =
   | "save1"
   | "save1.5"
@@ -45,24 +47,7 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
   ],
   "save1.6": ["PTO", "secondary_guardian", "tertiary_guardian"],
   save2: ["interests", "most_interested_in"],
-  save3: [
-    "ADHD",
-    "Dyscalculia",
-    "Dysgraphia",
-    "Dyslexia",
-    "additional_info_behavioral_challenges",
-    "anxiety",
-    "asperger",
-    "auditory_processing_disorder",
-    "austism_spectrum_discorder",
-    "behavioral_issues",
-    "depression",
-    "language_processing_disorder",
-    "learning_or_behavioral_challenges",
-    "nonverbal_learning_disorder",
-    "other_behavioral_challenges",
-    "visual_perceptual_or_visual_motor_defecit",
-  ],
+  save3: LEARNING_PROFILE_SAVE3_KEYS,
   save4: ["ela_grade_level", "math_grade_level", "science_grade_level"],
   save5: [
     "confidence_in_collaborating",
@@ -74,10 +59,13 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
   ],
   save6: [
     "IEP_or_504_plan",
+    "learningCenterBool",
     "learning_environment_past_12_months",
     "learning_experiece_past_12_months",
     "school_like_to_see",
     "student_last_school_address",
+    "student_last_school_contact_num",
+    "student_last_school_contact_person",
     "student_last_school_name",
     "upload_copy_EIP_504_plan",
     "upload_student_curreny_learning",
@@ -92,7 +80,6 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
   ],
   save8: [
     "computer_system",
-    "electives",
     "email",
     "length_of_staying",
     "starting_date",

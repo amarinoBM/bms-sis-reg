@@ -114,10 +114,6 @@ const FIELD_UI_HINTS: Record<string, FieldUiHints> = {
     selectPlaceholder: "Select device type",
     layout: "half",
   },
-  electives: {
-    placeholder: "Art, music, coding, languages…",
-    hint: "Optional — list anything beyond core subjects.",
-  },
   starting_date: {
     hint: "When you plan for them to begin with us.",
     layout: "half",

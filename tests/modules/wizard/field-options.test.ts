@@ -57,12 +57,30 @@ describe("wizard field enums", () => {
 
     expect(flat.gender_selection).toBe("Female");
     expect(flat.ethnicity_selection).toBe("Caucasian");
-    expect(flat.interests).toEqual(["Sports", "Music"]);
+    expect(flat.interests).toEqual([
+      "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
+      "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
+    ]);
     expect(flat.most_interested_in).toBe(
       "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
     );
     expect(flat.share_contact).toBe(true);
     expect(flat["secondary_guardian.parent_relation"]).toBe("Legal Guardian");
+  });
+
+  it("normalizes stored interest arrays when flattening student row", () => {
+    const flat = enrichFlatFormValues({
+      interests: ["Sports", "Music"],
+      most_interested_in: "Technology and Computing",
+    });
+
+    expect(flat.interests).toEqual([
+      "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
+      "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
+    ]);
+    expect(flat.most_interested_in).toBe(
+      "Technology and Computing: Video games, Coding, Robotics, Web design, etc.",
+    );
   });
 
   it("normalizes interest arrays on save2", () => {

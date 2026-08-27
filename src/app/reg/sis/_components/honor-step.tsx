@@ -5,15 +5,27 @@ import { toast } from "sonner";
 
 import { FormTextInput } from "@/app/reg/_components/form-fields";
 import { SectionSavedActions } from "@/app/reg/_components/section-saved-actions";
-import { getWizardStepLabel } from "@/modules/wizard/steps";
-import { DocumentReviewPanel } from "@/app/reg/_components/document-review-panel";
 import { ExternalLink } from "@/app/reg/_components/external-link";
 import { Button } from "@/components/ui/button";
 import {
-  HONOR_DOCUMENT_PREVIEW_URL,
   HONOR_DOCUMENT_TEMPLATE_ID,
+  buildDriveViewUrl,
 } from "@/config/document-templates";
+import {
+  HONOR_CODE_BODY,
+  HONOR_CODE_SIGN_INSTRUCTION,
+  HONOR_CODE_TITLE,
+  HONOR_CODE_VIEW_LINK_LABEL,
+  HONOR_CODE_VIEW_PREFIX,
+  HONOR_PARENT_NAME_LABEL,
+  HONOR_SIGN_BUTTON_LABEL,
+  HONOR_STUDENT_NAME_LABEL,
+  HONOR_VIEW_SIGNED_LABEL,
+  typeformReminder,
+} from "@/modules/honor/honor-code-copy";
+import { getNextStepId, getWizardStepLabel } from "@/modules/wizard/steps";
 import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
+import { cn } from "@/lib/utils";
 import { postApi } from "@/lib/client-api";
 
 import type { WizardStepId } from "@/modules/wizard/steps";
@@ -22,6 +34,7 @@ type HonorStepProps = {
   leadId: string;
   objectId: string;
   studentName: string;
+  parentName?: string;
   signed: boolean;
   honorCodeURL?: string | null;
   onSigned: () => Promise<void>;
@@ -32,25 +45,22 @@ export function HonorStep({
   leadId,
   objectId,
   studentName,
+  parentName,
   signed,
   honorCodeURL,
   onSigned,
   onGoToStep,
 }: HonorStepProps) {
-  const [parentSignature, setParentSignature] = useState("");
+  const [parentSignature, setParentSignature] = useState(parentName ?? "");
   const [studentSignatureOverride, setStudentSignatureOverride] = useState<string | null>(null);
-  const [hasReviewedDocument, setHasReviewedDocument] = useState(false);
   const [signing, setSigning] = useState(false);
   const studentSignature = studentSignatureOverride ?? studentName;
+  const nextStepId = getNextStepId("13");
+  const honorDocumentUrl = buildDriveViewUrl(HONOR_DOCUMENT_TEMPLATE_ID);
 
   async function handleSign() {
-    if (!hasReviewedDocument) {
-      toast.error("Please read the honor code and confirm before signing.");
-      return;
-    }
-
     if (!parentSignature.trim() || !studentSignature.trim()) {
-      toast.error("Enter both parent and student signatures.");
+      toast.error("Enter both parent and student names.");
       return;
     }
 
@@ -72,78 +82,122 @@ export function HonorStep({
     }
   }
 
+  function handleContinue() {
+    if (!signed) {
+      toast.error("Sign the honor code before continuing.");
+      return;
+    }
+
+    if (nextStepId) {
+      onGoToStep(nextStepId);
+    }
+  }
+
   if (signed) {
     return (
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="text-section font-semibold text-foreground">Honor code</h2>
-        <p className="mt-6 text-body text-foreground">
-          {honorCodeURL ? (
-            <>
-              Signed.{" "}
-              <ExternalLink href={honorCodeURL} className="text-primary underline">
-                View signed honor code
-              </ExternalLink>
-            </>
-          ) : (
-            <>
-              Signed. If you need a copy, email{" "}
-              <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
-                help@brilliantmicroschool.org
-              </a>
-              .
-            </>
-          )}
-        </p>
-        <SectionSavedActions
-          message="Honor code signed."
-          onNext={() => onGoToStep("11")}
-          nextLabel={`Next: ${getWizardStepLabel("11")}`}
-        />
-      </section>
+      <div className="space-y-4">
+        <p className="text-body text-muted-foreground">{typeformReminder(studentName)}</p>
+        <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
+            <h2 className="text-section font-semibold text-[#32325d]">{HONOR_CODE_TITLE}</h2>
+          </div>
+          <div className="space-y-6 p-6">
+            <p className="text-body leading-relaxed text-foreground">
+              {honorCodeURL ? (
+                <>
+                  Signed.{" "}
+                  <ExternalLink href={honorCodeURL} className="text-primary underline">
+                    {HONOR_VIEW_SIGNED_LABEL}
+                  </ExternalLink>
+                </>
+              ) : (
+                <>
+                  Signed. If you need a copy, email{" "}
+                  <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">
+                    help@brilliantmicroschool.org
+                  </a>
+                  .
+                </>
+              )}
+            </p>
+            <SectionSavedActions
+              message="Honor code signed."
+              onNext={nextStepId ? () => onGoToStep(nextStepId) : undefined}
+              nextLabel={
+                nextStepId ? `Next: ${getWizardStepLabel(nextStepId)}` : "Next section"
+              }
+            />
+          </div>
+        </section>
+      </div>
     );
   }
 
   return (
-    <section className="rounded-lg border border-border bg-card p-6">
-      <h2 className="text-section font-semibold text-foreground">Honor code</h2>
-      <p className="mt-2 text-body text-muted-foreground">
-        Read the honor code below, then sign on behalf of yourself and {studentName}.
-      </p>
+    <div className="space-y-4">
+      <p className="text-body text-muted-foreground">{typeformReminder(studentName)}</p>
+      <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="border-b border-[#fae2d9] bg-[#fdf6f3]/70 px-6 py-5">
+          <h2 className="text-section font-semibold text-[#32325d]">{HONOR_CODE_TITLE}</h2>
+        </div>
 
-      <DocumentReviewPanel
-        title="honor code"
-        templateFileId={HONOR_DOCUMENT_TEMPLATE_ID}
-        previewUrl={HONOR_DOCUMENT_PREVIEW_URL}
-        onReviewedChange={setHasReviewedDocument}
-      />
+        <div className="space-y-6 p-6">
+          <p className="text-body leading-relaxed text-foreground">{HONOR_CODE_BODY}</p>
 
-      <div className="mt-6 space-y-4">
-        <FormTextInput
-          id="honor-parent-signature"
-          label="Parent signature (type your full name)"
-          value={parentSignature}
-          onChange={setParentSignature}
-        />
-        <FormTextInput
-          id="honor-student-signature"
-          label={`Student signature (type ${studentName}'s full name)`}
-          value={studentSignature}
-          onChange={setStudentSignatureOverride}
-        />
-        <Button
-          className={REG_TOUCH_CLASS}
-          onClick={handleSign}
-          disabled={
-            signing ||
-            !hasReviewedDocument ||
-            !parentSignature.trim() ||
-            !studentSignature.trim()
-          }
-          aria-busy={signing}
-        >
-          {signing ? "Signing…" : "Sign honor code"}
-        </Button>
-      </div>
-    </section>
+          <p className="text-body text-foreground">
+            {HONOR_CODE_VIEW_PREFIX}{" "}
+            <ExternalLink href={honorDocumentUrl} className="text-primary underline">
+              {HONOR_CODE_VIEW_LINK_LABEL}
+            </ExternalLink>
+          </p>
+
+          <p className="text-body text-foreground">{HONOR_CODE_SIGN_INSTRUCTION}</p>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormTextInput
+              id="honor-parent-signature"
+              label={HONOR_PARENT_NAME_LABEL}
+              value={parentSignature}
+              onChange={setParentSignature}
+            />
+            <FormTextInput
+              id="honor-student-signature"
+              label={HONOR_STUDENT_NAME_LABEL}
+              value={studentSignature}
+              onChange={setStudentSignatureOverride}
+            />
+          </div>
+
+          <div className="flex justify-center">
+            <Button
+              className={cn(REG_TOUCH_CLASS, "bg-[#32325d] hover:bg-[#32325d]/90")}
+              onClick={handleSign}
+              disabled={signing || !parentSignature.trim() || !studentSignature.trim()}
+              aria-busy={signing}
+            >
+              {signing ? "Signing…" : HONOR_SIGN_BUTTON_LABEL}
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-3 border-t border-border pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              className={REG_TOUCH_CLASS}
+              onClick={() => onGoToStep("12")}
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              className={cn(REG_TOUCH_CLASS, "bg-[#f5713c] hover:bg-[#f5713c]/90")}
+              onClick={handleContinue}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

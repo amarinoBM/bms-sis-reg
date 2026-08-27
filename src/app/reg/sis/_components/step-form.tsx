@@ -13,8 +13,11 @@ import {
   FormTextInput,
 } from "@/app/reg/_components/form-fields";
 import { SecondaryGuardiansFields } from "@/app/reg/_components/secondary-guardians-fields";
+import { TranscriptFields } from "@/app/reg/_components/transcript-fields";
 import { HomeStateFields } from "@/app/reg/_components/home-state-fields";
 import { InterestsFields } from "@/app/reg/_components/interests-fields";
+import { LearningProfileFields } from "@/app/reg/_components/learning-profile-fields";
+import { PriorSchoolFields } from "@/app/reg/_components/prior-school-fields";
 import { ConfidenceScaleFields } from "@/app/reg/_components/confidence-scale-fields";
 import { RegSpinner } from "@/app/reg/_components/reg-spinner";
 import { Button } from "@/components/ui/button";
@@ -39,6 +42,7 @@ import { postApi, postFormApi } from "@/lib/client-api";
 import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
 import { fieldLayoutClass, getFieldUiHints } from "@/modules/wizard/field-hints";
 import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
+import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
 
 type StepFormProps = {
   definition: StepFormDefinition;
@@ -62,20 +66,10 @@ function fieldValue(values: Record<string, unknown>, key: string): unknown {
 }
 
 function shouldShowStepField(
-  stepId: WizardStepId,
-  field: StepFieldDefinition,
-  values: Record<string, unknown>,
+  _stepId: WizardStepId,
+  _field: StepFieldDefinition,
+  _values: Record<string, unknown>,
 ): boolean {
-  if (stepId === "5") {
-    if (field.group === "Challenges" || field.key === "additional_info_behavioral_challenges") {
-      return values.learning_or_behavioral_challenges === true;
-    }
-  }
-
-  if (stepId === "9" && (field.key === "CreditTransfer" || field.key === "uploadTranscript")) {
-    return values.transferCredit === true;
-  }
-
   return true;
 }
 
@@ -230,7 +224,14 @@ export function StepForm({
         formData,
       );
 
-      setValues((current) => ({ ...current, [uploadResult.fieldKey]: uploadResult.url }));
+      setValues((current) => {
+        if (uploadResult.fieldKey === "transcriptFiles") {
+          const existing = readTranscriptFiles(current.transcriptFiles);
+          return { ...current, transcriptFiles: [...existing, uploadResult.url] };
+        }
+
+        return { ...current, [uploadResult.fieldKey]: uploadResult.url };
+      });
       setUploadedFileNames((current) => ({
         ...current,
         [uploadResult.fieldKey]: file.name,
@@ -245,6 +246,18 @@ export function StepForm({
       setUploadingKey(null);
       setPendingUpload(null);
     }
+  }
+
+  async function handleTranscriptUpload(file: File) {
+    await handleUpload(
+      {
+        key: "transcriptFiles",
+        label: "Transcript upload",
+        type: "file",
+        uploadType: "transcript",
+      },
+      file,
+    );
   }
 
   function updateValue(key: string, value: unknown) {
@@ -291,6 +304,15 @@ export function StepForm({
           />
         ) : null}
 
+        {stepId === "5" ? (
+          <LearningProfileFields
+            studentName={studentName}
+            values={activeValues}
+            readOnly={readOnly}
+            onChange={updateValue}
+          />
+        ) : null}
+
         {stepId === "4" ? (
           <InterestsFields
             values={activeValues}
@@ -304,6 +326,83 @@ export function StepForm({
             values={activeValues}
             readOnly={readOnly}
             onChange={updateValue}
+          />
+        ) : null}
+
+        {stepId === "8" ? (
+          <PriorSchoolFields
+            studentName={studentName}
+            values={activeValues}
+            readOnly={readOnly}
+            onChange={updateValue}
+            uploadingLearningSample={uploadingKey === "upload_student_curreny_learning"}
+            uploadingIepPlan={uploadingKey === "upload_copy_EIP_504_plan"}
+            pendingLearningSampleName={
+              pendingUpload?.key === "upload_student_curreny_learning"
+                ? pendingUpload.fileName
+                : undefined
+            }
+            pendingIepPlanName={
+              pendingUpload?.key === "upload_copy_EIP_504_plan"
+                ? pendingUpload.fileName
+                : undefined
+            }
+            learningSampleUrl={
+              typeof activeValues.upload_student_curreny_learning === "string"
+                ? activeValues.upload_student_curreny_learning
+                : null
+            }
+            iepPlanUrl={
+              typeof activeValues.upload_copy_EIP_504_plan === "string"
+                ? activeValues.upload_copy_EIP_504_plan
+                : null
+            }
+            uploadedLearningSampleName={uploadedFileNames.upload_student_curreny_learning}
+            uploadedIepPlanName={uploadedFileNames.upload_copy_EIP_504_plan}
+            onUploadLearningSample={
+              readOnly
+                ? undefined
+                : (file) =>
+                    handleUpload(
+                      {
+                        key: "upload_student_curreny_learning",
+                        label: "Learning sample",
+                        type: "file",
+                        uploadType: "learning",
+                      },
+                      file,
+                    )
+            }
+            onUploadIepPlan={
+              readOnly
+                ? undefined
+                : (file) =>
+                    handleUpload(
+                      {
+                        key: "upload_copy_EIP_504_plan",
+                        label: "IEP plan",
+                        type: "file",
+                        uploadType: "iep",
+                      },
+                      file,
+                    )
+            }
+          />
+        ) : null}
+
+        {stepId === "9" ? (
+          <TranscriptFields
+            studentName={studentName}
+            values={activeValues}
+            readOnly={readOnly}
+            onChange={updateValue}
+            uploading={uploadingKey === "transcriptFiles"}
+            pendingFileName={
+              pendingUpload?.key === "transcriptFiles" ? pendingUpload.fileName : undefined
+            }
+            transcriptFileUrl={readTranscriptFiles(activeValues.transcriptFiles)[0]}
+            uploadedFileName={uploadedFileNames.transcriptFiles}
+            onUploadTranscript={readOnly ? undefined : handleTranscriptUpload}
           />
         ) : null}
 
