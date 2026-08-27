@@ -31,6 +31,7 @@ type HomeStateFieldsProps = {
   studentName: string;
   values: Record<string, unknown>;
   readOnly: boolean;
+  fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
 };
 
@@ -146,6 +147,7 @@ export function HomeStateFields({
   studentName,
   values,
   readOnly,
+  fieldErrors = {},
   onChange,
 }: HomeStateFieldsProps) {
   const homeState = readString(values.home_state);
@@ -276,12 +278,15 @@ export function HomeStateFields({
           id="home_state"
           value={homeState}
           disabled={readOnly}
+          aria-invalid={fieldErrors.home_state ? true : undefined}
+          aria-describedby={fieldErrors.home_state ? "home_state-error" : undefined}
           onChange={(event) => handleHomeStateChange(event.target.value)}
           className={cn(
             REG_TOUCH_CLASS,
             REG_FIELD_FOCUS_CLASS,
             "flex w-full rounded-md border border-input bg-background px-3 py-2 text-body",
             readOnly && "cursor-not-allowed opacity-60",
+            fieldErrors.home_state && "border-destructive ring-2 ring-inset ring-destructive/30",
           )}
         >
           <option value="">Select a state</option>
@@ -291,6 +296,11 @@ export function HomeStateFields({
             </option>
           ))}
         </select>
+        {fieldErrors.home_state ? (
+          <p id="home_state-error" className="text-label text-destructive" role="alert">
+            {fieldErrors.home_state}
+          </p>
+        ) : null}
       </div>
 
       {loadingStateReg ? (

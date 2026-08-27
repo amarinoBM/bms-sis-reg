@@ -23,6 +23,7 @@ type SecondaryGuardiansFieldsProps = {
   values: Record<string, unknown>;
   readOnly: boolean;
   showSecondGuardian: boolean;
+  fieldErrors?: Record<string, string>;
   onShowSecondGuardian: () => void;
   onRemoveSecondGuardian: () => void;
   onChange: (key: string, value: unknown) => void;
@@ -41,6 +42,7 @@ export function SecondaryGuardiansFields({
   values,
   readOnly,
   showSecondGuardian,
+  fieldErrors = {},
   onShowSecondGuardian,
   onRemoveSecondGuardian,
   onChange,
@@ -57,6 +59,7 @@ export function SecondaryGuardiansFields({
         prefix="secondary_guardian"
         guardian={secondaryGuardian}
         readOnly={readOnly}
+        fieldErrors={fieldErrors}
         onChange={onChange}
       />
 
@@ -67,6 +70,7 @@ export function SecondaryGuardiansFields({
           guardian={tertiaryGuardian}
           readOnly={readOnly}
           removable={!readOnly}
+          fieldErrors={fieldErrors}
           onRemove={onRemoveSecondGuardian}
           onChange={onChange}
         />
@@ -93,6 +97,7 @@ type GuardianCardProps = {
   guardian: Record<string, string | undefined>;
   readOnly: boolean;
   removable?: boolean;
+  fieldErrors?: Record<string, string>;
   onRemove?: () => void;
   onChange: (key: string, value: unknown) => void;
 };
@@ -103,6 +108,7 @@ function GuardianCard({
   guardian,
   readOnly,
   removable = false,
+  fieldErrors = {},
   onRemove,
   onChange,
 }: GuardianCardProps) {
@@ -137,6 +143,7 @@ function GuardianCard({
                 label={GUARDIAN_FIELD_LABELS[fieldKey]}
                 value={value}
                 disabled={readOnly}
+                error={fieldErrors[id]}
                 onChange={(next) => onChange(id, next)}
               />
             );
@@ -165,6 +172,7 @@ function GuardianCard({
                 type="email"
                 value={value}
                 disabled={readOnly}
+                error={fieldErrors[id]}
                 onChange={(next) => onChange(id, next)}
               />
             );
@@ -179,6 +187,7 @@ function GuardianCard({
                 type="tel"
                 value={value}
                 disabled={readOnly}
+                error={fieldErrors[id]}
                 onChange={(next) => onChange(id, next)}
               />
             );

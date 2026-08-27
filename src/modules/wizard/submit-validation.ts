@@ -1,4 +1,5 @@
 import type { WizardStepId } from "@/modules/wizard/steps";
+import { hasText } from "@/lib/field-validation";
 import {
   LEARNING_DISABILITY_FIELDS,
   LEARNING_EXPRESSION_FIELDS,
@@ -34,10 +35,6 @@ type SubmitRequirement = {
   isMissing: (student: Record<string, unknown>) => boolean;
 };
 
-function hasText(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
 function hasCloseContactId(student: Record<string, unknown>): boolean {
   const raw = typeof student.contact_id === "string" ? student.contact_id.trim() : "";
   if (!raw) {
@@ -52,7 +49,7 @@ function hasEthnicity(student: Record<string, unknown>): boolean {
   return ETHNICITY_KEYS.some((key) => student[key] === true);
 }
 
-function hasBehaviorCoverage(student: Record<string, unknown>): boolean {
+export function hasBehaviorCoverage(student: Record<string, unknown>): boolean {
   if (student.learning_or_behavioral_challenges !== true) {
     return true;
   }

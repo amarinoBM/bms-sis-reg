@@ -12,6 +12,7 @@ import {
   FormTextarea,
   FormTextInput,
 } from "@/app/reg/_components/form-fields";
+import { FormValidationSummary } from "@/app/reg/_components/form-validation-summary";
 import { SecondaryGuardiansFields } from "@/app/reg/_components/secondary-guardians-fields";
 import { TranscriptFields } from "@/app/reg/_components/transcript-fields";
 import { HomeStateFields } from "@/app/reg/_components/home-state-fields";
@@ -43,6 +44,10 @@ import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
 import { fieldLayoutClass, getFieldUiHints } from "@/modules/wizard/field-hints";
 import type { StepFieldDefinition, StepFormDefinition } from "@/modules/wizard/step-schemas";
 import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
+import {
+  type StepFieldErrors,
+  validateStepForSave,
+} from "@/modules/wizard/step-validation";
 
 type StepFormProps = {
   definition: StepFormDefinition;
@@ -134,6 +139,7 @@ export function StepForm({
     fileName: string;
   } | null>(null);
   const [uploadedFileNames, setUploadedFileNames] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<StepFieldErrors>({});
   const [showSecondGuardian, setShowSecondGuardian] = useState(() =>
     guardianContactHasValues(
       readGuardianContact("tertiary_guardian", initialValues),
@@ -159,6 +165,7 @@ export function StepForm({
       });
       setValues(initialValues);
       setJustSaved(false);
+      setFieldErrors({});
       setIsEditing(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not unlock section.");
@@ -172,6 +179,14 @@ export function StepForm({
       return;
     }
 
+    const validation = validateStepForSave(stepId, values);
+    if (!validation.valid) {
+      setFieldErrors(validation.fieldErrors);
+      toast.error(validation.summary ?? "Fix the highlighted fields before saving.");
+      return;
+    }
+
+    setFieldErrors({});
     setSaving(true);
     try {
       await postApi<{ objectId: string }>("/api/students/save", {
@@ -262,6 +277,13 @@ export function StepForm({
 
   function updateValue(key: string, value: unknown) {
     setValues((current) => ({ ...current, [key]: value }));
+    if (fieldErrors[key]) {
+      setFieldErrors((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
   }
 
   function handleRemoveSecondGuardian() {
@@ -286,6 +308,10 @@ export function StepForm({
       </div>
 
       <div className="space-y-6 p-6">
+        {Object.keys(fieldErrors).length > 0 ? (
+          <FormValidationSummary fieldErrors={fieldErrors} />
+        ) : null}
+
         {iepNotRequired ? (
           <div className="rounded-md border border-border bg-muted/30 p-4 text-body text-muted-foreground">
             You indicated that {studentName} does not have an IEP or 504 plan. No document upload
@@ -298,6 +324,7 @@ export function StepForm({
             values={activeValues}
             readOnly={readOnly}
             showSecondGuardian={showSecondGuardian}
+            fieldErrors={fieldErrors}
             onShowSecondGuardian={() => setShowSecondGuardian(true)}
             onRemoveSecondGuardian={handleRemoveSecondGuardian}
             onChange={updateValue}
@@ -309,6 +336,7 @@ export function StepForm({
             studentName={studentName}
             values={activeValues}
             readOnly={readOnly}
+            fieldErrors={fieldErrors}
             onChange={updateValue}
           />
         ) : null}
@@ -317,6 +345,7 @@ export function StepForm({
           <InterestsFields
             values={activeValues}
             readOnly={readOnly}
+            fieldErrors={fieldErrors}
             onChange={updateValue}
           />
         ) : null}
@@ -325,6 +354,7 @@ export function StepForm({
           <ConfidenceScaleFields
             values={activeValues}
             readOnly={readOnly}
+            fieldErrors={fieldErrors}
             onChange={updateValue}
           />
         ) : null}
@@ -334,6 +364,7 @@ export function StepForm({
             studentName={studentName}
             values={activeValues}
             readOnly={readOnly}
+            fieldErrors={fieldErrors}
             onChange={updateValue}
             uploadingLearningSample={uploadingKey === "upload_student_curreny_learning"}
             uploadingIepPlan={uploadingKey === "upload_copy_EIP_504_plan"}
@@ -395,6 +426,7 @@ export function StepForm({
             studentName={studentName}
             values={activeValues}
             readOnly={readOnly}
+            fieldErrors={fieldErrors}
             onChange={updateValue}
             uploading={uploadingKey === "transcriptFiles"}
             pendingFileName={
@@ -411,6 +443,7 @@ export function StepForm({
             studentName={studentName}
             values={activeValues}
             readOnly={readOnly}
+            fieldErrors={fieldErrors}
             onChange={updateValue}
           />
         ) : null}
@@ -434,6 +467,7 @@ export function StepForm({
                         field={field}
                         value={fieldValue(activeValues, field.key)}
                         readOnly={readOnly}
+                        error={fieldErrors[field.key]}
                         uploading={uploadingKey === field.key}
                         pendingFileName={
                           pendingUpload?.key === field.key
@@ -462,6 +496,7 @@ export function StepForm({
                     field={field}
                     value={fieldValue(activeValues, field.key)}
                     readOnly={readOnly}
+                    error={fieldErrors[field.key]}
                     uploading={uploadingKey === field.key}
                     pendingFileName={
                       pendingUpload?.key === field.key
@@ -541,6 +576,7 @@ type FieldControlProps = {
   field: StepFieldDefinition;
   value: unknown;
   readOnly: boolean;
+  error?: string;
   uploading: boolean;
   pendingFileName?: string;
   uploadedFileName?: string;
@@ -552,6 +588,7 @@ function FieldControl({
   field,
   value,
   readOnly,
+  error,
   uploading,
   pendingFileName,
   uploadedFileName,
@@ -570,6 +607,7 @@ function FieldControl({
         options={field.options ?? []}
         value={selected}
         disabled={readOnly}
+        error={error}
         onChange={(next) => onChange(next)}
       />
     );
@@ -582,6 +620,7 @@ function FieldControl({
         label={field.label}
         checked={Boolean(value)}
         disabled={readOnly}
+        error={error}
         onChange={(checked) => onChange(checked)}
       />
     );
@@ -593,6 +632,7 @@ function FieldControl({
         id={field.key}
         label={field.label}
         description={ui.hint}
+        error={error}
         value={String(value ?? "")}
         disabled={readOnly}
         placeholder={ui.placeholder}
@@ -607,6 +647,7 @@ function FieldControl({
         id={field.key}
         label={field.label}
         description={ui.hint}
+        error={error}
         value={value ? String(value) : ""}
         options={field.options ?? []}
         disabled={readOnly}
@@ -621,6 +662,7 @@ function FieldControl({
       <FormFileUpload
         id={field.key}
         label={field.label}
+        error={error}
         fileUrl={value ? String(value) : null}
         pendingFileName={pendingFileName}
         uploadedFileName={uploadedFileName}
@@ -637,6 +679,7 @@ function FieldControl({
         id={field.key}
         label={field.label}
         description={ui.hint}
+        error={error}
         value={toDateInputValue(value)}
         disabled={readOnly}
         onChange={(next) => onChange(fromDateInputValue(next))}
@@ -651,6 +694,7 @@ function FieldControl({
         label={field.label}
         description={ui.hint}
         type="email"
+        error={error}
         value={String(value ?? "")}
         disabled={readOnly}
         placeholder={ui.placeholder}
@@ -667,6 +711,7 @@ function FieldControl({
         label={field.label}
         description={ui.hint}
         type="tel"
+        error={error}
         value={String(value ?? "")}
         disabled={readOnly}
         placeholder={ui.placeholder}
@@ -682,6 +727,7 @@ function FieldControl({
       id={field.key}
       label={field.label}
       description={ui.hint}
+      error={error}
       value={String(value ?? "")}
       disabled={readOnly}
       placeholder={ui.placeholder}

@@ -54,16 +54,26 @@ export function HonorStep({
   const [parentSignature, setParentSignature] = useState(parentName ?? "");
   const [studentSignatureOverride, setStudentSignatureOverride] = useState<string | null>(null);
   const [signing, setSigning] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const studentSignature = studentSignatureOverride ?? studentName;
   const nextStepId = getNextStepId("13");
   const honorDocumentUrl = buildDriveViewUrl(HONOR_DOCUMENT_TEMPLATE_ID);
 
   async function handleSign() {
-    if (!parentSignature.trim() || !studentSignature.trim()) {
+    const errors: Record<string, string> = {};
+    if (!parentSignature.trim()) {
+      errors.parentSignature = "Enter the parent full name.";
+    }
+    if (!studentSignature.trim()) {
+      errors.studentSignature = "Enter the student full name.";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       toast.error("Enter both parent and student names.");
       return;
     }
 
+    setFieldErrors({});
     setSigning(true);
     try {
       await postApi<{ honorCodeURL: string }>("/api/honor/sign", {
@@ -158,13 +168,33 @@ export function HonorStep({
               id="honor-parent-signature"
               label={HONOR_PARENT_NAME_LABEL}
               value={parentSignature}
-              onChange={setParentSignature}
+              error={fieldErrors.parentSignature}
+              onChange={(value) => {
+                setParentSignature(value);
+                if (fieldErrors.parentSignature) {
+                  setFieldErrors((current) => {
+                    const next = { ...current };
+                    delete next.parentSignature;
+                    return next;
+                  });
+                }
+              }}
             />
             <FormTextInput
               id="honor-student-signature"
               label={HONOR_STUDENT_NAME_LABEL}
               value={studentSignature}
-              onChange={setStudentSignatureOverride}
+              error={fieldErrors.studentSignature}
+              onChange={(value) => {
+                setStudentSignatureOverride(value);
+                if (fieldErrors.studentSignature) {
+                  setFieldErrors((current) => {
+                    const next = { ...current };
+                    delete next.studentSignature;
+                    return next;
+                  });
+                }
+              }}
             />
           </div>
 

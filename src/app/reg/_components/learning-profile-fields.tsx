@@ -22,6 +22,7 @@ type LearningProfileFieldsProps = {
   studentName: string;
   values: Record<string, unknown>;
   readOnly: boolean;
+  fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
 };
 
@@ -100,6 +101,7 @@ export function LearningProfileFields({
   studentName,
   values,
   readOnly,
+  fieldErrors = {},
   onChange,
 }: LearningProfileFieldsProps) {
   const hasChallenges = readLearningOrBehavioralChallenges(
@@ -137,10 +139,20 @@ export function LearningProfileFields({
             No
           </ChoiceButton>
         </div>
+        {fieldErrors.learning_or_behavioral_challenges ? (
+          <p className="text-label text-destructive" role="alert">
+            {fieldErrors.learning_or_behavioral_challenges}
+          </p>
+        ) : null}
       </div>
 
       {hasChallenges === true ? (
         <div className="space-y-6">
+          {fieldErrors.learning_profile_details ? (
+            <p className="text-label text-destructive" role="alert">
+              {fieldErrors.learning_profile_details}
+            </p>
+          ) : null}
           <fieldset className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4">
             <legend className="px-1 text-label font-medium leading-snug text-foreground">
               {disabilitySelectionPrompt(studentName)}

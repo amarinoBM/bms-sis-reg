@@ -1,9 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/core/app-error";
 import { sendParentOtp, verifyParentOtp } from "@/modules/otp/otp-service";
 
 describe("otp service", () => {
+  const originalAuthSecret = process.env.AUTH_SECRET;
+  const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  beforeEach(() => {
+    process.env.AUTH_SECRET = "test-auth-secret-for-otp-service-tests";
+    process.env.NEXT_PUBLIC_APP_URL = "https://bms-registration.vercel.app";
+  });
+
+  afterEach(() => {
+    process.env.AUTH_SECRET = originalAuthSecret;
+    process.env.NEXT_PUBLIC_APP_URL = originalAppUrl;
+  });
+
   it("rejects send when no parent email is on file", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

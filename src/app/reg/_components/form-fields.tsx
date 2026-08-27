@@ -499,6 +499,7 @@ type FormCheckboxProps = {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
+  error?: string;
 };
 
 export function FormCheckbox({
@@ -507,19 +508,31 @@ export function FormCheckbox({
   checked,
   onChange,
   disabled,
+  error,
 }: FormCheckboxProps) {
+  const errorId = error ? `${id}-error` : undefined;
+
   return (
-    <div className="flex min-w-0 items-start gap-3">
-      <Checkbox
-        id={id}
-        className="mt-0.5 size-5 shrink-0 after:-inset-x-4 after:-inset-y-3"
-        checked={checked}
-        disabled={disabled}
-        onCheckedChange={(next) => onChange(next === true)}
-      />
-      <Label htmlFor={id} className="min-w-0 py-1 text-body leading-snug break-words">
-        {label}
-      </Label>
+    <div className="min-w-0 space-y-2">
+      <div className="flex min-w-0 items-start gap-3">
+        <Checkbox
+          id={id}
+          className="mt-0.5 size-5 shrink-0 after:-inset-x-4 after:-inset-y-3"
+          checked={checked}
+          disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          onCheckedChange={(next) => onChange(next === true)}
+        />
+        <Label htmlFor={id} className="min-w-0 py-1 text-body leading-snug break-words">
+          {label}
+        </Label>
+      </div>
+      {error ? (
+        <p id={errorId} className="text-label text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -649,6 +662,8 @@ export function FormDateInput({
           regControlClassName(disabled),
           "w-full min-w-0 rounded-lg border border-input px-2.5 py-1 text-base md:text-sm disabled:cursor-not-allowed disabled:opacity-50",
           "[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80",
+          error &&
+            "border-destructive ring-2 ring-inset ring-destructive/30 aria-invalid:border-destructive",
         )}
         {...controlA11yProps({ id, description, error, required })}
         onChange={(event) => onChange(event.target.value)}
@@ -720,6 +735,7 @@ export function FormFileUpload({
           uploading && "border-primary/40 bg-primary/5 ring-2 ring-primary/15",
           hasFile && !uploading && "border-primary/25 bg-primary/5",
           !hasFile && !uploading && "border-border bg-muted/30",
+          displayError && "border-destructive/50 ring-2 ring-destructive/15",
         )}
         aria-busy={uploading}
       >

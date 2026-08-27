@@ -15,6 +15,7 @@ const CONFIDENCE_OPTIONS: FormFieldOption[] = CONFIDENCE_SCALE_OPTIONS.map((opti
 type ConfidenceScaleFieldsProps = {
   values: Record<string, unknown>;
   readOnly: boolean;
+  fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
 };
 
@@ -25,6 +26,7 @@ function readConfidenceValue(value: unknown): string {
 export function ConfidenceScaleFields({
   values,
   readOnly,
+  fieldErrors = {},
   onChange,
 }: ConfidenceScaleFieldsProps) {
   return (
@@ -44,6 +46,7 @@ export function ConfidenceScaleFields({
           disabled={readOnly}
           placeholder="Select confidence level"
           required
+          error={fieldErrors[field.key]}
           onChange={(value) => onChange(field.key, value)}
         />
       ))}

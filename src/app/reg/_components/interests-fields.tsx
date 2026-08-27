@@ -17,6 +17,7 @@ const INTEREST_OPTIONS: FormFieldOption[] = INTEREST_CATEGORIES.map((item) => ({
 type InterestsFieldsProps = {
   values: Record<string, unknown>;
   readOnly: boolean;
+  fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
 };
 
@@ -24,7 +25,7 @@ function isKnownInterestValue(value: string): boolean {
   return INTEREST_CATEGORIES.some((item) => item.fullValue === value);
 }
 
-export function InterestsFields({ values, readOnly, onChange }: InterestsFieldsProps) {
+export function InterestsFields({ values, readOnly, fieldErrors = {}, onChange }: InterestsFieldsProps) {
   const primaryValue =
     typeof values.most_interested_in === "string" ? values.most_interested_in.trim() : "";
   const additionalValues = readInterestsSelection(values.interests);
@@ -61,6 +62,7 @@ export function InterestsFields({ values, readOnly, onChange }: InterestsFieldsP
         disabled={readOnly}
         placeholder="Select top interest"
         required
+        error={fieldErrors.most_interested_in}
         onChange={handlePrimaryChange}
       />
 

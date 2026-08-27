@@ -70,6 +70,7 @@ type PriorSchoolFieldsProps = {
   studentName: string;
   values: Record<string, unknown>;
   readOnly: boolean;
+  fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
   uploadingLearningSample?: boolean;
   uploadingIepPlan?: boolean;
@@ -87,6 +88,7 @@ export function PriorSchoolFields({
   studentName,
   values,
   readOnly,
+  fieldErrors = {},
   onChange,
   uploadingLearningSample = false,
   uploadingIepPlan = false,
@@ -136,6 +138,7 @@ export function PriorSchoolFields({
           disabled={readOnly}
           placeholder="Select an option"
           required
+          error={fieldErrors.learning_environment_past_12_months}
           onChange={(value) => {
             onChange("learning_environment_past_12_months", value);
             if (shouldAskLastSchoolAttendance(value)) {
@@ -158,6 +161,7 @@ export function PriorSchoolFields({
           value={String(values.learning_experiece_past_12_months ?? "")}
           disabled={readOnly}
           required
+          error={fieldErrors.learning_experiece_past_12_months}
           onChange={(value) => onChange("learning_experiece_past_12_months", value)}
         />
       </fieldset>
@@ -191,6 +195,7 @@ export function PriorSchoolFields({
             label={priorSchoolNameLabel(studentName)}
             value={String(values.student_last_school_name ?? "")}
             disabled={readOnly}
+            error={fieldErrors.student_last_school_name}
             onChange={(value) => onChange("student_last_school_name", value)}
           />
           <FormTextarea
@@ -198,6 +203,7 @@ export function PriorSchoolFields({
             label={priorSchoolAddressLabel(studentName)}
             value={String(values.student_last_school_address ?? "")}
             disabled={readOnly}
+            error={fieldErrors.student_last_school_address}
             onChange={(value) => onChange("student_last_school_address", value)}
           />
           <FormTextInput
@@ -251,6 +257,7 @@ export function PriorSchoolFields({
         <FormFileUpload
           id="upload_copy_EIP_504_plan"
           label={IEP_UPLOAD_LABEL}
+          error={fieldErrors.upload_copy_EIP_504_plan}
           fileUrl={iepPlanUrl}
           pendingFileName={pendingIepPlanName}
           uploadedFileName={uploadedIepPlanName}

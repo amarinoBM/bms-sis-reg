@@ -30,6 +30,7 @@ type TranscriptFieldsProps = {
   studentName: string;
   values: Record<string, unknown>;
   readOnly: boolean;
+  fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
   uploading?: boolean;
   pendingFileName?: string;
@@ -42,6 +43,7 @@ export function TranscriptFields({
   studentName,
   values,
   readOnly,
+  fieldErrors = {},
   onChange,
   uploading = false,
   pendingFileName,
@@ -72,6 +74,7 @@ export function TranscriptFields({
         disabled={readOnly}
         placeholder="Select an option"
         required
+        error={fieldErrors.uploadTranscript}
         onChange={(value) => onChange("uploadTranscript", value)}
       />
 
@@ -80,6 +83,7 @@ export function TranscriptFields({
           id="transcript-upload"
           label="Upload transcript files"
           description="Upload report cards, transcripts, or other records from prior schools. You can add more than one file."
+          error={fieldErrors.transcriptFiles}
           fileUrl={displayFileUrl}
           pendingFileName={pendingFileName}
           uploadedFileName={uploadedFileName}
@@ -116,6 +120,7 @@ export function TranscriptFields({
             options={CREDIT_SUBJECT_OPTIONS}
             disabled={readOnly}
             placeholder="Add a subject…"
+            error={fieldErrors.CreditTransfer}
             onChange={(next) => onChange("CreditTransfer", next)}
           />
         ) : null}
