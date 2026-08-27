@@ -61,16 +61,18 @@ export async function docsBatchUpdate(
   replacements: Record<string, string>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Record<string, unknown>> {
+  const requestJson = JSON.stringify({
+    action: "docsBatchUpdate",
+    payload: {
+      documentId: String(documentId),
+      requests: buildReplaceRequests(replacements),
+    },
+  });
+
   const raw = await invokeCloudCode<string | Record<string, unknown>>({
     service: "BG_30_SIS_SECURITY",
     method: "SISSecureProxyPost",
-    body: {
-      action: "docsBatchUpdate",
-      payload: {
-        documentId: String(documentId),
-        requests: buildReplaceRequests(replacements),
-      },
-    },
+    body: requestJson,
     fetchImpl,
   });
 
