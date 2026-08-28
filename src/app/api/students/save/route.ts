@@ -6,6 +6,7 @@ import { saveStudentStep, loadStudentRecord } from "@/modules/students/repositor
 import { parseSaveStep } from "@/modules/wizard/save-service";
 import { unflattenFormValues } from "@/modules/wizard/step-schemas";
 import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
+import { preserveDocumentFields } from "@/modules/uploads/document-files";
 
 const bodySchema = z.object({
   leadId: z.string().min(1),
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const fields = unflattenFormValues(parsed.fields);
+    const fields = preserveDocumentFields(unflattenFormValues(parsed.fields), current.student);
 
     return saveStudentStep(
       parsed.leadId,

@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { readIepFiles } from "@/modules/uploads/document-files";
+import { UPLOAD_FORMAT_HINT } from "@/modules/uploads/upload-limits";
 
 import {
   FieldRequirementBadge,
@@ -121,9 +123,6 @@ export function PriorSchoolFields({
 
   function setHasIep(next: boolean) {
     onChange("IEP_or_504_plan", next);
-    if (!next) {
-      onChange("upload_copy_EIP_504_plan", "");
-    }
   }
 
   return (
@@ -265,6 +264,10 @@ export function PriorSchoolFields({
             label={IEP_UPLOAD_LABEL}
             error={fieldErrors.upload_copy_EIP_504_plan}
             fileUrl={iepPlanUrl}
+            fileUrls={readIepFiles(values)}
+            fileLabel="IEP or 504 file"
+            actionLabel={iepPlanUrl ? "Replace current file" : "Choose file"}
+            description={`Upload one current IEP or 504 plan. Older attachments stay available. ${UPLOAD_FORMAT_HINT}`}
             pendingFileName={pendingIepPlanName}
             uploadedFileName={uploadedIepPlanName}
             uploading={uploadingIepPlan}

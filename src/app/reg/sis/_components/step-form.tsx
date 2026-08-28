@@ -49,7 +49,7 @@ import {
   applyGenderSelection,
   isOtherGenderSelected,
 } from "@/modules/wizard/field-options";
-import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
+import { readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 import {
   type StepFieldErrors,
   validateStepForSave,
@@ -156,9 +156,9 @@ export function StepForm({
   const snapshotVersion = persistence.kind === "admin" ? persistence.version : "";
   useEffect(() => { adminVersion.current = snapshotVersion; }, [snapshotVersion]);
   function reportAdminState(next: Partial<AdminFormState>) {
-    if (persistence.kind !== "admin" || !mounted.current) return;
+    if (!mounted.current) return;
     adminState.current = { ...adminState.current, ...next };
-    onAdminStateChange?.(adminState.current);
+    if (persistence.kind === "admin") onAdminStateChange?.(adminState.current);
   }
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [saving, setSaving] = useState(false);
@@ -206,7 +206,7 @@ export function StepForm({
   }
 
   async function handleSave() {
-    if (persistence.kind === "admin" && adminState.current.busy) return;
+    if (adminState.current.busy) return;
     if (!definition.saveHandler) {
       return;
     }
@@ -245,7 +245,7 @@ export function StepForm({
   }
 
   async function handleUpload(field: StepFieldDefinition, file: File) {
-    if (persistence.kind === "admin" && adminState.current.busy) return;
+    if (adminState.current.busy) return;
     if (!field.uploadType) {
       return;
     }
@@ -256,7 +256,7 @@ export function StepForm({
       toast.error(
         isAppError(error)
           ? error.exposeMessage
-          : "Could not upload this file. Try a PDF or image under 10 MB.",
+          : "Could not upload this file. Try a PDF or image under 4 MB.",
       );
       return;
     }
@@ -278,7 +278,7 @@ export function StepForm({
         persistence.kind === "admin" ? "/api/admin/uploads" : "/api/uploads",
         formData,
       );
-      if (persistence.kind === "admin" && !mounted.current) return;
+      if (!mounted.current) return;
       if (persistence.kind === "admin") {
         if (!uploadResult.adminVersion) throw new Error("Reload this registration before making more changes.");
         adminVersion.current = uploadResult.adminVersion;
@@ -287,7 +287,7 @@ export function StepForm({
 
       setValues((current) => {
         if (uploadResult.fieldKey === "transcriptFiles") {
-          const existing = readTranscriptFiles(current.transcriptFiles);
+          const existing = readStudentTranscriptFiles(current);
           return { ...current, transcriptFiles: [...existing, uploadResult.url] };
         }
 
@@ -299,8 +299,10 @@ export function StepForm({
       }));
       toast.success("File uploaded");
       if (persistence.kind === "parent") {
-        setIsEditing(false);
-        setJustSaved(true);
+        if (!definition.saveHandler) {
+          setIsEditing(false);
+          setJustSaved(true);
+        }
         await onSaved();
       }
     } catch (error) {
@@ -398,7 +400,7 @@ export function StepForm({
         </p>
       </div>
 
-      <fieldset disabled={persistence.kind === "admin" && (saving || uploadingKey !== null)} className="min-w-0 space-y-6 p-6">
+      <fieldset disabled={saving || uploadingKey !== null} className="min-w-0 space-y-6 p-6">
         {persistence.kind === "admin" && stepId === "2" && <p className="text-label text-muted-foreground">Parent sign-in email is locked in admin mode. It controls who can sign and submit this registration.</p>}
         {Object.keys(fieldErrors).length > 0 ? (
           <FormValidationSummary fieldErrors={fieldErrors} />
@@ -517,7 +519,6 @@ export function StepForm({
             pendingFileName={
               pendingUpload?.key === "transcriptFiles" ? pendingUpload.fileName : undefined
             }
-            transcriptFileUrl={readTranscriptFiles(activeValues.transcriptFiles)[0]}
             uploadedFileName={uploadedFileNames.transcriptFiles}
             onUploadTranscript={readOnly ? undefined : handleTranscriptUpload}
           />
@@ -610,7 +611,7 @@ export function StepForm({
             <Button
               className={cn(REG_TOUCH_CLASS, "gap-2")}
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || uploadingKey !== null}
               aria-busy={saving}
             >
               {saving ? (

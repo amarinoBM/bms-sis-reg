@@ -8,10 +8,11 @@ import {
   type FormFieldOption,
 } from "@/app/reg/_components/form-fields";
 import { CREDIT_TRANSFER_SUBJECTS } from "@/modules/wizard/credit-transfer-subjects";
+import { readStudentTranscriptFiles } from "@/modules/uploads/document-files";
+import { UPLOAD_FORMAT_HINT } from "@/modules/uploads/upload-limits";
 import {
   readCreditTransferSubjects,
   readTranscriptDeliveryChoice,
-  readTranscriptFiles,
   readTransferCreditFlag,
   TRANSCRIPT_DELIVERY_CHOICES,
   TRANSCRIPT_DELIVERY_OPTIONS,
@@ -39,7 +40,6 @@ type TranscriptFieldsProps = {
   onChange: (key: string, value: unknown) => void;
   uploading?: boolean;
   pendingFileName?: string;
-  transcriptFileUrl?: string | null;
   uploadedFileName?: string;
   onUploadTranscript?: (file: File) => void;
 };
@@ -52,15 +52,13 @@ export function TranscriptFields({
   onChange,
   uploading = false,
   pendingFileName,
-  transcriptFileUrl,
   uploadedFileName,
   onUploadTranscript,
 }: TranscriptFieldsProps) {
   const deliveryChoice = readTranscriptDeliveryChoice(values.uploadTranscript);
-  const transcriptFiles = readTranscriptFiles(values.transcriptFiles);
+  const transcriptFiles = readStudentTranscriptFiles(values);
   const creditSubjects = readCreditTransferSubjects(values.CreditTransfer);
   const wantsCreditTransfer = readTransferCreditFlag(values.transferCredit);
-  const displayFileUrl = transcriptFileUrl ?? transcriptFiles[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -87,9 +85,11 @@ export function TranscriptFields({
         <FormFileUpload
           id="transcript-upload"
           label="Upload transcript files"
-          description="Upload report cards, transcripts, or other records from prior schools. You can add more than one file."
+          description={`Add report cards, transcripts, or other school records one file at a time. Existing files are kept. ${UPLOAD_FORMAT_HINT}`}
           error={fieldErrors.transcriptFiles}
-          fileUrl={displayFileUrl}
+          fileUrls={transcriptFiles}
+          fileLabel="Transcript file"
+          actionLabel={transcriptFiles.length ? "Add another file" : "Choose file"}
           pendingFileName={pendingFileName}
           uploadedFileName={uploadedFileName}
           uploading={uploading}

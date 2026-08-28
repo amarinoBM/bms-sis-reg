@@ -7,7 +7,9 @@ import { hydrateUploadMetadata } from "@/modules/students/upload-metadata";
 import { toStudentLoadResultDto } from "@/modules/students/student-wizard-dto";
 import type { MsStudentDirRow, StudentLoadResult } from "@/modules/students/types";
 import { decryptStudentDirRow } from "@/server/connectors/backendless/cloud-code-client";
-import { readTranscriptFiles, TRANSCRIPT_DELIVERY_OPTIONS, TRANSCRIPT_DELIVERY_UPLOAD } from "@/modules/wizard/transcript-fields";
+import { TRANSCRIPT_DELIVERY_UPLOAD } from "@/modules/wizard/transcript-fields";
+import { DOCUMENT_FIELDS, isDriveDocument, readDocumentFiles, readIepFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
+export { preserveDocumentFields } from "@/modules/uploads/document-files";
 import { adminRef } from "./store";
 
 const ENROLLED = "student_name not like '%[delete]%' and slots.status='enrolled'";
@@ -83,21 +85,11 @@ export function registrationVersion(student: Record<string, unknown>): string {
   return adminRef("registration-version", JSON.stringify(stable(student)));
 }
 
-const DOCUMENT_FIELDS = [
-  "studentBirthCert", "studentPic", "upload_student_curreny_learning",
-  "upload_copy_EIP_504_plan", "honorCodeURL", "ToSURL", "uploadTranscript",
-] as const;
-
 export function adminDocumentUrl(student: Record<string, unknown>, field: string, index = 0): string | null {
-  const value = field === "transcriptFiles" ? readTranscriptFiles(student.transcriptFiles)[index]
+  const value = field === "transcriptFiles" ? readStudentTranscriptFiles(student)[index]
+    : field === "IEPFiles" ? readDocumentFiles(student.IEPFiles)[index]
     : DOCUMENT_FIELDS.includes(field as typeof DOCUMENT_FIELDS[number]) ? student[field] : null;
-  if (typeof value !== "string") return null;
-  try {
-    const url = new URL(value);
-    // All existing SIS document uploads use Drive. Never redirect to an arbitrary stored URL.
-    return url.protocol === "https:" && !url.username && !url.password &&
-      ["drive.google.com", "docs.google.com"].includes(url.hostname) ? url.href : null;
-  } catch { return null; }
+  return typeof value === "string" && isDriveDocument(value) ? new URL(value).href : null;
 }
 
 export function withAdminDocumentLinks(result: StudentLoadResult, leadId: string): StudentLoadResult {
@@ -115,15 +107,19 @@ export function withAdminDocumentLinks(result: StudentLoadResult, leadId: string
     if (adminDocumentUrl(student, field)) student[field] = link(field);
     else if (typeof student[field] === "string" && /^https?:|^javascript:|^data:/i.test(String(student[field]))) delete student[field];
   }
-  student.transcriptFiles = readTranscriptFiles(result.student.transcriptFiles).map((_, index) =>
+  student.transcriptFiles = readStudentTranscriptFiles(result.student).map((_, index) =>
     adminDocumentUrl(result.student, "transcriptFiles", index) ? link("transcriptFiles", index) : "",
   ).filter(Boolean);
-  const legacyTranscript = adminDocumentUrl(result.student, "uploadTranscript");
-  if (legacyTranscript) {
-    const alreadyListed = readTranscriptFiles(result.student.transcriptFiles).some((_, index) =>
-      adminDocumentUrl(result.student, "transcriptFiles", index) === legacyTranscript,
-    );
-    if (!alreadyListed) student.transcriptFiles = [...(student.transcriptFiles as string[]), link("uploadTranscript")];
+  const currentIep = readIepFiles({ upload_copy_EIP_504_plan: result.student.upload_copy_EIP_504_plan });
+  student.IEPFiles = readDocumentFiles(result.student.IEPFiles).map((url, index) => {
+    if (!isDriveDocument(url)) return "";
+    // Keep legacy proxies stable when the current IEP is replaced later.
+    if (currentIep.length && readIepFiles({ upload_copy_EIP_504_plan: currentIep[0], IEPFiles: [url] }).length === 1) {
+      student.upload_copy_EIP_504_plan = link("IEPFiles", index);
+    }
+    return link("IEPFiles", index);
+  }).filter(Boolean);
+  if (adminDocumentUrl(result.student, "uploadTranscript")) {
     student.uploadTranscript = TRANSCRIPT_DELIVERY_UPLOAD;
   }
   return { ...dto, student };
@@ -131,27 +127,4 @@ export function withAdminDocumentLinks(result: StudentLoadResult, leadId: string
 
 export function toAdminRegistrationResult(result: StudentLoadResult, leadId: string): AdminRegistrationResult {
   return { ...withAdminDocumentLinks(result, leadId), adminVersion: registrationVersion(result.student) };
-}
-
-export function preserveDocumentFields(fields: Record<string, unknown>, current: Record<string, unknown>) {
-  const next = { ...fields };
-  for (const field of [...DOCUMENT_FIELDS.filter((f) => f !== "uploadTranscript"), "transcriptFiles"]) {
-    // Uploaded document locations can only change through the validated upload endpoint.
-    if (field in next) { if (field in current) next[field] = current[field]; else delete next[field]; }
-  }
-  if ("uploadTranscript" in next) {
-    const isDeliveryChoice = TRANSCRIPT_DELIVERY_OPTIONS.some((choice) => next.uploadTranscript === choice);
-    if (isDeliveryChoice) {
-      const legacyTranscript = adminDocumentUrl(current, "uploadTranscript");
-      if (legacyTranscript) {
-        next.transcriptFiles = [...new Set([...readTranscriptFiles(current.transcriptFiles), legacyTranscript])];
-      }
-    } else {
-      // Do not accept raw URLs or proxy links from the client in this legacy
-      // document-or-choice field. Only the upload endpoint can add documents.
-      if ("uploadTranscript" in current) next.uploadTranscript = current.uploadTranscript;
-      else delete next.uploadTranscript;
-    }
-  }
-  return next;
 }

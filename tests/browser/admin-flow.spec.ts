@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { sealData } from "iron-session";
 test.skip(!process.env.ADMIN_BROWSER_TESTS, "Run with npm run test:browser:admin against the synthetic backend.");
 test("admin signs in, searches, edits, switches students, and signs out", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
@@ -81,6 +82,27 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
   expect(state.records[0].computer_system).toBe("MacOS Computer");
   expect(state.audit.some((a: { event: string }) => a.event === "save_verified")).toBe(true);
+  await page.getByLabel("Jump to section").selectOption("9");
+  await expect(page.getByRole("link", { name: /Transcript file/ })).toHaveCount(1);
+  for (let count = 2; count <= 3; count++) {
+    await expect(page.getByRole("button", { name: "Add another file" })).toBeVisible();
+    const uploaded = page.waitForResponse("**/api/admin/uploads");
+    await page.locator("#transcript-upload").setInputFiles({ name: `record-${count}.pdf`, mimeType: "application/pdf", buffer: Buffer.from("%PDF synthetic") });
+    expect((await uploaded).status()).toBe(200);
+    await expect(page.getByRole("link", { name: /Transcript file/ })).toHaveCount(count);
+  }
+  await page.screenshot({ path: testInfo.outputPath("admin-transcripts.png"), fullPage: true });
+  const transcriptSave = page.waitForResponse("**/api/admin/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await transcriptSave).status()).toBe(200);
+  await expect(page.getByRole("button", { name: "Edit section" })).toBeVisible();
+  await page.getByLabel("Jump to section").selectOption("8");
+  await expect(page.getByRole("link", { name: /IEP or 504 file/ })).toHaveCount(2);
+  for (const link of await page.getByRole("link", { name: /IEP or 504 file/ }).all()) {
+    expect(await link.getAttribute("href")).toMatch(/^\/api\/admin\/document\?/);
+  }
+  await expect(page.getByRole("button", { name: "Replace current file" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("admin-iep.png"), fullPage: true });
   await page.getByLabel("Jump to section").selectOption("12");
   await expect(page.getByText("Signed by the family.", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open signed document" })).toBeVisible();
@@ -98,4 +120,50 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin\/login$/);
   expect(errors).toEqual([]);
+});
+
+test("parent keeps draft answers during uploads and can add several transcripts", async ({ page, request, context }, testInfo) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  // Synthetic signed session: no production OTPs, credentials, or students.
+  const value = await sealData({ leadId: "lead_family", studentName: "Alex", isLoggedIn: true }, { password: "synthetic-parent-browser-secret-32-characters!!" });
+  await context.addCookies([{ name: "bms-sis-reg-parent", value, url: "http://127.0.0.1:3028", httpOnly: true, sameSite: "Lax" }]);
+  await page.goto("/reg/sis?lead_id=lead_family&student_name=Alex");
+  await page.getByLabel("Nickname").fill("Draft nickname");
+  const birthUpload = page.waitForResponse("**/api/uploads");
+  await page.locator("#studentBirthCert").setInputFiles({ name: "birth.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF synthetic") });
+  expect((await birthUpload).status()).toBe(200);
+  await expect(page.getByLabel("Nickname")).toBeEnabled();
+  await expect(page.getByLabel("Nickname")).toHaveValue("Draft nickname");
+  const save = page.waitForResponse("**/api/students/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await save).status()).toBe(200);
+  for (let i = 0; i < 7; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("link", { name: /IEP or 504 file/ })).toHaveCount(2);
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  for (let count = 2; count <= 3; count++) {
+    await expect(page.getByRole("button", { name: "Add another file" })).toBeVisible();
+    const upload = page.waitForResponse("**/api/uploads");
+    await page.locator("#transcript-upload").setInputFiles({ name: `transcript-${count}.pdf`, mimeType: "application/pdf", buffer: Buffer.from("%PDF synthetic") });
+    expect((await upload).status()).toBe(200);
+    await expect(page.getByRole("link", { name: /Transcript file/ })).toHaveCount(count);
+    await expect(page.getByRole("button", { name: "Add another file" })).toBeEnabled();
+  }
+  await page.locator("#transcript-upload").setInputFiles({ name: "oversized.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(4 * 1024 * 1024 + 1) });
+  await expect(page.getByText("File is too large. Maximum size is 4 MB.")).toBeVisible();
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.records[0].transcriptFiles).toHaveLength(3);
+  expect(state.records[0].student_nick_name).toBe("Draft nickname");
+  expect(state.records[1].transcriptFiles).toBeUndefined();
+  await page.getByRole("button", { name: "Previous", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("link", { name: /Transcript file/ })).toHaveCount(3);
+  const transcriptSave = page.waitForResponse("**/api/students/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await transcriptSave).status()).toBe(200);
+  await expect(page.getByRole("button", { name: "Edit section" })).toBeVisible();
+  const finalState = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(finalState.records[0]["6.1disabled"]).toBe(true);
+  expect(finalState.records[0].transcriptFiles).toHaveLength(3);
+  await page.screenshot({ path: testInfo.outputPath("parent-transcripts.png"), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

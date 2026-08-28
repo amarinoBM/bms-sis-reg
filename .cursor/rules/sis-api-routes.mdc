@@ -13,7 +13,7 @@ alwaysApply: false
 - **Response shape:** Use `runRoute` → `{ success: true, data }` or `{ success: false, error: { code, message } }`. Never return raw Cloud Code payloads to the client.
 - **Student payload:** Return `toStudentLoadResultDto()` from load — strip `studentMSPassword`, `studentMSEmail`, `UpdateHistory`, `previous_data`, `slots`, etc.
 - **Writes:** All Backendless mutations require `EXTERNAL_WRITES_ENABLED=true` (throws `FORBIDDEN` otherwise).
-- **Uploads:** `assertUploadFileAllowed` — max 10 MB, PDF/JPEG/PNG/WEBP only.
+- **Uploads:** `assertUploadFileAllowed` — max 4 MB, PDF/JPEG/PNG/WEBP only.
 - **Errors:** `AppError` codes map to HTTP status via `route-handler`; do not expose stack traces or Backendless cause text to clients.
 - **Logging:** Never log student PII, OTP values, or secrets.
 

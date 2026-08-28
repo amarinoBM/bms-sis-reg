@@ -1,4 +1,5 @@
 import type { WizardStepId } from "@/modules/wizard/steps";
+import { readIepFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 import {
   hasText,
   isConfidenceRating,
@@ -28,7 +29,6 @@ import {
   hasTranscriptDeliveryChoice,
   isFamilyTranscriptDelivery,
   readCreditTransferSubjects,
-  readTranscriptFiles,
   readTransferCreditFlag,
 } from "@/modules/wizard/transcript-fields";
 
@@ -242,7 +242,7 @@ function validateStep8(values: Record<string, unknown>): StepFieldErrors {
   }
 
   const hasIep = readIepOr504Plan(values.IEP_or_504_plan);
-  if (hasIep === true && !hasText(values.upload_copy_EIP_504_plan)) {
+  if (hasIep === true && readIepFiles(values).length === 0) {
     setError(errors, "upload_copy_EIP_504_plan", "Upload a copy of the IEP or 504 plan.");
   }
 
@@ -267,7 +267,7 @@ function validateStep9(values: Record<string, unknown>): StepFieldErrors {
   }
 
   if (isFamilyTranscriptDelivery(values.uploadTranscript)) {
-    if (readTranscriptFiles(values.transcriptFiles).length === 0) {
+    if (readStudentTranscriptFiles(values).length === 0) {
       setError(errors, "transcriptFiles", "Upload a transcript file.");
     }
   }

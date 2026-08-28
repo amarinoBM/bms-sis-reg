@@ -1,4 +1,5 @@
 import type { WizardStepId } from "@/modules/wizard/steps";
+import { readIepFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 import { hasText } from "@/lib/field-validation";
 import {
   LEARNING_DISABILITY_FIELDS,
@@ -9,7 +10,6 @@ import {
   hasTranscriptDeliveryChoice,
   isFamilyTranscriptDelivery,
   readCreditTransferSubjects,
-  readTranscriptFiles,
   readTransferCreditFlag,
 } from "@/modules/wizard/transcript-fields";
 import {
@@ -185,7 +185,7 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
     stepId: "8",
     isMissing: (student) =>
       readIepOr504Plan(student.IEP_or_504_plan) === true &&
-      !hasText(student.upload_copy_EIP_504_plan),
+      readIepFiles(student).length === 0,
   },
   {
     key: "CreditTransfer",
@@ -201,7 +201,7 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
     stepId: "9",
     isMissing: (student) =>
       isFamilyTranscriptDelivery(student.uploadTranscript) &&
-      readTranscriptFiles(student.transcriptFiles).length === 0,
+      readStudentTranscriptFiles(student).length === 0,
   },
   {
     key: "home_state",

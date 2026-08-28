@@ -3,6 +3,7 @@ import {
   normalizeGuardianContactForSave,
 } from "@/modules/wizard/guardian-contact";
 import type { SaveHandlerKey } from "@/modules/wizard/save-handlers";
+import { readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 import {
   applyEthnicitySelection,
   applyGenderSelection,
@@ -14,9 +15,7 @@ import {
 import {
   readCreditTransferSubjects,
   readTranscriptDeliveryChoice,
-  readTranscriptFiles,
   readTransferCreditFlag,
-  TRANSCRIPT_DELIVERY_UPLOAD,
 } from "@/modules/wizard/transcript-fields";
 import {
   readIepOr504Plan,
@@ -48,7 +47,7 @@ export function expandVirtualFormFields(
 
   if (saveStep === "save6.1") {
     expanded.CreditTransfer = readCreditTransferSubjects(expanded.CreditTransfer);
-    expanded.transcriptFiles = readTranscriptFiles(expanded.transcriptFiles);
+    expanded.transcriptFiles = readStudentTranscriptFiles(expanded);
     expanded.transferCredit = readTransferCreditFlag(expanded.transferCredit);
 
     const deliveryChoice = readTranscriptDeliveryChoice(expanded.uploadTranscript);
@@ -115,21 +114,13 @@ export function enrichFlatFormValues(
     typeof student.most_interested_in === "string" ? student.most_interested_in : "";
   flat.most_interested_in = normalizeInterestCategory(mostInterestedIn) ?? mostInterestedIn;
 
-  flat.transcriptFiles = readTranscriptFiles(student.transcriptFiles);
+  flat.transcriptFiles = readStudentTranscriptFiles(student);
   flat.CreditTransfer = readCreditTransferSubjects(student.CreditTransfer);
   flat.transferCredit = readTransferCreditFlag(student.transferCredit);
 
   const deliveryChoice = readTranscriptDeliveryChoice(student.uploadTranscript);
   if (deliveryChoice) {
     flat.uploadTranscript = deliveryChoice;
-  } else if (
-    typeof student.uploadTranscript === "string" &&
-    student.uploadTranscript.trim().startsWith("http")
-  ) {
-    const legacyUrl = student.uploadTranscript.trim();
-    const legacyFiles = readTranscriptFiles(flat.transcriptFiles);
-    flat.transcriptFiles = [...legacyFiles, legacyUrl];
-    flat.uploadTranscript = TRANSCRIPT_DELIVERY_UPLOAD;
   }
 
   if (student.share_contact === "Yes") {

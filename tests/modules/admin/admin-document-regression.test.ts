@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildStudentInfoState } from "@/modules/students/student-info-state";
 import { hydrateUploadMetadata } from "@/modules/students/upload-metadata";
 import { TRANSCRIPT_DELIVERY_SCHOOL, TRANSCRIPT_DELIVERY_UPLOAD } from "@/modules/wizard/transcript-fields";
-import { preserveDocumentFields, withAdminDocumentLinks } from "@/server/admin/registrations";
+import { adminDocumentUrl, preserveDocumentFields, withAdminDocumentLinks } from "@/server/admin/registrations";
+import { readIepFiles } from "@/modules/uploads/document-files";
 
 const legacy = "https://drive.google.com/file/d/legacy-file-id/view";
 const existing = "https://drive.google.com/file/d/existing-file-id/view";
@@ -29,7 +30,8 @@ describe("admin document preservation", () => {
     const student = hydrateUploadMetadata({
       objectId: "student-test", student_name: "Synthetic", studentBirthCert: existing,
       studentPic: existing, upload_student_curreny_learning: existing,
-      uploadTranscript: legacy, transcriptFiles: [legacy],
+      uploadTranscript: legacy, transcriptFiles: [legacy, "https://drive.google.com/open?id=legacy-file-id"],
+      IEPFiles: [legacy, existing], upload_copy_EIP_504_plan: existing,
       customUploadMetaData: { fileId: "metadata-file-id", downloadUrl: existing },
     });
     const result = withAdminDocumentLinks({
@@ -44,5 +46,10 @@ describe("admin document preservation", () => {
     expect(result.student.studentBirthCert).toContain("/api/admin/document?");
     expect(result.student.transcriptFiles).toHaveLength(1);
     expect(result.student.uploadTranscript).toBe(TRANSCRIPT_DELIVERY_UPLOAD);
+    expect(readIepFiles(result.student)).toHaveLength(2);
+    expect(adminDocumentUrl(student, "IEPFiles", 1)).toBe(existing);
+    expect(adminDocumentUrl(student, "IEPFiles", 99)).toBeNull();
+    // Replacing the current file cannot change a proxy for a legacy attachment.
+    expect(adminDocumentUrl({ ...student, upload_copy_EIP_504_plan: "https://drive.google.com/file/d/replacement/view" }, "IEPFiles", 1)).toBe(existing);
   });
 });

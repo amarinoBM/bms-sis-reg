@@ -44,13 +44,16 @@ export function buildStepSavePayload(
   const changedKeys = Object.keys(picked).filter(
     (key) => stableSerialize(picked[key]) !== stableSerialize(previousRow[key]),
   );
-
-  if (changedKeys.length === 0) {
+  const disabledKey = saveStep.replace(/^save/, "") + "disabled";
+  // Uploads save documents separately. Finishing an incomplete section is still a change.
+  const completesSection = Object.keys(picked).length > 0 && previousRow[disabledKey] !== true;
+  if (changedKeys.length === 0 && !completesSection) {
     throw new AppError({
       code: "INVALID_INPUT",
       message: "No changes to save.",
     });
   }
+  const auditedKeys = changedKeys.length > 0 ? changedKeys : [disabledKey];
 
   const existingHistory = Array.isArray(previousRow.UpdateHistory)
     ? previousRow.UpdateHistory
@@ -58,7 +61,7 @@ export function buildStepSavePayload(
 
   return {
     ...(actor ? Object.fromEntries(changedKeys.map((key) => [key, picked[key]])) : picked),
-    changed_fields: changedKeys.join(","),
+    changed_fields: auditedKeys.join(","),
     date_updated: Date.now(),
     previous_data: previousRow,
     UpdateHistory: [
@@ -66,11 +69,11 @@ export function buildStepSavePayload(
       {
         step: saveStep,
         at: Date.now(),
-        fields: changedKeys,
+        fields: auditedKeys,
         ...(actor ? { actor } : {}),
       },
     ],
-    [saveStep.replace(/^save/, "") + "disabled"]: true,
+    [disabledKey]: true,
   };
 }
 

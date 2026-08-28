@@ -21,8 +21,22 @@ describe("wizard save-service", () => {
     expect(() =>
       buildStepSavePayload("save2", { most_interested_in: "math" }, {
         most_interested_in: "math",
+        "2disabled": true,
       }),
     ).toThrow();
+  });
+
+  it.each([false, undefined])("can finish a section after a document-only change (saved flag: %s)", (flag) => {
+    const fields = { uploadTranscript: "I can upload them", transcriptFiles: ["https://drive.google.com/file/d/already-uploaded/view"] };
+    const payload = buildStepSavePayload("save6.1", fields, { ...fields, "6.1disabled": flag });
+    expect(payload["6.1disabled"]).toBe(true);
+    expect(payload.transcriptFiles).toEqual(fields.transcriptFiles);
+    expect(payload.changed_fields).toBe("6.1disabled");
+  });
+
+  it("still rejects an empty or unrelated save request", () => {
+    expect(() => buildStepSavePayload("save6.1", {}, {})).toThrow();
+    expect(() => buildStepSavePayload("save6.1", { unrelated: true }, {})).toThrow();
   });
 });
 

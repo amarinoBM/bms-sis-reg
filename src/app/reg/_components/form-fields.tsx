@@ -865,6 +865,9 @@ type FormFileUploadProps = {
   description?: string;
   error?: string;
   fileUrl?: string | null;
+  fileUrls?: string[];
+  fileLabel?: string;
+  actionLabel?: string;
   pendingFileName?: string;
   uploadedFileName?: string;
   accept?: string;
@@ -880,6 +883,9 @@ export function FormFileUpload({
   description = UPLOAD_FIELD_DESCRIPTION,
   error: externalError,
   fileUrl,
+  fileUrls,
+  fileLabel = "File",
+  actionLabel,
   pendingFileName,
   uploadedFileName,
   accept = REG_UPLOAD_ACCEPT,
@@ -890,7 +896,7 @@ export function FormFileUpload({
 }: FormFileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  const hasFile = Boolean(fileUrl);
+  const hasFile = fileUrls ? fileUrls.length > 0 : Boolean(fileUrl);
   const displayError = externalError ?? localError ?? undefined;
   const statusId = `${id}-status`;
   const displayFileName =
@@ -969,7 +975,17 @@ export function FormFileUpload({
               {displayFileName ? (
                 <p className="truncate text-label text-muted-foreground">{displayFileName}</p>
               ) : null}
-              {hasFile && !uploading ? (
+              {fileUrls && fileUrls.length > 0 ? (
+                <ul className="space-y-2" aria-label={`${label}: uploaded files`}>
+                  {fileUrls.map((url, index) => (
+                    <li key={url}>
+                      <ExternalLink href={url} className="block py-1 text-body text-primary underline underline-offset-2">
+                        {fileLabel} {index + 1}
+                      </ExternalLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : hasFile && !uploading ? (
                 <ExternalLink
                   href={String(fileUrl)}
                   className="block truncate text-body text-primary underline underline-offset-2"
@@ -996,6 +1012,8 @@ export function FormFileUpload({
                   <RegSpinner size="sm" />
                   Uploading…
                 </>
+              ) : actionLabel ? (
+                actionLabel
               ) : hasFile ? (
                 "Replace file"
               ) : (
