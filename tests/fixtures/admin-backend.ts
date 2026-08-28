@@ -12,6 +12,7 @@ export function createAdminBackend() {
     { objectId: "student-1", lead_id: "lead_family", student_name: "Alex", student_last_name: "Example",
       parent_email: "parent@example.test", parent_name: "Sam", student_birth_date: Date.UTC(2014, 2, 1),
       male: true, Caucasian: true,
+      most_interested_in: "Sports: mostly swimming, but also building model rockets.\nMusic matters too.", interests: null,
       slots: [{ status: "enrolled", chargebee: "cb-test" }], computer_system: "Windows",
       starting_date: Date.UTC(2026, 8, 1), length_of_staying: "The full school year",
       studentBirthCert: "https://drive.google.com/file/d/synthetic-birth/view",
