@@ -1,6 +1,81 @@
 import { test, expect } from "@playwright/test";
 import { sealData } from "iron-session";
 test.skip(!process.env.ADMIN_BROWSER_TESTS, "Run with npm run test:browser:admin against the synthetic backend.");
+test("search results open before the scan finishes and lead IDs work directly", async ({ page, request }, testInfo) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  await page.goto("/admin/login");
+  await page.getByLabel("Work email").fill("am@brilliantmicroschool.org");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  await expect(page.getByLabel("Login code")).toBeVisible();
+  const { code } = await (await request.get("http://127.0.0.1:3039/_test/code")).json();
+  await page.getByLabel("Login code").fill(code);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Find a registration" })).toBeVisible();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/admin/search", async (route) => {
+    const input = route.request().postDataJSON();
+    if (input.offset === 100) { await gate; await route.fulfill({ json: { success: true, data: { results: [], nextOffset: null } } }); return; }
+    const response = await route.fetch();
+    const body = await response.json();
+    body.data.nextOffset = 100;
+    await route.fulfill({ json: body });
+  });
+  try {
+    await page.getByLabel("Search registrations").fill("Example");
+    const continuing = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().offset === 100);
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await continuing;
+    const open = page.getByRole("button", { name: "View registration for Alex Example" });
+    await expect(open).toBeEnabled();
+    await page.screenshot({ path: testInfo.outputPath("admin-search-in-progress.png"), fullPage: true });
+    await open.click();
+    await expect(page.getByLabel("Nickname")).toBeVisible();
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+    await page.getByRole("button", { name: "Back to search" }).click();
+    await page.getByLabel("Search registrations").fill("lead_family");
+    await expect(page.getByRole("button", { name: /View registration for/ })).toHaveCount(0);
+    const searched = page.waitForResponse("**/api/admin/search");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    expect((await searched).status()).toBe(200);
+    await expect(page.getByRole("button", { name: /View registration for/ })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "View registration for Taylor Example" })).toBeEnabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Changing the query cancels an old request and clears its visible results.
+    let releaseOld!: () => void;
+    const oldGate = new Promise<void>((resolve) => { releaseOld = resolve; });
+    await page.route("**/api/admin/search", async (route) => {
+      if (route.request().postDataJSON().query !== "old query") { await route.continue(); return; }
+      await oldGate;
+      await route.fulfill({ json: { success: true, data: { results: [{ objectId: "stale", leadId: "lead_stale", studentName: "Stale result", lastName: "", parentEmail: "", completed: false }], nextOffset: null } } });
+    });
+    try {
+      await page.getByLabel("Search registrations").fill("old query");
+      const pending = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().query === "old query");
+      await page.getByRole("button", { name: "Search", exact: true }).click();
+      await pending;
+      await expect(page.getByRole("button", { name: "Stop search" })).toBeEnabled();
+      await page.getByLabel("Search registrations").fill("Taylor");
+      await page.getByRole("button", { name: "Search", exact: true }).click();
+      await expect(page.getByRole("button", { name: "View registration for Taylor Example" })).toBeEnabled();
+      releaseOld();
+      await expect(page.getByText("Stale result", { exact: true })).toHaveCount(0);
+      await page.unrouteAll({ behavior: "wait" });
+    } finally { releaseOld(); }
+    // A failed continuation keeps usable partial results and labels them incomplete.
+    await page.route("**/api/admin/search", async (route) => {
+      if (route.request().postDataJSON().offset === 100) { await route.abort("failed"); return; }
+      const body = await (await route.fetch()).json(); body.data.nextOffset = 100;
+      await route.fulfill({ json: body });
+    });
+    await page.getByLabel("Search registrations").fill("Example");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Search could not finish" })).toContainText("results shown may be incomplete");
+    await expect(page.getByRole("button", { name: "View registration for Alex Example" })).toBeEnabled();
+    await page.unroute("**/api/admin/search");
+  } finally { release(); }
+});
 test("admin signs in, searches, edits, switches students, and signs out", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   const errors: string[] = [];

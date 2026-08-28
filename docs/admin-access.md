@@ -41,6 +41,10 @@ Check idle/max-session expiry, logout replay, and parent-only credentials agains
 
 ## Limits
 
+Search defaults to student names. Name matching skips decrypting unrelated family emails; encrypted names still use server-side decryption. Choose **Parent email** for full or partial email searches (queries containing `@` also use email search). Pasting a `lead_…` ID or registration link always performs an exact family lookup. No decrypted search index is stored.
+
+Results appear page by page and can be opened immediately. Opening a record, changing the query or search type, signing out, or leaving the page cancels the client search; late responses cannot overwrite the current view. Stop search keeps partial results with a warning. Each page has a 30-second client timeout. Email search can still take longer because encrypted fields must be checked on the server. Every page keeps the admin session and audit checks; opening a result rechecks eligibility.
+
 Snapshot checks reject edits made against an older view. They are not database-level transactions against a simultaneous parent write. Admin saves send only changed allowed fields and read them back. A downstream or audit failure after a write can mean data changed without a success response: reload and inspect the record/audit trail before retrying.
 
 Documents keep their existing Google Drive permissions. The app checks and audits access before redirecting; signing out cannot revoke already-open Drive tabs or downloaded copies.
