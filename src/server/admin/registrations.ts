@@ -30,7 +30,7 @@ async function rows(where: string, offset = 0, props?: string): Promise<MsStuden
   return data as MsStudentDirRow[];
 }
 
-export async function searchRegistrations(query: string, offset: number) {
+export async function searchRegistrations(query: string, offset: number, mode: "name" | "email" | "all" = "all") {
   const search = normalizeAdminSearch(query);
   const where = ENROLLED + ("leadId" in search ? " and lead_id='" + quote(search.leadId) + "'" : "");
   // Search one bounded source page per request. The client continues pages until the census
@@ -40,6 +40,12 @@ export async function searchRegistrations(query: string, offset: number) {
   for (let i = 0; i < page.length; i += 5) {
     const batch = await Promise.all(page.slice(i, i + 5).map(async (row) => {
       if (!row.lead_id || !row.objectId || !row.student_name) return null;
+      // Names are normally plaintext. Do not decrypt unrelated family emails for
+      // a name search. Encrypted names still take the full matching path below.
+      const names = [row.student_name, row.student_last_name];
+      if ("text" in search && mode === "name" &&
+          !names.some((value) => typeof value === "string" && value.startsWith("sis:v1:")) &&
+          !names.join(" ").toLowerCase().includes(search.text)) return null;
       const leadId = String(row.lead_id);
       const needsDecryption = Object.values(row).some((v) => typeof v === "string" && v.startsWith("sis:v1:"));
       const value = needsDecryption ? await decryptStudentDirRow(leadId, row) : row;
@@ -51,7 +57,8 @@ export async function searchRegistrations(query: string, offset: number) {
       };
       const text = [item.studentName, item.lastName].join(" ").toLowerCase();
       const emails = [value.parent_email, value.email].filter((v): v is string => typeof v === "string");
-      return "leadId" in search || text.includes(search.text) || emails.some((v) => v.toLowerCase().includes(search.text)) ? item : null;
+      return "leadId" in search || (mode !== "email" && text.includes(search.text)) ||
+        (mode !== "name" && emails.some((v) => v.toLowerCase().includes(search.text))) ? item : null;
     }));
     for (const item of batch) if (item) results.push(item);
   }

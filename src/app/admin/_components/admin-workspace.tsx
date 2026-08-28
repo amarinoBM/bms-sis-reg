@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FormTextInput } from "@/app/reg/_components/form-fields";
 import { AdminRegistration } from "./admin-registration";
 import { ADMIN_IDLE_MS, ADMIN_MAX_MS } from "@/modules/admin/policy";
-import { postApi } from "@/lib/client-api";
+import { fetchApi, postApi } from "@/lib/client-api";
 import type { AdminSearchItem, AdminRegistrationResult } from "@/server/admin/registrations";
 import type { AdminFormState, AdminUploadResult } from "@/app/reg/sis/_components/step-form";
 import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
@@ -14,6 +14,8 @@ type SearchPage = { results: AdminSearchItem[]; nextOffset: number | null };
 export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; lastSeenAt: number }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"name" | "email">("name");
+  const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<AdminSearchItem[]>([]);
   const [searched, setSearched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -24,6 +26,7 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
   const lastActivity = useRef(lastSeenAt);
   const lastTouch = useRef(lastSeenAt);
   const operation = useRef(0);
+  const searchRequest = useRef<AbortController | null>(null);
   const active = useRef(true);
   const currentTarget = useRef(target);
   const formState = useRef<AdminFormState>({ dirty: false, busy: false });
@@ -47,6 +50,7 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     function expire() {
       if (!alive) return;
       active.current = false; currentTarget.current = null; operation.current++;
+      searchRequest.current?.abort();
       setExpired(true); setRecord(null); setResults([]);
       router.replace("/admin/login");
     }
@@ -81,6 +85,7 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     const timer = window.setInterval(check, 10_000);
     return () => {
       alive = false; active.current = false; operation.current += 1; window.clearInterval(timer);
+      searchRequest.current?.abort();
       window.removeEventListener("pointerdown", activity);
       window.removeEventListener("keydown", activity);
       window.removeEventListener("scroll", activity);
@@ -92,19 +97,39 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
   function handleError(error: unknown) {
     const value = error as { code?: string; message?: string };
     if (value.code === "UNAUTHENTICATED" || value.code === "FORBIDDEN") {
+      searchRequest.current?.abort();
       active.current = false; currentTarget.current = null; operation.current++; setExpired(true); setRecord(null); setResults([]); router.replace("/admin/login");
     } else setMessage(value.message ?? "Could not load registrations. Please try again.");
   }
+  function cancelSearch(clearResults = false) {
+    if (!clearResults && !searchRequest.current) return;
+    searchRequest.current?.abort(); searchRequest.current = null;
+    operation.current++; setSearching(false); setSearched(false);
+    setMessage(clearResults ? "" : "Search stopped. Results shown may be incomplete.");
+    if (clearResults) setResults([]);
+  }
   async function search() {
     if (!canNavigate()) return;
+    searchRequest.current?.abort();
+    const controller = new AbortController();
+    searchRequest.current = controller;
     const id = ++operation.current;
     currentTarget.current = null;
-    setBusy(true); setMessage(""); setResults([]); setSearched(false); setRecord(null); setTarget(null);
+    setSearching(true); setMessage(""); setResults([]); setSearched(false); setRecord(null); setTarget(null);
     const found = new Map<string, AdminSearchItem>();
     try {
       let offset: number | null = 0;
       do {
-        const page: SearchPage = await postApi("/api/admin/search", { query, offset });
+        // A stalled page must not leave search running forever. Navigation and
+        // edits abort this request; the operation ID also rejects late responses.
+        const timeout = window.setTimeout(() => controller.abort(), 30_000);
+        let page: SearchPage;
+        try {
+          page = await fetchApi<SearchPage>("/api/admin/search", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, offset, mode: query.includes("@") ? "email" : searchMode }), signal: controller.signal,
+          });
+        } finally { window.clearTimeout(timeout); }
         if (id !== operation.current) return;
         for (const item of page.results) found.set(item.objectId, item);
         setResults([...found.values()]);
@@ -112,8 +137,11 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
         if (offset !== null) setMessage("Searching remaining registrations…");
       } while (offset !== null);
       setMessage(""); setSearched(true);
-    } catch (error) { if (id === operation.current) { handleError(error); setMessage("Search could not finish. Any results shown may be incomplete. Please try again."); } }
-    finally { if (id === operation.current) setBusy(false); }
+    } catch (error) { if (id === operation.current) {
+      handleError(error);
+      if (active.current) setMessage("Search could not finish. Any results shown may be incomplete. Try again, or use a lead ID for a direct lookup.");
+    } }
+    finally { if (id === operation.current) { setSearching(false); searchRequest.current = null; } }
   }
   async function open(next: { leadId: string; objectId: string }, refresh = false) {
     if (refresh) {
@@ -122,6 +150,7 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
       if (!canNavigate()) return;
       currentTarget.current = next;
     }
+    cancelSearch();
     const id = ++operation.current;
     setBusy(true); setMessage(""); if (!refresh) setRecord(null); setTarget(next);
     try {
@@ -132,6 +161,7 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
   }
   async function signOut() {
     if (active.current && !canNavigate()) return;
+    searchRequest.current?.abort();
     active.current = false; currentTarget.current = null; operation.current++; setRecord(null); setResults([]); setExpired(true);
     try { await postApi("/api/admin/logout", {}); router.replace("/admin/login"); router.refresh(); }
     catch { setMessage("Sign-out could not be confirmed. Try again before leaving this device."); }
@@ -152,7 +182,7 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     </div>
     <h1 className="text-title font-semibold">{target ? record?.studentInfo.studentName ?? "Student registration" : "Find a registration"}</h1>
     {target ? <>
-      <Button variant="outline" className="min-h-11" disabled={formBusy} onClick={() => { if (!canNavigate()) return; currentTarget.current = null; operation.current++; setTarget(null); setRecord(null); setBusy(false); setMessage(""); }}>Back to search</Button>
+      <Button variant="outline" className="min-h-11" disabled={formBusy} onClick={() => { if (!canNavigate()) return; currentTarget.current = null; operation.current++; setTarget(null); setRecord(null); setBusy(false); setMessage(!searched && results.length ? "Search stopped. Results shown may be incomplete." : ""); }}>Back to search</Button>
       {record && <div>
         <label htmlFor="admin-student" className="mb-2 block text-label font-medium">Student</label>
         <select id="admin-student" className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-body" value={record.studentInfo.objectId} disabled={busy || formBusy} onChange={(e) => void open({ leadId: target.leadId, objectId: e.target.value })}>
@@ -163,18 +193,26 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     </> : <>
       <p className="text-body text-muted-foreground">Find an eligible student’s saved form by name, parent email, lead ID, or registration link.</p>
       <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={(e) => { e.preventDefault(); void search(); }}>
-        <div className="min-w-0 flex-1"><FormTextInput id="admin-search" label="Search registrations" value={query} onChange={setQuery} required placeholder="Student name, parent email, or registration link" /></div>
-        <Button size="lg" className="min-h-11" type="submit" disabled={busy || query.trim().length < 2}>Search</Button>
+        <div><label htmlFor="admin-search-mode" className="mb-2 block text-label font-medium">Search by</label>
+          <select id="admin-search-mode" className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-body" value={searchMode} onChange={(e) => { cancelSearch(true); setSearchMode(e.target.value as "name" | "email"); }}>
+            <option value="name">Name or lead ID</option><option value="email">Parent email</option>
+          </select>
+        </div>
+        <div className="min-w-0 flex-1"><FormTextInput id="admin-search" label="Search registrations" value={query} onChange={(value) => { cancelSearch(true); setQuery(value); }} required placeholder={searchMode === "email" ? "Parent email (full or partial)" : "Student name, lead_… or registration link"} /></div>
+        <Button size="lg" className="min-h-11" type="submit" disabled={searching || query.trim().length < 2}>{searching ? "Searching…" : "Search"}</Button>
+        {searching && <Button variant="outline" className="min-h-11" type="button" onClick={() => cancelSearch()}>Stop search</Button>}
       </form>
+      {searching && <p role="status" className="text-body text-muted-foreground">{results.length ? "You can open a result now. Searching remaining registrations…" : "Searching registrations…"}</p>}
+      {!searching && message && <p role="alert" className="text-body text-destructive">{message}</p>}
       {results.length > 0 && <ul className="divide-y divide-border border-y border-border">
         {results.map((item) => <li key={item.objectId} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0"><p className="text-body font-semibold break-words">{item.studentName} {item.lastName}</p><p className="text-label text-muted-foreground break-all">{item.parentEmail || "No parent email recorded"}</p><p className="mt-1 text-label">{item.completed ? "Submitted" : "In progress"}</p></div>
-          <Button variant="outline" className="min-h-11 shrink-0" disabled={busy} onClick={() => void open(item)}>View registration<span className="sr-only"> for {item.studentName} {item.lastName}</span></Button>
+          <Button variant="outline" className="min-h-11 shrink-0" onClick={() => void open(item)}>View registration<span className="sr-only"> for {item.studentName} {item.lastName}</span></Button>
         </li>)}
       </ul>}
-      {searched && results.length === 0 && <p className="text-body">No eligible registrations match. Try another name, parent email, or paste the registration link.</p>}
+      {searched && results.length === 0 && <p className="text-body">No eligible registrations match. Try another name, choose Parent email, or paste a lead ID or registration link.</p>}
     </>}
     {busy && <p role="status" className="text-body text-muted-foreground">{message || "Loading…"}</p>}
-    {!busy && message && <p role="alert" className="text-body text-destructive">{message}</p>}
+    {target && !busy && message && <p role="alert" className="text-body text-destructive">{message}</p>}
   </div>;
 }

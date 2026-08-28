@@ -233,6 +233,37 @@ describe("admin APIs and parent boundaries", () => {
     expect(second.results.map((row: { objectId: string }) => row.objectId)).toEqual(["page-100"]);
     expect(second.nextOffset).toBeNull();
   });
+  it("decrypts only matching students in name mode, not every family's email", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    backend.records[0].parent_email = "sis:v1:parent@example.test";
+    for (let i = 0; i < 98; i++) backend.records.push({ objectId: "speed-" + i, lead_id: "lead_speed", student_name: "Unrelated", parent_email: "sis:v1:other@example.test", slots: [{ status: "enrolled" }] });
+    const calls = vi.fn(backend.fetch); vi.stubGlobal("fetch", calls);
+    const data = (await (await search(req("/api/admin/search", { query: "Alex", mode: "name" }))).json()).data;
+    expect(data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1"]);
+    expect(data.results[0].parentEmail).toBe("parent@example.test");
+    expect(calls.mock.calls.filter(([url]) => String(url).endsWith("/EncryptDecryptMSStudentDir"))).toHaveLength(1);
+  });
+  it("still finds encrypted names and partial encrypted email searches", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    backend.records[0].student_name = "sis:v1:Alex";
+    backend.records[0].parent_email = "sis:v1:unique@example.test";
+    for (const [query, mode] of [["Alex", "name"], ["unique", "email"]]) {
+      const data = (await (await search(req("/api/admin/search", { query, mode }))).json()).data;
+      expect(data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1"]);
+    }
+    const data = (await (await search(req("/api/admin/search", { query: "Alex", mode: "email" }))).json()).data;
+    expect(data.results).toEqual([]);
+  });
+  it.each(["lead_family", "https://example.test/reg/sis?lead_id=lead_family"])('looks up only the exact lead for %s', async (query) => {
+    await createAdminSession(ADMIN_EMAIL);
+    const calls = vi.fn(backend.fetch); vi.stubGlobal("fetch", calls);
+    const data = (await (await search(req("/api/admin/search", { query, mode: "name" }))).json()).data;
+    expect(data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1", "student-2"]);
+    expect(data.nextOffset).toBeNull();
+    const reads = calls.mock.calls.filter(([url]) => String(url).includes("/data/ms_student_dir?"));
+    expect(reads).toHaveLength(1);
+    expect(new URL(String(reads[0][0])).searchParams.get("where")).toContain("lead_id='lead_family'");
+  });
   it("strips sensitive fields, guards documents, and never writes registration data when viewing", async () => {
     await createAdminSession(ADMIN_EMAIL);
     const data = await loaded();
