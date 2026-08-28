@@ -1,4 +1,5 @@
 import { AppError } from "@/core/app-error";
+import type { AdminEditActor } from "@/modules/admin/policy";
 import {
   isSaveHandlerKey,
   SAVE_HANDLERS,
@@ -13,12 +14,19 @@ function stableSerialize(value: unknown): string {
 export function pickSaveStepFields(
   saveStep: SaveHandlerKey,
   fields: Record<string, unknown>,
+  actor?: AdminEditActor,
 ): Record<string, unknown> {
   const allowed = new Set(SAVE_HANDLERS[saveStep]);
   const picked: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(fields)) {
-    if (allowed.has(key) && !SAVE_META_FIELDS.has(key)) {
+    const adminFirstName = actor?.role === "admin" && saveStep === "save1" && key === "student_name";
+    if (adminFirstName) {
+      if (typeof value !== "string" || !value.trim() || /\[delete\]/i.test(value)) {
+        throw new AppError({ code: "INVALID_INPUT", message: "Enter a first name without the reserved [delete] marker." });
+      }
+      picked[key] = value.trim();
+    } else if (allowed.has(key) && !SAVE_META_FIELDS.has(key)) {
       picked[key] = value;
     }
   }
@@ -30,8 +38,9 @@ export function buildStepSavePayload(
   saveStep: SaveHandlerKey,
   fields: Record<string, unknown>,
   previousRow: Record<string, unknown>,
+  actor?: AdminEditActor,
 ): Record<string, unknown> {
-  const picked = pickSaveStepFields(saveStep, fields);
+  const picked = pickSaveStepFields(saveStep, fields, actor);
   const changedKeys = Object.keys(picked).filter(
     (key) => stableSerialize(picked[key]) !== stableSerialize(previousRow[key]),
   );
@@ -48,7 +57,7 @@ export function buildStepSavePayload(
     : [];
 
   return {
-    ...picked,
+    ...(actor ? Object.fromEntries(changedKeys.map((key) => [key, picked[key]])) : picked),
     changed_fields: changedKeys.join(","),
     date_updated: Date.now(),
     previous_data: previousRow,
@@ -58,6 +67,7 @@ export function buildStepSavePayload(
         step: saveStep,
         at: Date.now(),
         fields: changedKeys,
+        ...(actor ? { actor } : {}),
       },
     ],
     [saveStep.replace(/^save/, "") + "disabled"]: true,

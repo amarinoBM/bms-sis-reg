@@ -1,4 +1,5 @@
 import { RegistrationHeader } from "@/app/_components/registration-header";
+import { RegistrationFooter } from "@/app/_components/registration-footer";
 
 export function RegistrationShell({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export function RegistrationShell({ children }: { children: React.ReactNode }) {
       <main className="mx-auto max-w-4xl min-w-0 px-4 py-8 sm:px-6 sm:py-10 md:py-12">
         {children}
       </main>
+      <RegistrationFooter />
     </div>
   );
 }

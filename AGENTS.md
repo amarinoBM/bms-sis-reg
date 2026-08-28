@@ -29,6 +29,9 @@ Parent-facing Next.js app replacing Clever `Main_Page` OTP + `SIS` wizard.
 
 ## API security (see `.cursor/rules/sis-api-routes.mdc`)
 
+- Admin routes live under `/api/admin`, use separate OTP/session credentials, and require an explicit enable flag. See `docs/admin-access.md` before enabling them.
+- Admins can edit answers and upload documents, but cannot sign or submit as parents. Admin saves require snapshot-version checks, audit attribution, and fresh readback.
+
 - Load returns `toStudentLoadResultDto()` — no passwords, audit blobs, or raw slots to the browser.
 - OTP send only to emails on the lead record; crypto 6-digit OTP; rate limits on send/verify.
 - `AUTH_SECRET` required in production.
