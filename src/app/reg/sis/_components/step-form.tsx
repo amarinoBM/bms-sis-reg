@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -55,6 +55,9 @@ import {
   validateStepForSave,
 } from "@/modules/wizard/step-validation";
 
+export type AdminFormState = { dirty: boolean; busy: boolean };
+export type AdminUploadResult = { fieldKey: string; url: string; adminVersion: string };
+
 type StepFormProps = {
   definition: StepFormDefinition;
   leadId: string;
@@ -63,6 +66,9 @@ type StepFormProps = {
   stepId: WizardStepId;
   initialValues: Record<string, unknown>;
   disabled: boolean;
+  persistence?: { kind: "parent" } | { kind: "admin"; version: string };
+  onAdminStateChange?: (state: AdminFormState) => void;
+  onAdminUploaded?: (result: AdminUploadResult) => void;
   onSaved: () => Promise<void>;
   onGoToStep: (stepId: WizardStepId) => void;
 };
@@ -134,9 +140,26 @@ export function StepForm({
   stepId,
   initialValues,
   disabled,
+  persistence = { kind: "parent" },
+  onAdminStateChange,
+  onAdminUploaded,
   onSaved,
   onGoToStep,
 }: StepFormProps) {
+  const mounted = useRef(true);
+  const adminState = useRef<AdminFormState>({ dirty: false, busy: false });
+  const adminVersion = useRef(persistence.kind === "admin" ? persistence.version : "");
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const snapshotVersion = persistence.kind === "admin" ? persistence.version : "";
+  useEffect(() => { adminVersion.current = snapshotVersion; }, [snapshotVersion]);
+  function reportAdminState(next: Partial<AdminFormState>) {
+    if (persistence.kind !== "admin" || !mounted.current) return;
+    adminState.current = { ...adminState.current, ...next };
+    onAdminStateChange?.(adminState.current);
+  }
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [saving, setSaving] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
@@ -166,7 +189,7 @@ export function StepForm({
   async function handleUnlock() {
     setUnlocking(true);
     try {
-      await postApi<{ unlocked: boolean }>("/api/students/unlock", {
+      if (persistence.kind === "parent") await postApi<{ unlocked: boolean }>("/api/students/unlock", {
         leadId,
         objectId,
         stepId,
@@ -183,6 +206,7 @@ export function StepForm({
   }
 
   async function handleSave() {
+    if (persistence.kind === "admin" && adminState.current.busy) return;
     if (!definition.saveHandler) {
       return;
     }
@@ -195,27 +219,33 @@ export function StepForm({
     }
 
     setFieldErrors({});
+    reportAdminState({ busy: true });
     setSaving(true);
     try {
-      await postApi<{ objectId: string }>("/api/students/save", {
+      await postApi<{ objectId: string }>(persistence.kind === "admin" ? "/api/admin/save" : "/api/students/save", {
         leadId,
         objectId,
         saveStep: definition.saveHandler,
         studentName,
         fields: values,
+        ...(persistence.kind === "admin" ? { version: adminVersion.current } : {}),
       });
+      if (persistence.kind === "admin" && !mounted.current) return;
       toast.success("Section saved");
       setIsEditing(false);
       setJustSaved(true);
+      reportAdminState({ dirty: false });
       await onSaved();
     } catch (error) {
-      toast.error(messageFromRegApiError(error, "Could not save."));
+      if (mounted.current) toast.error(messageFromRegApiError(error, "Could not save."));
     } finally {
+      reportAdminState({ busy: false });
       setSaving(false);
     }
   }
 
   async function handleUpload(field: StepFieldDefinition, file: File) {
+    if (persistence.kind === "admin" && adminState.current.busy) return;
     if (!field.uploadType) {
       return;
     }
@@ -231,6 +261,7 @@ export function StepForm({
       return;
     }
 
+    reportAdminState({ busy: true });
     setPendingUpload({ key: field.key, fileName: file.name });
     setUploadingKey(field.key);
     try {
@@ -241,11 +272,18 @@ export function StepForm({
       formData.append("uploadType", field.uploadType);
       formData.append("fieldKey", field.key);
       formData.append("file", file);
+      if (persistence.kind === "admin") formData.append("version", adminVersion.current);
 
-      const uploadResult = await postFormApi<{ fieldKey: string; url: string }>(
-        "/api/uploads",
+      const uploadResult = await postFormApi<{ fieldKey: string; url: string; adminVersion?: string }>(
+        persistence.kind === "admin" ? "/api/admin/uploads" : "/api/uploads",
         formData,
       );
+      if (persistence.kind === "admin" && !mounted.current) return;
+      if (persistence.kind === "admin") {
+        if (!uploadResult.adminVersion) throw new Error("Reload this registration before making more changes.");
+        adminVersion.current = uploadResult.adminVersion;
+        onAdminUploaded?.({ ...uploadResult, adminVersion: uploadResult.adminVersion });
+      }
 
       setValues((current) => {
         if (uploadResult.fieldKey === "transcriptFiles") {
@@ -260,12 +298,15 @@ export function StepForm({
         [uploadResult.fieldKey]: file.name,
       }));
       toast.success("File uploaded");
-      setIsEditing(false);
-      setJustSaved(true);
-      await onSaved();
+      if (persistence.kind === "parent") {
+        setIsEditing(false);
+        setJustSaved(true);
+        await onSaved();
+      }
     } catch (error) {
-      toast.error(messageFromRegApiError(error, "Upload failed."));
+      if (mounted.current) toast.error(messageFromRegApiError(error, "Upload failed."));
     } finally {
+      reportAdminState({ busy: false });
       setUploadingKey(null);
       setPendingUpload(null);
     }
@@ -284,6 +325,8 @@ export function StepForm({
   }
 
   function updateValue(key: string, value: unknown) {
+    if (persistence.kind === "admin" && (adminState.current.busy || key === "parent_email" || key === "email")) return;
+    reportAdminState({ dirty: true });
     setValues((current) => {
       const next = { ...current, [key]: value };
 
@@ -311,6 +354,8 @@ export function StepForm({
   }
 
   function updateValues(updates: Record<string, unknown>) {
+    if (persistence.kind === "admin" && adminState.current.busy) return;
+    reportAdminState({ dirty: true });
     setValues((current) => {
       const next = { ...current, ...updates };
       return next;
@@ -329,6 +374,8 @@ export function StepForm({
   }
 
   function handleRemoveSecondGuardian() {
+    if (persistence.kind === "admin" && adminState.current.busy) return;
+    reportAdminState({ dirty: true });
     const clearedFields = GUARDIAN_CONTACT_FIELD_KEYS.reduce<
       Record<string, unknown>
     >((acc, fieldKey) => {
@@ -351,7 +398,8 @@ export function StepForm({
         </p>
       </div>
 
-      <div className="space-y-6 p-6">
+      <fieldset disabled={persistence.kind === "admin" && (saving || uploadingKey !== null)} className="min-w-0 space-y-6 p-6">
+        {persistence.kind === "admin" && stepId === "2" && <p className="text-label text-muted-foreground">Parent sign-in email is locked in admin mode. It controls who can sign and submit this registration.</p>}
         {Object.keys(fieldErrors).length > 0 ? (
           <FormValidationSummary fieldErrors={fieldErrors} />
         ) : null}
@@ -501,7 +549,7 @@ export function StepForm({
                         field={field}
                         studentName={studentName}
                         value={fieldValue(activeValues, field.key)}
-                        readOnly={readOnly}
+                        readOnly={readOnly || (persistence.kind === "admin" && field.key === "parent_email")}
                         error={fieldErrors[field.key]}
                         requirement={getFieldRequirement(stepId, field.key, activeValues)}
                         uploading={uploadingKey === field.key}
@@ -532,7 +580,7 @@ export function StepForm({
                     field={field}
                     studentName={studentName}
                     value={fieldValue(activeValues, field.key)}
-                    readOnly={readOnly}
+                    readOnly={readOnly || (persistence.kind === "admin" && field.key === "parent_email")}
                     error={fieldErrors[field.key]}
                     requirement={getFieldRequirement(stepId, field.key, activeValues)}
                     uploading={uploadingKey === field.key}
@@ -603,7 +651,7 @@ export function StepForm({
           }
         />
         ) : null}
-      </div>
+      </fieldset>
     </section>
   );
 }

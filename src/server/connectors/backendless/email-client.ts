@@ -49,6 +49,7 @@ export async function sendOtpEmail(
   toEmail: string,
   otp: number,
   fetchImpl: typeof fetch = fetch,
+  options?: { ttlSeconds?: number; admin?: boolean },
 ): Promise<void> {
   const payload: EmailFrontendPayload = {
     status: "outbox",
@@ -56,8 +57,8 @@ export async function sendOtpEmail(
     sender_name: EMAIL_FROM.name,
     sender_email: EMAIL_FROM.address,
     to: toEmail,
-    subject: OTP_EMAIL_SUBJECT,
-    body_html: buildOtpEmailBody(otp),
+    subject: options?.admin ? "Your BMS admin login code" : OTP_EMAIL_SUBJECT,
+    body_html: buildOtpEmailHtml(otp, options),
   };
 
   await invokeCloudCode({

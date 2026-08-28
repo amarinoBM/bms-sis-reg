@@ -5,8 +5,8 @@ import {
 } from "@/modules/email/bms-email-template";
 import { OTP_CACHE_TTL_SECONDS } from "@/config/backendless";
 
-function otpExpiryLabel(): string {
-  const minutes = OTP_CACHE_TTL_SECONDS / 60;
+function otpExpiryLabel(ttlSeconds: number): string {
+  const minutes = ttlSeconds / 60;
   if (minutes % 60 === 0) {
     const hours = minutes / 60;
     return hours === 1 ? "1 hour" : `${hours} hours`;
@@ -15,13 +15,13 @@ function otpExpiryLabel(): string {
   return `${minutes} minutes`;
 }
 
-export function buildOtpEmailHtml(otp: number): string {
+export function buildOtpEmailHtml(otp: number, options?: { ttlSeconds?: number; admin?: boolean }): string {
   const otpDisplay = escapeHtml(String(otp));
   const { navy, navyMuted, orange, border, support } = BMS_EMAIL_COLORS;
 
   const middleHtml = `
     <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:${navyMuted};">
-      Enter this code on the registration page you already have open.
+      ${options?.admin ? "Enter this code on the admin sign-in page you already have open. Never share it with a parent or another person." : "Enter this code on the registration page you already have open."}
     </p>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
       <tr>
@@ -36,11 +36,11 @@ export function buildOtpEmailHtml(otp: number): string {
       </tr>
     </table>
     <p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:${navyMuted};">
-      The code expires in <strong style="color:${navy};">${escapeHtml(otpExpiryLabel())}</strong>.
+      The code expires in <strong style="color:${navy};">${escapeHtml(otpExpiryLabel(options?.ttlSeconds ?? OTP_CACHE_TTL_SECONDS))}</strong>.
     </p>`;
 
   return buildBrandedEmailHtml({
-    title: "Your login code",
+    title: options?.admin ? "Your admin login code" : "Your login code",
     middleHtml,
     footerNote: "If you did not request this code, you can ignore this email.",
   });

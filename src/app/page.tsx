@@ -1,4 +1,5 @@
 import { RegistrationHeader } from "@/app/_components/registration-header";
+import { RegistrationFooter } from "@/app/_components/registration-footer";
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
           .
         </p>
       </main>
+      <RegistrationFooter />
     </div>
   );
 }

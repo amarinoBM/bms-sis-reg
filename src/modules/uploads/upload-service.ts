@@ -1,4 +1,5 @@
 import { uploadFileToDrive } from "@/server/connectors/backendless/sis-cloud-code";
+import type { AdminEditActor } from "@/modules/admin/policy";
 import {
   readTranscriptFiles,
 } from "@/modules/wizard/transcript-fields";
@@ -18,6 +19,7 @@ type UploadStudentFileInput = {
   parentName: string;
   studentName: string;
   currentRow?: Record<string, unknown>;
+  actor?: AdminEditActor;
 };
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -62,6 +64,12 @@ export async function uploadStudentFile(
 
   const driveUrl = buildDriveFileUrl(fileId);
   const savePayload: Record<string, unknown> = {};
+  if (input.actor) {
+    savePayload.UpdateHistory = [
+      ...(Array.isArray(input.currentRow?.UpdateHistory) ? input.currentRow.UpdateHistory : []),
+      { at: Date.now(), step: "upload", fields: [mapping.fieldKey], actor: input.actor },
+    ];
+  }
 
   if (input.uploadType === "transcript") {
     const existingFiles = readTranscriptFiles(input.currentRow?.transcriptFiles);

@@ -1,4 +1,5 @@
 import { AppError } from "@/core/app-error";
+import type { AdminEditActor } from "@/modules/admin/policy";
 import { BACKENDLESS_TABLES } from "@/config/backendless";
 import { updateAppRow } from "@/server/connectors/backendless/app-data-client";
 import {
@@ -176,6 +177,7 @@ export async function saveStudentStep(
   fields: Record<string, unknown>,
   previousRow: Record<string, unknown>,
   fetchImpl: typeof fetch = fetch,
+  actor?: AdminEditActor,
 ): Promise<{ objectId: string }> {
   const normalizedFields = expandVirtualFormFields(
     saveStep,
@@ -186,7 +188,7 @@ export async function saveStudentStep(
     normalizedFields.share_contact = normalizedFields.share_contact ? "Yes" : "No";
   }
 
-  const payload = buildStepSavePayload(saveStep, normalizedFields, previousRow);
+  const payload = buildStepSavePayload(saveStep, normalizedFields, previousRow, actor);
   const result = await saveStudentRecord(leadId, objectId, payload, fetchImpl);
 
   if (saveStep === "save1.5") {
