@@ -20,6 +20,7 @@ function isIdentityGuardFailure(result: unknown): boolean {
 }
 
 export function isSisCompletedFormSuccess(result: unknown): boolean {
+  if (readStage(result) === "registration_incomplete") return false;
   if (result === null || result === undefined) {
     return true;
   }
@@ -46,6 +47,9 @@ export function isSisCompletedFormSuccess(result: unknown): boolean {
 }
 
 export function formatSisCompletedFormFailure(result: unknown): string {
+  if (readStage(result) === "registration_incomplete") {
+    return "Honor Code and Terms of Service must be signed before submitting.";
+  }
   if (isIdentityGuardFailure(result)) {
     return IDENTITY_FAILURE_MESSAGE;
   }

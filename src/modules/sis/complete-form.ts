@@ -1,5 +1,6 @@
 import { completeSisForm } from "@/server/connectors/backendless/sis-cloud-code";
-import { saveStudentRecord } from "@/modules/students/repository";
+import { getAppRow } from "@/server/connectors/backendless/app-data-client";
+import { BACKENDLESS_TABLES } from "@/config/backendless";
 import {
   formatSisCompletedFormFailure,
   isSisCompletedFormSuccess,
@@ -38,7 +39,13 @@ export async function completeSisRegistration(
     StudentData: studentData,
   };
 
-  const result = await completeSisForm(event, fetchImpl);
+  // Cloud Code owns the completion flag. A lost response may occur after it commits.
+  let result: Record<string, unknown> | undefined;
+  try {
+    result = await completeSisForm(event, fetchImpl);
+  } catch {
+    // Verify below; never retry side effects or declare failure solely from transport status.
+  }
 
   if (!isSisCompletedFormSuccess(result)) {
     throw new AppError({
@@ -48,15 +55,13 @@ export async function completeSisRegistration(
     });
   }
 
-  await saveStudentRecord(
-    input.leadId,
-    input.objectId,
-    {
-      is_complete_sis: true,
-      "12disabled": true,
-    },
-    fetchImpl,
-  );
-
-  return result;
+  const saved = await getAppRow(BACKENDLESS_TABLES.msStudentDir, input.objectId, fetchImpl).catch(() => null);
+  if (!saved || saved.objectId !== input.objectId || saved.lead_id !== input.leadId || saved.is_complete_sis !== true) {
+    throw new AppError({
+      code: "EXTERNAL_READBACK_MISMATCH",
+      message: "We could not confirm your submission. Reload the registration to check its status before trying again.",
+      status: 502,
+    });
+  }
+  return { success: true };
 }
