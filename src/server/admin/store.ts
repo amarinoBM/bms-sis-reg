@@ -18,7 +18,13 @@ export async function readAdminValue<T>(name: string): Promise<T | null> {
 }
 export async function writeAdminValue(name: string, value: unknown, ttl: number): Promise<void> {
   const sealed = await sealData({ name, value }, { password: adminConfig().secret, ttl });
-  await putCacheValue(key(name), sealed, ttl);
+  try {
+    await putCacheValue(key(name), sealed, ttl);
+  } catch (error) {
+    if (!(error instanceof AppError) || error.code !== "EXTERNAL_WRITE_FAILED") throw error;
+    throw new AppError({ code: "EXTERNAL_WRITE_FAILED", status: 502,
+      message: "Could not save admin sign-in state. Request a new code and try again." });
+  }
 }
 export async function removeAdminValue(name: string) {
   await deleteCacheValue(key(name));

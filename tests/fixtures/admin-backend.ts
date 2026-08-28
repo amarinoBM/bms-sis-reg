@@ -38,7 +38,11 @@ export function createAdminBackend() {
     const body = init?.body ? JSON.parse(String(init.body)) : null;
     if (path.includes("/cache/")) {
       const key = path.split("/cache/")[1];
-      if (method === "PUT") { cache.set(key, { value: body, expires: Date.now() + Number(url.searchParams.get("timeout") ?? 1800) * 1000 }); return json({}); }
+      if (method === "PUT") {
+        const ttl = Number(url.searchParams.get("timeout") ?? 7200);
+        if (!Number.isInteger(ttl) || ttl < 1 || ttl > 7200) return json({ message: "Cache timeout must be between 1 and 7200 seconds." }, 400);
+        cache.set(key, { value: body, expires: Date.now() + ttl * 1000 }); return json({});
+      }
       if (method === "DELETE") { cache.delete(key); return json({}); }
       const item = cache.get(key);
       return item && item.expires > Date.now() ? json(item.value) : json(null, 404);
