@@ -6,6 +6,8 @@ Staff can sign in from the registration footer, search registration-eligible stu
 
 Admin codes and cookies are separate from parent credentials. Server-side sessions and OTP records are encrypted with a separate secret. Codes expire after 5 minutes; sessions expire after 30 idle minutes or 8 hours total. The user confirmed mailbox two-step verification. Email OTP remains vulnerable to phishing.
 
+Backendless cache entries cannot exceed 7,200 seconds. Session entries last at most 30 minutes and refresh with activity, without changing the original 8-hour deadline. Logout markers last 2 hours, longer than the idle window of an in-flight session refresh. The test backend enforces the same cache limit.
+
 ## Deployment gate
 
 This branch does not enable or deploy production access. Configure:

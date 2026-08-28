@@ -147,13 +147,46 @@ describe("admin authentication with the real store and session chain", () => {
     const cookie = jar.get(ADMIN_COOKIE)!;
     await destroyAdminSession();
     jar.set(ADMIN_COOKIE, cookie);
-    await writeAdminValue("session:" + session.id, session, 28800);
+    await writeAdminValue("session:" + session.id, session, ADMIN_IDLE_MS / 1000);
     await expect(requireAdminSession()).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
     const fresh = await createAdminSession(ADMIN_EMAIL);
     vi.useFakeTimers(); vi.setSystemTime(fresh.issuedAt + ADMIN_IDLE_MS);
     await expect(requireAdminSession()).rejects.toThrow();
     vi.setSystemTime(fresh.issuedAt + ADMIN_MAX_MS);
     await expect(requireAdminSession()).rejects.toThrow();
+  });
+  it("renews active sessions beyond two hours without extending the eight-hour maximum", async () => {
+    vi.useFakeTimers();
+    const session = await createAdminSession(ADMIN_EMAIL);
+    const start = session.issuedAt;
+    for (let minutes = 20; minutes < 480; minutes += 20) {
+      vi.setSystemTime(start + minutes * 60_000);
+      expect((await requireAdminSession()).issuedAt).toBe(start);
+      for (const entry of backend.cache.values()) expect(entry.expires - Date.now()).toBeLessThanOrEqual(7200_000);
+    }
+    vi.setSystemTime(start + ADMIN_MAX_MS - 1000);
+    expect((await requireAdminSession()).id).toBe(session.id);
+    vi.setSystemTime(start + ADMIN_MAX_MS);
+    await expect(requireAdminSession()).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+  });
+  it("does not renew idle time for a read-only session check", async () => {
+    vi.useFakeTimers();
+    const session = await createAdminSession(ADMIN_EMAIL);
+    vi.setSystemTime(session.issuedAt + ADMIN_IDLE_MS - 1000);
+    expect((await requireAdminSession(false)).lastSeenAt).toBe(session.lastSeenAt);
+    vi.setSystemTime(session.issuedAt + ADMIN_IDLE_MS);
+    await expect(requireAdminSession(false)).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+  });
+  it("fails closed with a sign-in-state error if session storage fails after code verification", async () => {
+    const challenge = await otp();
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes("/cache/") && init?.method === "PUT") return Promise.resolve(Response.json({}, { status: 503 }));
+      return backend.fetch(input, init);
+    });
+    const response = await verifyCode(req("/api/admin/otp/verify", { email: ADMIN_EMAIL, challengeId: challenge.challengeId, otp: challenge.code }));
+    expect(response.status).toBe(502);
+    expect((await response.json()).error.message).toBe("Could not save admin sign-in state. Request a new code and try again.");
+    expect(jar.has(ADMIN_COOKIE)).toBe(false);
   });
 });
 

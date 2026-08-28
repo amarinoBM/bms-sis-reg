@@ -2,13 +2,18 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { getIronSession } from "iron-session";
 import { AppError } from "@/core/app-error";
-import { ADMIN_MAX_MS, isAdminSessionActive, isAllowedAdmin } from "@/modules/admin/policy";
+import { ADMIN_IDLE_MS, ADMIN_MAX_MS, isAdminSessionActive, isAllowedAdmin } from "@/modules/admin/policy";
 import { adminConfig } from "./config";
 import { readAdminValue, writeAdminValue, removeAdminValue } from "./store";
 
 export const ADMIN_COOKIE = "bms-sis-reg-admin";
 type AdminCookie = { id?: string };
 export type AdminSession = { id: string; email: string; issuedAt: number; lastSeenAt: number };
+// Backendless caps cache entries at two hours. Refresh only the idle window;
+// issuedAt continues to enforce the independent eight-hour maximum.
+function sessionCacheSeconds(session: AdminSession) {
+  return Math.max(1, Math.ceil(Math.min(ADMIN_IDLE_MS, session.issuedAt + ADMIN_MAX_MS - Date.now()) / 1000));
+}
 async function cookieSession() {
   return getIronSession<AdminCookie>(await cookies(), {
     password: adminConfig().secret, cookieName: ADMIN_COOKIE, ttl: ADMIN_MAX_MS / 1000,
@@ -20,7 +25,7 @@ export async function createAdminSession(email: string) {
   const cookie = await cookieSession();
   if (cookie.id) await removeAdminValue("session:" + cookie.id);
   const session: AdminSession = { id: randomUUID(), email, issuedAt: Date.now(), lastSeenAt: Date.now() };
-  await writeAdminValue("session:" + session.id, session, ADMIN_MAX_MS / 1000);
+  await writeAdminValue("session:" + session.id, session, sessionCacheSeconds(session));
   cookie.id = session.id;
   await cookie.save();
   return session;
@@ -34,15 +39,15 @@ export async function requireAdminSession(touch = true): Promise<AdminSession> {
   }
   if (touch) {
     session.lastSeenAt = Date.now();
-    await writeAdminValue("session:" + session.id, session, Math.max(1, Math.ceil((session.issuedAt + ADMIN_MAX_MS - Date.now()) / 1000)));
+    await writeAdminValue("session:" + session.id, session, sessionCacheSeconds(session));
   }
   return session;
 }
 export async function destroyAdminSession() {
   const cookie = await cookieSession();
   if (cookie.id) {
-    // A tombstone prevents an in-flight activity request from restoring a logged-out session.
-    await writeAdminValue("revoked:" + cookie.id, true, ADMIN_MAX_MS / 1000);
+    // Outlast the 30-minute idle window of any in-flight session refresh.
+    await writeAdminValue("revoked:" + cookie.id, true, 7200);
     await removeAdminValue("session:" + cookie.id);
   }
   cookie.destroy();
