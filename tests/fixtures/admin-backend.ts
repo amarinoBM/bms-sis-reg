@@ -27,6 +27,8 @@ export function createAdminBackend() {
   ];
   let failAudit = false;
   let failEmail = false;
+  let emailReceipt: unknown;
+  let overrideEmailReceipt = false;
   let tick = 10;
   const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
   async function fetchImpl(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -51,7 +53,14 @@ export function createAdminBackend() {
       for (const [key, value] of Object.entries(row)) if (typeof value === "string" && value.startsWith("sis:v1:")) row[key] = value.slice(7);
       return json(row);
     }
-    if (path.endsWith("/emailFrontend")) { if (failEmail) return json({}, 503); emails.push(body); return json({}); }
+    if (path.endsWith("/emailFrontend")) {
+      if (failEmail) return json({}, 503);
+      // Production's Close helper swallows a missing-lead error and returns null with HTTP 200.
+      if (!body.lead_id) return json(null);
+      if (overrideEmailReceipt) return json(emailReceipt);
+      emails.push(body);
+      return json({ id: "acti_synthetic", status: "outbox", lead_id: body.lead_id, to: [body.to] });
+    }
     if (path.endsWith("/SISUploadFileToDrivePost")) { uploads.push(body); return json({ id: "synthetic-upload-" + uploads.length }); }
     if (path.endsWith("/data/parent_maps") && method === "GET") return json([{ objectId: "synthetic-parent-map" }]);
     if (path.includes("/data/parent_maps/") && method === "PUT") { parentMapWrites.push(body); return json({}); }
@@ -74,5 +83,6 @@ export function createAdminBackend() {
     throw new Error("Unexpected synthetic backend request: " + method + " " + path);
   }
   return { fetch: fetchImpl, records, audit, emails, writes, uploads, parentMapWrites, cache, counters,
-    failAudit: () => { failAudit = true; }, failEmail: () => { failEmail = true; } };
+    failAudit: () => { failAudit = true; }, failEmail: () => { failEmail = true; },
+    setEmailReceipt: (value: unknown) => { overrideEmailReceipt = true; emailReceipt = value; } };
 }

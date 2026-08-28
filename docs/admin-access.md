@@ -13,6 +13,7 @@ This branch does not enable or deploy production access. Configure:
 - `ADMIN_ACCESS_ENABLED=true` only after the checks below
 - `ADMIN_AUTH_SECRET`: a new random secret of at least 32 characters, different from `AUTH_SECRET`
 - `ADMIN_AUDIT_TABLE=reg_admin_audit`
+- `ADMIN_EMAIL_LEAD_ID`: an explicitly approved test/internal Close lead used only for email routing. The recipient remains the fixed admin allowlist address, not the lead's contacts. Close stores the email body on this lead, so restrict who can read its email activities.
 - existing Backendless settings and the correct `NEXT_PUBLIC_APP_URL`
 - `EXTERNAL_WRITES_ENABLED=true` only where registration edits are authorized
 
@@ -28,7 +29,7 @@ Run typecheck, lint, unit tests, build, Knip, and the parent browser suite. Run 
 
 ## Post-deploy monitoring and validation
 
-Andreas owns preview validation before production enablement. Confirm real code delivery through `uiBuilder.emailFrontend` with an empty lead association, a 5-minute expiry label, the exact allowlist, and no parent notification. Verify audit permissions, atomic-counter support, and the production email encryption format.
+Andreas owns preview validation before production enablement. Confirm real code delivery through `uiBuilder.emailFrontend` using the approved test/internal lead, a 5-minute expiry label, the exact allowlist, and no parent notification. Close requires a lead ID; the helper can return HTTP 200 with null after a send error. Admin sends require a valid activity receipt with the expected lead, sole recipient, and `outbox` or `sent` status. An outbox receipt confirms queuing, not inbox delivery. The server logs only the activity ID and status for follow-up checks. Verify audit permissions, atomic-counter support, and the production email encryption format.
 
 Search by student name, parent email, and pasted registration link, including siblings and submitted forms. With an explicitly approved test student, change one field and upload one harmless document. Confirm the fresh Backendless readback, unchanged signature/submission fields, and paired `save_requested/save_verified` or `upload_requested/upload_verified` events.
 

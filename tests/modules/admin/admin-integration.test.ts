@@ -9,6 +9,7 @@ import { sendAdminOtp, verifyAdminOtp } from "@/server/admin/otp";
 import { createAdminSession, requireAdminSession, destroyAdminSession, ADMIN_COOKIE } from "@/server/admin/session";
 import { ADMIN_EMAIL, ADMIN_IDLE_MS, ADMIN_MAX_MS } from "@/modules/admin/policy";
 import { clearBackendlessGuestToken } from "@/server/connectors/backendless/guest-session";
+import { sendOtpEmail } from "@/server/connectors/backendless/email-client";
 import { writeAdminValue } from "@/server/admin/store";
 import { POST as search } from "@/app/api/admin/search/route";
 import { POST as load } from "@/app/api/admin/registration/route";
@@ -34,6 +35,7 @@ beforeEach(() => {
   vi.stubEnv("ADMIN_ACCESS_ENABLED", "true");
   vi.stubEnv("ADMIN_AUTH_SECRET", "admin-test-secret-32-characters-or-more!!");
   vi.stubEnv("ADMIN_AUDIT_TABLE", "reg_admin_audit");
+  vi.stubEnv("ADMIN_EMAIL_LEAD_ID", "lead_adminDelivery");
   vi.stubEnv("AUTH_SECRET", "parent-test-secret-32-characters-or-more!!");
   vi.stubEnv("BACKENDLESS_REST_URL", "http://backend.test/rest");
   vi.stubEnv("BACKENDLESS_CODE_URL", "http://backend.test/code");
@@ -63,7 +65,7 @@ describe("admin authentication with the real store and session chain", () => {
   });
   it("issues an admin-only code once, including simultaneous redemption attempts", async () => {
     const challenge = await otp();
-    expect(backend.emails[0]).toMatchObject({ to: ADMIN_EMAIL, lead_id: "" });
+    expect(backend.emails[0]).toMatchObject({ to: ADMIN_EMAIL, lead_id: "lead_adminDelivery" });
     const results = await Promise.allSettled([
       verifyAdminOtp(ADMIN_EMAIL, challenge.challengeId, challenge.code),
       verifyAdminOtp(ADMIN_EMAIL, challenge.challengeId, challenge.code),
@@ -89,6 +91,33 @@ describe("admin authentication with the real store and session chain", () => {
     expect(backend.emails).toHaveLength(0);
     // Only the cooldown timestamp remains; the unusable challenge is removed.
     expect(backend.cache.size).toBe(1);
+  });
+  it.each([null, {}, { id: "acti_failed", status: "error" },
+    { id: "acti_wrong", status: "outbox", lead_id: "lead_other", to: [ADMIN_EMAIL] },
+    { id: "acti_wrong", status: "outbox", lead_id: "lead_adminDelivery", to: ["other@example.test"] },
+    { id: "acti_extra", status: "outbox", lead_id: "lead_adminDelivery", to: [ADMIN_EMAIL, "other@example.test"] },
+    { id: "acti_draft", status: "draft", lead_id: "lead_adminDelivery", to: [ADMIN_EMAIL] },
+  ])("does not report success for an invalid HTTP-200 email receipt: %j", async (receipt) => {
+    backend.setEmailReceipt(receipt);
+    const response = await sendCode(req("/api/admin/otp/send", { email: ADMIN_EMAIL }));
+    expect(response.status).toBe(500);
+    expect((await response.json()).success).toBe(false);
+    expect(backend.cache.size).toBe(1);
+    expect(jar.has(ADMIN_COOKIE)).toBe(false);
+  });
+  it.each(["", "not-a-lead"])("fails closed without a valid admin email lead: %s", async (leadId) => {
+    vi.stubEnv("ADMIN_EMAIL_LEAD_ID", leadId);
+    await expect(sendAdminOtp(ADMIN_EMAIL)).rejects.toThrow();
+    expect(backend.cache.size).toBe(0);
+    expect(backend.emails).toHaveLength(0);
+  });
+  it("keeps parent email routing independent of the admin delivery lead", async () => {
+    vi.stubEnv("ADMIN_EMAIL_LEAD_ID", "");
+    await sendOtpEmail("lead_family", "parent@example.test", 123456);
+    expect(backend.emails[0]).toMatchObject({
+      lead_id: "lead_family", to: "parent@example.test", subject: "Your Brilliant Microschools login code",
+    });
+    expect(backend.emails[0].body_html).toContain("30 minutes");
   });
   it("issues the separate cookie only after OTP verification and a successful login audit", async () => {
     const sent = await sendCode(req("/api/admin/otp/send", { email: ADMIN_EMAIL }));
