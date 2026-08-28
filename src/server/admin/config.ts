@@ -7,9 +7,11 @@ export function adminAccessEnabled(): boolean {
 export function adminConfig() {
   const secret = process.env.ADMIN_AUTH_SECRET?.trim();
   const auditTable = process.env.ADMIN_AUDIT_TABLE?.trim();
+  const emailLeadId = process.env.ADMIN_EMAIL_LEAD_ID?.trim();
   if (!adminAccessEnabled() || !secret || secret.length < 32 ||
-      secret === process.env.AUTH_SECRET?.trim() || !auditTable || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(auditTable)) {
+      secret === process.env.AUTH_SECRET?.trim() || !auditTable || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(auditTable) ||
+      !emailLeadId || !/^lead_[a-zA-Z0-9]+$/.test(emailLeadId)) {
     throw new AppError({ code: "FORBIDDEN", message: "Admin access is not available. Contact the site administrator." });
   }
-  return { secret, auditTable };
+  return { secret, auditTable, emailLeadId };
 }

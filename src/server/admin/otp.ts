@@ -10,7 +10,7 @@ function invalidCode(): never {
   throw new AppError({ code: "INVALID_INPUT", message: "That code is invalid or expired. Request a new code if needed." });
 }
 export async function sendAdminOtp(email: string): Promise<{ challengeId: string; cooldownSeconds: number }> {
-  adminConfig();
+  const { emailLeadId } = adminConfig();
   const challengeId = randomUUID();
   // Same public response for every address; only the exact allowlisted address receives mail.
   if (!isAllowedAdmin(email)) return { challengeId, cooldownSeconds: 30 };
@@ -28,8 +28,8 @@ export async function sendAdminOtp(email: string): Promise<{ challengeId: string
     expiresAt: Date.now() + ADMIN_OTP_SECONDS * 1000,
   } satisfies Challenge, ADMIN_OTP_SECONDS);
   try {
-    // Empty lead association: staff authentication must not be attached to a family's lead.
-    await sendOtpEmail("", ADMIN_EMAIL, Number(otp), fetch, { ttlSeconds: ADMIN_OTP_SECONDS, admin: true });
+    // Close requires a lead: use the operator-approved test lead, never a viewed family's lead.
+    await sendOtpEmail(emailLeadId, ADMIN_EMAIL, Number(otp), fetch, { ttlSeconds: ADMIN_OTP_SECONDS, admin: true });
   } catch {
     await removeAdminValue(name);
     throw new AppError({ code: "INTERNAL_ERROR", message: "Could not send your login code. Please try again." });
