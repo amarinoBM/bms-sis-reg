@@ -144,6 +144,23 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   expect(mixedState.records[0].student_nick_name).toBe("Lex");
   expect(mixedState.records[0].studentBirthCert).toMatch(/^https:\/\/drive\.google\.com\//);
   expect(mixedState.records[0].studentBirthCert).not.toContain("synthetic-birth/view");
+  await page.getByLabel("Jump to section").selectOption("4");
+  const interestAnswer = page.getByRole("textbox", { name: "What is Alex most interested in?" });
+  const originalAnswer = "Sports: mostly swimming, but also building model rockets.\nMusic matters too.";
+  await expect(interestAnswer).toHaveValue(originalAnswer);
+  await expect(page.getByText("Saved answer", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await page.getByRole("checkbox", { name: /^Music / }).click();
+  await expect(interestAnswer).toHaveValue(originalAnswer);
+  const interestsSave = page.waitForResponse("**/api/admin/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await interestsSave).status()).toBe(200);
+  await expect(interestAnswer).toBeDisabled();
+  await expect(page.getByRole("checkbox", { name: /^Music / })).toBeDisabled();
+  const interestState = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(interestState.records[0].most_interested_in).toBe(originalAnswer);
+  expect(interestState.records[0].interests).toHaveLength(1);
+  await page.screenshot({ path: testInfo.outputPath("admin-interests.png"), fullPage: true });
   await page.getByLabel("Jump to section").selectOption("2");
   await expect(page.getByLabel("Email", { exact: true })).toBeDisabled();
   await expect(page.getByText("Parent sign-in email is locked in admin mode.", { exact: false })).toBeVisible();
@@ -195,6 +212,40 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin\/login$/);
   expect(errors).toEqual([]);
+});
+
+test("parent edits free-text interests independently of optional categories", async ({ page, request, context }, testInfo) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  const value = await sealData({ leadId: "lead_family", studentName: "Alex", isLoggedIn: true }, { password: "synthetic-parent-browser-secret-32-characters!!" });
+  await context.addCookies([{ name: "bms-sis-reg-parent", value, url: "http://127.0.0.1:3028", httpOnly: true, sameSite: "Lax" }]);
+  await page.goto("/reg/sis?lead_id=lead_family&student_name=Alex");
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+  const answer = page.getByRole("textbox", { name: "What is Alex most interested in?" });
+  await expect(answer).toHaveValue("Sports: mostly swimming, but also building model rockets.\nMusic matters too.");
+  await answer.fill("");
+  await page.getByRole("checkbox", { name: /^Music / }).click();
+  await expect(answer).toHaveValue("");
+  await page.getByRole("button", { name: "Save section" }).click();
+  await expect(answer).toBeEnabled();
+  expect(await answer.evaluate((element: HTMLTextAreaElement) => element.validity.valueMissing)).toBe(true);
+  const writtenAnswer = "Sports: swimming every weekend.\nAlso loves astronomy and piano.";
+  await answer.fill(writtenAnswer);
+  await page.getByRole("checkbox", { name: /^Music / }).click();
+  await expect(answer).toHaveValue(writtenAnswer);
+  const saved = page.waitForResponse("**/api/students/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await saved).status()).toBe(200);
+  await expect(answer).toBeDisabled();
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.records[0].most_interested_in).toBe(writtenAnswer);
+  expect(state.records[0].interests).toEqual([]);
+  await page.reload();
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(answer).toHaveValue(writtenAnswer);
+  await page.getByRole("button", { name: "Edit section" }).click();
+  await expect(answer).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath("parent-interests.png"), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test("parent keeps draft answers during uploads and can add several transcripts", async ({ page, request, context }, testInfo) => {

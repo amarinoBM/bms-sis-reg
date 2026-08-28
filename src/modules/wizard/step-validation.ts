@@ -152,7 +152,7 @@ function validateStep4(values: Record<string, unknown>): StepFieldErrors {
   const errors: StepFieldErrors = {};
 
   if (!hasText(values.most_interested_in)) {
-    setError(errors, "most_interested_in", requiredFieldError("Top interest"));
+    setError(errors, "most_interested_in", requiredFieldError("What your child is most interested in"));
   }
 
   return errors;

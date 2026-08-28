@@ -99,7 +99,7 @@ describe("wizard field enums", () => {
       "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
     ]);
     expect(flat.most_interested_in).toBe(
-      "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
+      "Sports: Soccer, Basketball",
     );
     expect(flat.share_contact).toBe(true);
     expect(flat["secondary_guardian.parent_relation"]).toBe("Legal Guardian");
@@ -116,7 +116,7 @@ describe("wizard field enums", () => {
       "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
     ]);
     expect(flat.most_interested_in).toBe(
-      "Technology and Computing: Video games, Coding, Robotics, Web design, etc.",
+      "Technology and Computing",
     );
   });
 
@@ -127,11 +127,24 @@ describe("wizard field enums", () => {
     });
 
     expect(expanded.most_interested_in).toBe(
-      "Technology and Computing: Video games, Coding, Robotics, Web design, etc.",
+      "Technology and Computing",
     );
     expect(readInterestsSelection(expanded.interests)).toEqual([
       "Sports: Soccer, Basketball, Swimming, Tennis, Gymnastics, etc.",
       "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
     ]);
+  });
+
+  it.each([
+    "Sports: mostly swimming, but also building model rockets.\nMusic matters too.",
+    "  Loves numbers, maps, and singing.  ",
+    "Music: Playing an instrument, Singing, Listening to music, Music composition, etc.",
+  ])("preserves free-text interests through load and save: %s", (answer) => {
+    const flat = enrichFlatFormValues({ most_interested_in: answer, interests: null });
+    expect(flat.most_interested_in).toBe(answer);
+    expect(flat.interests).toEqual([]);
+    const saved = expandVirtualFormFields("save2", { most_interested_in: flat.most_interested_in, interests: ["Sports"] });
+    expect(saved.most_interested_in).toBe(answer);
+    expect(readInterestsSelection(saved.interests)).toHaveLength(1);
   });
 });

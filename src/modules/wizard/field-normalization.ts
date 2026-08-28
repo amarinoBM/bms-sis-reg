@@ -62,13 +62,6 @@ export function expandVirtualFormFields(
       (item) => normalizeInterestCategory(item) ?? item,
     );
 
-    const mostInterestedIn = expanded.most_interested_in;
-    if (typeof mostInterestedIn === "string") {
-      const normalized = normalizeInterestCategory(mostInterestedIn);
-      if (normalized) {
-        expanded.most_interested_in = normalized;
-      }
-    }
   }
 
   if (saveStep === "save1.6") {
@@ -112,7 +105,7 @@ export function enrichFlatFormValues(
 
   const mostInterestedIn =
     typeof student.most_interested_in === "string" ? student.most_interested_in : "";
-  flat.most_interested_in = normalizeInterestCategory(mostInterestedIn) ?? mostInterestedIn;
+  flat.most_interested_in = mostInterestedIn;
 
   flat.transcriptFiles = readStudentTranscriptFiles(student);
   flat.CreditTransfer = readCreditTransferSubjects(student.CreditTransfer);
