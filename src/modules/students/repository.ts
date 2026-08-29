@@ -66,10 +66,11 @@ function toEnrolledStudentSummaries(rows: MsStudentDirRow[]): EnrolledStudentSum
   return summaries;
 }
 
-export async function findEnrolledStudents(
+async function fetchEnrolledStudentRows(
   leadId: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<EnrolledStudentSummary[]> {
+  failureMessage: string,
+  fetchImpl: typeof fetch,
+): Promise<MsStudentDirRow[]> {
   const where = buildEnrolledWhereClause(leadId);
   const restUrl = process.env.BACKENDLESS_REST_URL?.replace(/\/$/, "");
 
@@ -88,12 +89,23 @@ export async function findEnrolledStudents(
   if (!response.ok) {
     throw new AppError({
       code: "EXTERNAL_WRITE_FAILED",
-      message: "Could not query enrolled students.",
+      message: failureMessage,
       status: 502,
     });
   }
 
-  const rows = (await response.json()) as MsStudentDirRow[];
+  return (await response.json()) as MsStudentDirRow[];
+}
+
+export async function findEnrolledStudents(
+  leadId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<EnrolledStudentSummary[]> {
+  const rows = await fetchEnrolledStudentRows(
+    leadId,
+    "Could not query enrolled students.",
+    fetchImpl,
+  );
 
   return toEnrolledStudentSummaries(rows);
 }
@@ -104,30 +116,11 @@ export async function loadStudentRecord(
   fetchImpl: typeof fetch = fetch,
 ): Promise<StudentLoadResult> {
   const normalizedName = studentName ? trimStudentName(studentName) : undefined;
-  const where = buildEnrolledWhereClause(leadId);
-  const restUrl = process.env.BACKENDLESS_REST_URL?.replace(/\/$/, "");
-
-  if (!restUrl) {
-    throw new AppError({
-      code: "INTERNAL_ERROR",
-      message: "Backendless REST URL is not configured.",
-    });
-  }
-
-  const query = encodeURIComponent(where);
-  const response = await fetchImpl(
-    `${restUrl}/data/${BACKENDLESS_TABLES.msStudentDir}?where=${query}&pageSize=100&loadRelations=slots`,
+  const rows = await fetchEnrolledStudentRows(
+    leadId,
+    "Could not load student record.",
+    fetchImpl,
   );
-
-  if (!response.ok) {
-    throw new AppError({
-      code: "EXTERNAL_WRITE_FAILED",
-      message: "Could not load student record.",
-      status: 502,
-    });
-  }
-
-  const rows = (await response.json()) as MsStudentDirRow[];
   const enrolledStudents = toEnrolledStudentSummaries(rows);
 
   if (enrolledStudents.length === 0) {
@@ -235,19 +228,25 @@ export async function findPreferredParentEmails(
   leadId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string[]> {
-  const enrolledStudents = await findEnrolledStudents(leadId, fetchImpl);
+  const rows = await fetchEnrolledStudentRows(
+    leadId,
+    "Could not query enrolled students.",
+    fetchImpl,
+  );
+  const enrolledStudents = toEnrolledStudentSummaries(rows);
 
   if (enrolledStudents.length === 0) {
     return [];
   }
 
-  const rows: MsStudentDirRow[] = [];
+  const namedRows = rows.filter((candidate) => candidate.student_name && candidate.objectId);
+  const decryptedRows: MsStudentDirRow[] = [];
   for (const student of enrolledStudents) {
-    const { student: row } = await loadStudentRecord(leadId, student.studentName, fetchImpl);
-    rows.push(row);
+    const row = pickBestEnrolledStudentRow(namedRows, student.studentName);
+    decryptedRows.push(await decryptStudentDirRow(leadId, row, fetchImpl));
   }
 
-  return collectPreferredParentEmails(rows);
+  return collectPreferredParentEmails(decryptedRows);
 }
 
 export async function findSuggestedParentEmail(
