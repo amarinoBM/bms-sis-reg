@@ -1,7 +1,6 @@
 import { RegistrationShell } from "@/app/_components/registration-shell";
 import { OtpForm } from "@/app/reg/_components/otp-form";
-import { maskEmail } from "@/lib/mask-email";
-import { findSuggestedParentEmail } from "@/modules/students/repository";
+import { findParentEmailOptions } from "@/server/auth/parent-email-choice";
 
 type RegPageProps = {
   searchParams: Promise<{ lead_id?: string }>;
@@ -32,8 +31,7 @@ export default async function RegPage({ searchParams }: RegPageProps) {
     );
   }
 
-  const suggestedEmail = await findSuggestedParentEmail(leadId).catch(() => null);
-  const maskedEmail = suggestedEmail ? maskEmail(suggestedEmail) : null;
+  const emailOptions = await findParentEmailOptions(leadId).catch(() => []);
 
   return (
     <RegistrationShell>
@@ -41,7 +39,7 @@ export default async function RegPage({ searchParams }: RegPageProps) {
       <p className="mt-3 max-w-xl text-body text-muted-foreground">
         We will send a one-time login code to the parent email we already have on file.
       </p>
-      <OtpForm leadId={leadId} maskedEmail={maskedEmail} />
+      <OtpForm leadId={leadId} emailOptions={emailOptions} />
     </RegistrationShell>
   );
 }
