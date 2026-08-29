@@ -75,7 +75,7 @@ export function StepNav({
         })}
       </ol>
       <p className="mt-2 text-label text-muted-foreground">
-        Highlighted bar = where you are now. Lighter fill = saved elsewhere.
+        Orange marks this section. Light orange marks sections with saved answers.
       </p>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -85,7 +85,7 @@ export function StepNav({
             {activeStep ? ` · ${activeStep.label}` : ""}
           </p>
           <p className="mt-1 text-label text-muted-foreground">
-            {activeComplete ? "Saved" : "Not saved yet"}
+            {activeComplete ? "Answers saved" : "No saved answers yet"}
           </p>
         </div>
 
