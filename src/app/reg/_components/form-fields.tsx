@@ -526,7 +526,6 @@ export function FormQuestionnaireSingleChoice({
             name={id}
             required={isRequired}
             invalid={Boolean(error)}
-            disabled={disabled}
             className="gap-0"
           >
             <QuestionnaireChoices>

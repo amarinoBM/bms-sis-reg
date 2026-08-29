@@ -101,6 +101,27 @@ test("three-sibling family sees two completed registrations and can continue the
   await expect(page.getByText("14 of 14 sections complete", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Edit section" })).toBeVisible();
 
+  const registrationNav = page.getByLabel("Registration navigation");
+  for (let step = 1; step < 7; step += 1) {
+    await registrationNav.getByRole("button", { name: "Next", exact: true }).click();
+  }
+  await expect(page.getByText("Section 7 of 14 · Confidence", { exact: true })).toBeVisible();
+  const confidenceAnswers = page.locator('input[type="radio"]:checked');
+  await expect(confidenceAnswers).toHaveCount(6);
+  expect(await confidenceAnswers.evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value)))
+    .toEqual(["3", "2", "5", "1", "2", "2"]);
+
+  await registrationNav.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText("Section 8 of 14 · Prior school", { exact: true })).toBeVisible();
+  await expect(page.locator('input[type="radio"]:checked')).toHaveValue("Physical public/charter school");
+  await expect(page.getByLabel("Can you briefly describe Noah’s past learning experience during the last 12 months?")).toHaveValue("He has a hard time communicating.");
+  await expect(page.getByLabel("What was the name of Noah’s last school?")).toHaveValue("Synthetic Elementary");
+  await expect(page.getByRole("button", { name: "Yes", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+  await registrationNav.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText("Section 9 of 14 · Transcripts", { exact: true })).toBeVisible();
+  await expect(page.locator('input[type="radio"]:checked')).toHaveValue("I can upload them");
+
   await page.getByRole("button", { name: "Switch student" }).click();
   await page.getByRole("button", { name: "Madilyn" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Switch student" }).click();

@@ -242,7 +242,11 @@ function validateStep8(values: Record<string, unknown>): StepFieldErrors {
   }
 
   const hasIep = readIepOr504Plan(values.IEP_or_504_plan);
-  if (hasIep === true && readIepFiles(values).length === 0) {
+  if (
+    hasIep === true &&
+    readIepFiles(values).length === 0 &&
+    values.is_complete_sis !== true
+  ) {
     setError(errors, "upload_copy_EIP_504_plan", "Upload a copy of the IEP or 504 plan.");
   }
 

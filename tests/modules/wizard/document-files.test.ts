@@ -20,6 +20,14 @@ describe("registration documents", () => {
     expect(validateStepForSave("8", row).fieldErrors.upload_copy_EIP_504_plan).toBeUndefined();
     expect(validateSubmitReadiness(row).missingKeys).not.toContain("upload_copy_EIP_504_plan");
   });
+
+  it("does not reopen the IEP upload requirement on an already-submitted legacy form", () => {
+    const submitted = { IEP_or_504_plan: true, is_complete_sis: true };
+    expect(validateStepForSave("8", submitted).fieldErrors.upload_copy_EIP_504_plan).toBeUndefined();
+
+    const unfinished = { IEP_or_504_plan: true, is_complete_sis: false };
+    expect(validateStepForSave("8", unfinished).fieldErrors.upload_copy_EIP_504_plan).toBeTruthy();
+  });
   it("includes legacy transcripts and keeps stored documents when answers are saved", () => {
     const row = { uploadTranscript: first, transcriptFiles: [second], IEPFiles: [first], upload_copy_EIP_504_plan: second };
     expect(readStudentTranscriptFiles(row)).toEqual([second, first]);
