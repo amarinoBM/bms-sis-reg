@@ -30,16 +30,18 @@ export function AdminRegistration({ result, leadId, onSaved, onUploaded, onFormS
     </div>
     <fieldset disabled={busy} className="min-w-0"><StepNav activeStepId={stepId} stepCompletion={studentInfo.stepCompletion} onStepSelect={goToStep} /></fieldset>
     <p className="text-label text-muted-foreground">Changes are saved as admin edits. Blank fields have not been answered. Signing and submission remain parent-only.</p>
-    {definition && <StepForm key={stepId} definition={definition} leadId={leadId} objectId={studentInfo.objectId} studentName={studentInfo.studentName} stepId={stepId} initialValues={flattenFormValues(student)} disabled={studentInfo.stepCompletion[stepId] === true} persistence={{ kind: "admin", version: result.adminVersion }} onSaved={onSaved} onAdminUploaded={onUploaded} onAdminStateChange={onFormStateChange} onGoToStep={goToStep} />}
-    {(stepId === "12" || stepId === "13") && <section className="rounded-lg border border-border bg-card p-6">
-      <h2 className="text-section font-semibold">{stepId === "12" ? "Honor code" : "Terms of service"}</h2>
-      <p className="mt-3 text-body">{signed ? "Signed by the family." : "Not signed yet."}</p>
-      {typeof document === "string" && document.startsWith("/api/admin/document?") && <ExternalLink href={document} className="mt-4 inline-flex min-h-11 items-center text-primary underline">Open signed document</ExternalLink>}
-    </section>}
-    {stepId === "14" && <section className="rounded-lg border border-border bg-card p-6">
-      <h2 className="text-section font-semibold">Registration status</h2>
-      <p className="mt-3 text-body">{student.is_complete_sis === true ? "Submitted by the family." : "Not submitted yet."}</p>
-      <p className="mt-2 text-body text-muted-foreground">Only the family can submit this registration.</p>
-    </section>}
+    <div data-registration-step-frame className="space-y-6 [overflow-anchor:none] md:min-h-[42rem]">
+      {definition && <StepForm key={stepId} definition={definition} leadId={leadId} objectId={studentInfo.objectId} studentName={studentInfo.studentName} stepId={stepId} initialValues={flattenFormValues(student)} disabled={studentInfo.stepCompletion[stepId] === true} persistence={{ kind: "admin", version: result.adminVersion }} onSaved={onSaved} onAdminUploaded={onUploaded} onAdminStateChange={onFormStateChange} onGoToStep={goToStep} />}
+      {(stepId === "12" || stepId === "13") && <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="text-section font-semibold">{stepId === "12" ? "Honor code" : "Terms of service"}</h2>
+        <p className="mt-3 text-body">{signed ? "Signed by the family." : "Not signed yet."}</p>
+        {typeof document === "string" && document.startsWith("/api/admin/document?") && <ExternalLink href={document} className="mt-4 inline-flex min-h-11 items-center text-primary underline">Open signed document</ExternalLink>}
+      </section>}
+      {stepId === "14" && <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="text-section font-semibold">Registration status</h2>
+        <p className="mt-3 text-body">{student.is_complete_sis === true ? "Submitted by the family." : "Not submitted yet."}</p>
+        <p className="mt-2 text-body text-muted-foreground">Only the family can submit this registration.</p>
+      </section>}
+    </div>
   </div>;
 }

@@ -348,7 +348,28 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   await expect(page.getByRole("button", { name: /sign honor|submit registration/i })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("admin-form.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  if (testInfo.project.name === "desktop") {
+    const stepFrame = page.locator("[data-registration-step-frame]");
+    const signedStepHeight = (await stepFrame.boundingBox())?.height;
+    await page.getByLabel("Jump to section").selectOption("14");
+    await expect(page.getByText("Registration status", { exact: true })).toBeVisible();
+    const submitStepHeight = (await stepFrame.boundingBox())?.height;
+    expect(signedStepHeight).toBeGreaterThanOrEqual(672);
+    expect(submitStepHeight).toBe(signedStepHeight);
+  }
+
+  let releaseStudent!: () => void;
+  const studentGate = new Promise<void>((resolve) => { releaseStudent = resolve; });
+  await page.route("**/api/admin/registration", async (route) => { await studentGate; await route.continue(); });
+  const studentLoaded = page.waitForResponse("**/api/admin/registration");
   await page.getByLabel("Student", { exact: true }).selectOption("student-2");
+  await expect(page.getByRole("heading", { name: "Alex", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Jump to section")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Loading");
+  releaseStudent();
+  expect((await studentLoaded).status()).toBe(200);
+  await page.unroute("**/api/admin/registration");
   await expect(page.getByRole("heading", { name: "Taylor", exact: true })).toBeVisible();
   await page.getByLabel("Nickname").fill("Tay");
   await page.getByRole("button", { name: "Back to search" }).click();

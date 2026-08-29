@@ -227,11 +227,17 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     }
     cancelSearch();
     const id = ++operation.current;
-    setBusy(true); setMessage(""); if (!refresh) setRecord(null); setTarget(next);
+    setBusy(true); setMessage(""); setTarget(next);
     try {
       const result = await postApi<AdminRegistrationResult>("/api/admin/registration", next);
       if (active.current && currentTarget.current === next && id === operation.current) setRecord(result);
-    } catch (error) { if (id === operation.current) handleError(error); if (refresh) throw error; }
+    } catch (error) {
+      if (id === operation.current) {
+        handleError(error);
+        if (!refresh) setRecord(null);
+      }
+      if (refresh) throw error;
+    }
     finally { if (id === operation.current) setBusy(false); }
   }
   async function signOut() {
