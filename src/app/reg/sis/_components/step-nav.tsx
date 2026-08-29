@@ -48,7 +48,7 @@ export function StepNav({
           Registration progress
         </p>
         <p className="text-label text-muted-foreground">
-          {completedCount} of {WIZARD_STEPS.length} sections saved
+          {completedCount} of {WIZARD_STEPS.length} sections complete
         </p>
       </div>
 
@@ -69,13 +69,13 @@ export function StepNav({
                 !isCurrent && saved && "bg-primary/35",
                 !isCurrent && !saved && "bg-muted",
               )}
-              title={`Section ${index + 1}: ${step.label}${saved ? " · saved" : ""}${isCurrent ? " · current" : ""}`}
+              title={`Section ${index + 1}: ${step.label}${saved ? " · complete" : ""}${isCurrent ? " · current" : ""}`}
             />
           );
         })}
       </ol>
       <p className="mt-2 text-label text-muted-foreground">
-        Orange marks this section. Light orange marks sections with saved answers.
+        Orange marks this section. Light orange marks completed sections.
       </p>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -85,7 +85,7 @@ export function StepNav({
             {activeStep ? ` · ${activeStep.label}` : ""}
           </p>
           <p className="mt-1 text-label text-muted-foreground">
-            {activeComplete ? "Answers saved" : "No saved answers yet"}
+            {activeComplete ? "Section complete" : "Section not complete yet"}
           </p>
         </div>
 

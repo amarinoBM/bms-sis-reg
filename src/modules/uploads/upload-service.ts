@@ -80,10 +80,6 @@ export async function uploadStudentFile(
     }
   }
 
-  if (mapping.marksStepDisabled) {
-    savePayload[`${mapping.marksStepDisabled}disabled`] = true;
-  }
-
   await saveStudentRecord(input.leadId, input.objectId, savePayload, fetchImpl);
 
   return { fieldKey: mapping.fieldKey, url: driveUrl };

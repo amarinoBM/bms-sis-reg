@@ -4,6 +4,7 @@ import {
   buildStepCompletionMap,
   getMainProgressStatuses,
   isStepComplete,
+  isStepDisabled,
 } from "@/modules/wizard/progress";
 import { INITIAL_ACTIVE_STEP, getNextStepId, getPreviousStepId, getWizardStepLabel } from "@/modules/wizard/steps";
 
@@ -21,6 +22,30 @@ describe("wizard progress", () => {
     expect(isStepComplete("12", completion)).toBe(true);
     expect(isStepComplete("13", completion)).toBe(true);
     expect(isStepComplete("4", completion)).toBe(false);
+  });
+
+  it("treats a submitted legacy registration as fully complete", () => {
+    const completion = buildStepCompletionMap({
+      is_complete_sis: true,
+      honorCodeSigned: "Completed",
+      ToSBool: true,
+    });
+
+    expect(Object.values(completion).filter(Boolean)).toHaveLength(14);
+    expect(isStepComplete("1", completion)).toBe(true);
+    expect(isStepComplete("11", completion)).toBe(true);
+    expect(isStepComplete("14", completion)).toBe(true);
+  });
+
+  it("uses persisted save history when Backendless has no numeric flag columns", () => {
+    const student = {
+      UpdateHistory: [{ step: "save8", at: 1, fields: ["computer_system"] }],
+    };
+    const completion = buildStepCompletionMap(student);
+
+    expect(isStepComplete("11", completion)).toBe(true);
+    expect(isStepDisabled("11", student)).toBe(true);
+    expect(isStepComplete("10", completion)).toBe(false);
   });
 
   it("highlights the active main step", () => {

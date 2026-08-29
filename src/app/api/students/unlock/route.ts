@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 import { AppError } from "@/core/app-error";
-import { loadStudentRecord, saveStudentRecord } from "@/modules/students/repository";
+import { loadStudentRecord } from "@/modules/students/repository";
 import {
-  getWizardStepDisabledKey,
   WIZARD_STEPS,
   type WizardStepId,
 } from "@/modules/wizard/steps";
@@ -40,12 +39,6 @@ export async function POST(request: Request) {
         message: "Student record mismatch.",
       });
     }
-
-    const disabledKey = getWizardStepDisabledKey(parsed.stepId);
-
-    await saveStudentRecord(parsed.leadId, parsed.objectId, {
-      [disabledKey]: false,
-    });
 
     return { stepId: parsed.stepId, unlocked: true };
   }, request);

@@ -5,33 +5,37 @@ import { buildStepSavePayload } from "@/modules/wizard/save-service";
 import { unflattenFormValues } from "@/modules/wizard/step-schemas";
 
 describe("wizard save-service", () => {
-  it("marks step disabled on save", () => {
+  it("records section completion in persisted save history", () => {
     const payload = buildStepSavePayload(
       "save1",
       { student_last_name: "Moore" },
       { student_last_name: "Bennett" },
     );
 
-    expect(payload["1disabled"]).toBe(true);
+    expect(payload["1disabled"]).toBeUndefined();
     expect(payload.student_last_name).toBe("Moore");
-    expect(payload.changed_fields).toBe("student_last_name");
+    expect(payload.UpdateHistory).toEqual([
+      expect.objectContaining({ step: "save1", fields: ["student_last_name"] }),
+    ]);
   });
 
   it("rejects empty diffs", () => {
     expect(() =>
       buildStepSavePayload("save2", { most_interested_in: "math" }, {
         most_interested_in: "math",
-        "2disabled": true,
+        UpdateHistory: [{ step: "save2", at: 1, fields: ["most_interested_in"] }],
       }),
     ).toThrow();
   });
 
-  it.each([false, undefined])("can finish a section after a document-only change (saved flag: %s)", (flag) => {
+  it("can finish a section after a document-only change", () => {
     const fields = { uploadTranscript: "I can upload them", transcriptFiles: ["https://drive.google.com/file/d/already-uploaded/view"] };
-    const payload = buildStepSavePayload("save6.1", fields, { ...fields, "6.1disabled": flag });
-    expect(payload["6.1disabled"]).toBe(true);
+    const payload = buildStepSavePayload("save6.1", fields, fields);
+    expect(payload["6.1disabled"]).toBeUndefined();
     expect(payload.transcriptFiles).toEqual(fields.transcriptFiles);
-    expect(payload.changed_fields).toBe("6.1disabled");
+    expect(payload.UpdateHistory).toEqual([
+      expect.objectContaining({ step: "save6.1", fields: ["section_completion"] }),
+    ]);
   });
 
   it("still rejects an empty or unrelated save request", () => {

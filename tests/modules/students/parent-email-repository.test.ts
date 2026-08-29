@@ -88,7 +88,12 @@ describe("preferred parent email repository", () => {
         objectId: "student_one",
         parent_email: "legacy@example.test",
         email: "current@example.test",
-        changed_fields: expect.stringContaining("email"),
+        UpdateHistory: [
+          expect.objectContaining({
+            step: "save1.5",
+            fields: expect.arrayContaining(["email", "parent_email"]),
+          }),
+        ],
       }),
       expect.any(Function),
     );

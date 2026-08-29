@@ -10,7 +10,6 @@ export type UploadFieldMapping = {
   extraFieldKey?: string;
   metadataKey?: string;
   fileNamePrefix: string;
-  marksStepDisabled?: string;
 };
 
 export const UPLOAD_FIELD_MAP: Record<UploadType, UploadFieldMapping> = {
@@ -35,7 +34,6 @@ export const UPLOAD_FIELD_MAP: Record<UploadType, UploadFieldMapping> = {
   iep: {
     fieldKey: "upload_copy_EIP_504_plan",
     fileNamePrefix: "IEP_",
-    marksStepDisabled: "9",
   },
 };
 

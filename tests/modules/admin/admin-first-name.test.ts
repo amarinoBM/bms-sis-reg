@@ -22,7 +22,6 @@ describe("admin first-name corrections", () => {
   it("writes a first-name-only correction with trusted attribution", () => {
     const result = buildStepSavePayload("save1", { student_name: " Alexander ", actor: { role: "forged" } }, { student_name: "Alex" }, actor);
     expect(result.student_name).toBe("Alexander");
-    expect(result.changed_fields).toBe("student_name");
     expect(result.UpdateHistory).toEqual([expect.objectContaining({ fields: ["student_name"], actor })]);
     expect(result.actor).toBeUndefined();
   });

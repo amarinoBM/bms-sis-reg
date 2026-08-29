@@ -6,6 +6,7 @@ import {
   SAVE_META_FIELDS,
   type SaveHandlerKey,
 } from "@/modules/wizard/save-handlers";
+import { hasRecordedSectionCompletion } from "@/modules/wizard/section-completion";
 
 function stableSerialize(value: unknown): string {
   return JSON.stringify(value ?? null);
@@ -44,16 +45,17 @@ export function buildStepSavePayload(
   const changedKeys = Object.keys(picked).filter(
     (key) => stableSerialize(picked[key]) !== stableSerialize(previousRow[key]),
   );
-  const disabledKey = saveStep.replace(/^save/, "") + "disabled";
   // Uploads save documents separately. Finishing an incomplete section is still a change.
-  const completesSection = Object.keys(picked).length > 0 && previousRow[disabledKey] !== true;
+  const completesSection =
+    Object.keys(picked).length > 0 &&
+    !hasRecordedSectionCompletion(previousRow, saveStep);
   if (changedKeys.length === 0 && !completesSection) {
     throw new AppError({
       code: "INVALID_INPUT",
       message: "No changes to save.",
     });
   }
-  const auditedKeys = changedKeys.length > 0 ? changedKeys : [disabledKey];
+  const auditedKeys = changedKeys.length > 0 ? changedKeys : ["section_completion"];
 
   const existingHistory = Array.isArray(previousRow.UpdateHistory)
     ? previousRow.UpdateHistory
@@ -61,9 +63,6 @@ export function buildStepSavePayload(
 
   return {
     ...(actor ? Object.fromEntries(changedKeys.map((key) => [key, picked[key]])) : picked),
-    changed_fields: auditedKeys.join(","),
-    date_updated: Date.now(),
-    previous_data: previousRow,
     UpdateHistory: [
       ...existingHistory,
       {
@@ -73,7 +72,6 @@ export function buildStepSavePayload(
         ...(actor ? { actor } : {}),
       },
     ],
-    [disabledKey]: true,
   };
 }
 
