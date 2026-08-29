@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -14,21 +15,30 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FormTextInput } from "@/app/reg/_components/form-fields";
 import { AdminRegistration } from "./admin-registration";
-import { ADMIN_IDLE_MS, ADMIN_MAX_MS } from "@/modules/admin/policy";
+import { ADMIN_IDLE_MS, ADMIN_MAX_MS, isValidAdminSearchQuery } from "@/modules/admin/policy";
 import { fetchApi, postApi } from "@/lib/client-api";
-import type { AdminSearchItem, AdminSearchStatus, AdminRegistrationResult } from "@/server/admin/registrations";
+import type { AdminSearchItem, AdminSearchScope, AdminRegistrationResult } from "@/server/admin/registrations";
 import type { AdminFormState, AdminUploadResult } from "@/app/reg/sis/_components/step-form";
 import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
 
-type SearchPage = { results: AdminSearchItem[]; nextOffset: number | null; matchedFamily: boolean };
+type SearchPage = { results: AdminSearchItem[]; nextOffset: number | null; scope: AdminSearchScope };
+function groupSearchResults(items: AdminSearchItem[]): Record<string, AdminSearchItem[]> {
+  return items.reduce<Record<string, AdminSearchItem[]>>((groups, item) => {
+    (groups[item.leadId] ??= []).push(item);
+    return groups;
+  }, {});
+}
+function searchItemStatus(item: AdminSearchItem): string {
+  if (item.enrolled) return item.completed ? "Submitted" : "In progress";
+  if (item.completed) return "Not currently enrolled · Submitted";
+  return `Not currently enrolled · ${item.savedSections} section${item.savedSections === 1 ? "" : "s"} saved`;
+}
 export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; lastSeenAt: number }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [searchMode, setSearchMode] = useState<"name" | "email">("name");
-  const [searchStatus, setSearchStatus] = useState<AdminSearchStatus>("all");
   const [searching, setSearching] = useState(false);
+  const [searchScope, setSearchScope] = useState<AdminSearchScope>("enrolled");
   const [results, setResults] = useState<AdminSearchItem[]>([]);
-  const [nextSearchOffset, setNextSearchOffset] = useState<number | null>(null);
   const [searched, setSearched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -160,45 +170,51 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     searchRequest.current?.abort(); searchRequest.current = null;
     operation.current++; setSearching(false); setSearched(false);
     setMessage("");
-    setSearchNote(clearResults ? "" : "Search stopped. You can search the next group when you are ready.");
-    if (clearResults) { setResults([]); setNextSearchOffset(null); }
+    setSearchNote(clearResults ? "" : "Search stopped.");
+    if (clearResults) setResults([]);
   }
-  async function search(loadMore = false) {
+  async function search() {
     if (!await canNavigate()) return;
-    const offset = loadMore ? nextSearchOffset : 0;
-    if (offset === null) return;
     searchRequest.current?.abort();
     const controller = new AbortController();
     searchRequest.current = controller;
     const id = ++operation.current;
     currentTarget.current = null;
-    setSearching(true); setMessage(""); setSearchNote(""); setSearched(false); setRecord(null); setTarget(null);
-    if (!loadMore) { setResults([]); setNextSearchOffset(null); }
-    const found = new Map<string, AdminSearchItem>((loadMore ? results : []).map((item) => [item.objectId, item]));
+    setSearching(true); setSearchScope("enrolled"); setMessage(""); setSearchNote("");
+    setSearched(false); setRecord(null); setTarget(null); setResults([]);
+    const found = new Map<string, AdminSearchItem>();
     try {
-      // Search one bounded group at a time. Exact email matches return the whole
-      // enrolled family and stop; broader searches continue only when requested.
-      const timeout = window.setTimeout(() => controller.abort(), 30_000);
-      let page: SearchPage;
-      try {
-        page = await fetchApi<SearchPage>("/api/admin/search", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, offset, mode: query.includes("@") ? "email" : searchMode, status: searchStatus }), signal: controller.signal,
-        });
-      } finally { window.clearTimeout(timeout); }
-      if (id !== operation.current) return;
-      for (const item of page.results) found.set(item.objectId, item);
-      const nextResults = [...found.values()];
-      setResults(nextResults); setNextSearchOffset(page.nextOffset); setSearched(page.nextOffset === null);
-      if (page.matchedFamily) {
-        const noun = searchStatus === "all" ? "enrolled student" : searchStatus === "submitted" ? "submitted registration" : "in-progress registration";
-        setSearchNote(`Found ${page.results.length} ${noun}${page.results.length === 1 ? "" : "s"} in this family.`);
-      } else if (page.nextOffset !== null) {
-        setSearchNote(page.results.length ? "Matches were added below. Search the next group to continue." : "No matches in this group. Search the next group to continue.");
+      async function searchAllPages(scope: AdminSearchScope) {
+        setSearchScope(scope);
+        let offset: number | null = 0;
+        do {
+          const timeout = window.setTimeout(() => controller.abort(), 30_000);
+          let page: SearchPage;
+          try {
+            page = await fetchApi<SearchPage>("/api/admin/search", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ query, offset, scope }), signal: controller.signal,
+            });
+          } finally { window.clearTimeout(timeout); }
+          if (id !== operation.current) return false;
+          for (const item of page.results) found.set(item.objectId, item);
+          setResults([...found.values()]);
+          offset = page.nextOffset;
+        } while (offset !== null);
+        return true;
       }
+
+      const enrolledFinished = await searchAllPages("enrolled");
+      if (!enrolledFinished || id !== operation.current) return;
+      if (found.size === 0) {
+        const otherFinished = await searchAllPages("other");
+        if (!otherFinished || id !== operation.current) return;
+      }
+      setSearched(true);
+      setSearchNote("");
     } catch (error) { if (id === operation.current) {
       handleError(error);
-      if (active.current) setMessage("This search group could not be checked. Try again, or use a lead ID for a direct lookup.");
+      if (active.current) setMessage("The registration search could not finish. Check the email or lead ID and try again.");
     } }
     finally { if (id === operation.current) { setSearching(false); searchRequest.current = null; } }
   }
@@ -233,6 +249,8 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
       return { ...current, adminVersion: upload.adminVersion, student: { ...current.student, [upload.fieldKey]: value } };
     });
   }
+  const resultGroups = groupSearchResults(results);
+  const showFamilyLead = Object.keys(resultGroups).length > 1;
   if (expired) return <div><p role="status">{message || "Signing out…"}</p><Button onClick={() => void signOut()}>Sign out</Button></div>;
   return <div className="space-y-6">
     <AlertDialog open={discardDialogOpen} onOpenChange={handleDiscardDialogOpenChange}>
@@ -257,7 +275,7 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     </div>
     <h1 className="text-title font-semibold">{target ? record?.studentInfo.studentName ?? "Student registration" : "Find a registration"}</h1>
     {target ? <>
-      <Button variant="outline" className="min-h-11" disabled={formBusy} onClick={async () => { if (!await canNavigate()) return; currentTarget.current = null; operation.current++; setTarget(null); setRecord(null); setBusy(false); setMessage(""); if (!searched && results.length) setSearchNote("These are partial results. Search the next group to continue."); }}>Back to search</Button>
+      <Button variant="outline" className="min-h-11" disabled={formBusy} onClick={async () => { if (!await canNavigate()) return; currentTarget.current = null; operation.current++; setTarget(null); setRecord(null); setBusy(false); setMessage(""); if (!searched && results.length) setSearchNote("Search stopped before every registration was checked."); }}>Back to search</Button>
       {record && <div>
         <label htmlFor="admin-student" className="mb-2 block text-label font-medium">Student</label>
         <select id="admin-student" className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-body" value={record.studentInfo.objectId} disabled={busy || formBusy} onChange={(e) => void open({ leadId: target.leadId, objectId: e.target.value })}>
@@ -266,32 +284,35 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
       </div>}
       {record && <AdminRegistration key={record.studentInfo.objectId} result={record} leadId={target.leadId} onSaved={() => open(target, true)} onUploaded={(upload) => uploaded(target, upload)} onFormStateChange={updateFormState} canNavigate={canNavigate} busy={busy || formBusy} />}
     </> : <>
-      <p className="text-body text-muted-foreground">Search enrolled students by name, family email, lead ID, or registration link.</p>
-      <form className="grid gap-3 md:grid-cols-2 lg:grid-cols-[auto_auto_minmax(16rem,1fr)_auto] lg:items-end" onSubmit={(e) => { e.preventDefault(); void search(); }}>
-        <div><label htmlFor="admin-search-mode" className="mb-2 block text-label font-medium">Search by</label>
-          <select id="admin-search-mode" className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-body" value={searchMode} onChange={(e) => { cancelSearch(true); setSearchMode(e.target.value as "name" | "email"); }}>
-            <option value="name">Name or lead ID</option><option value="email">Parent email</option>
-          </select>
-        </div>
-        <div><label htmlFor="admin-search-status" className="mb-2 block text-label font-medium">Registration status</label>
-          <select id="admin-search-status" className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-body" value={searchStatus} onChange={(e) => { cancelSearch(true); setSearchStatus(e.target.value as AdminSearchStatus); }}>
-            <option value="all">All enrolled</option><option value="in_progress">In progress</option><option value="submitted">Submitted</option>
-          </select>
-        </div>
-        <div className="min-w-0 flex-1"><FormTextInput id="admin-search" label="Search registrations" value={query} onChange={(value) => { cancelSearch(true); setQuery(value); }} required placeholder={searchMode === "email" ? "Parent email (full or partial)" : "Student name, lead_… or registration link"} /></div>
-        <Button size="lg" className="min-h-11" type="submit" disabled={searching || query.trim().length < 2}>Search</Button>
+      <p className="text-body text-muted-foreground">Enter a full parent email, lead ID, or registration link.</p>
+      <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={(e) => { e.preventDefault(); void search(); }}>
+        <div className="min-w-0 flex-1"><FormTextInput id="admin-search" label="Search registrations" value={query} onChange={(value) => { cancelSearch(true); setQuery(value); }} required placeholder="parent@example.com, lead_… or registration link" /></div>
+        <Button size="lg" className="min-h-11" type="submit" disabled={searching || !isValidAdminSearchQuery(query)}>Search</Button>
       </form>
-      {searching && <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-body text-muted-foreground">{results.length ? "Searching the next group…" : "Searching enrolled students…"}</p><Button variant="outline" className="min-h-11" type="button" onClick={() => cancelSearch()}>Stop search</Button></div>}
+      {searching && <div className="flex items-center gap-2">
+        <p role="status" className="text-body text-muted-foreground">
+          {searchScope === "enrolled" ? "Searching enrolled students…" : "No enrolled registration found. Checking other saved registrations…"}
+        </p>
+        <Button variant="ghost" size="icon" type="button" aria-label="Stop search" onClick={() => cancelSearch()}><X aria-hidden="true" /></Button>
+      </div>}
       {!searching && searchNote && <p role="status" className="text-body text-muted-foreground">{searchNote}</p>}
       {!searching && message && <p role="alert" className="text-body text-destructive">{message}</p>}
-      {results.length > 0 && <ul className="divide-y divide-border border-y border-border">
-        {results.map((item) => <li key={item.objectId} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0"><p className="text-body font-semibold break-words">{item.studentName} {item.lastName}</p><p className="text-label text-muted-foreground break-all">{item.parentEmail || "No parent email recorded"}</p><p className="mt-1 text-label">{item.completed ? "Submitted" : "In progress"}</p></div>
-          <Button variant="outline" className="min-h-11 shrink-0" onClick={() => void open(item)}>View registration<span className="sr-only"> for {item.studentName} {item.lastName}</span></Button>
-        </li>)}
-      </ul>}
-      {!searching && nextSearchOffset !== null && <Button variant="outline" className="min-h-11" type="button" onClick={() => void search(true)}>Search next group</Button>}
-      {searched && results.length === 0 && <p className="text-body">No eligible registrations match. Try another name, choose Parent email, or paste a lead ID or registration link.</p>}
+      {results.length > 0 && <div className="space-y-5">
+        {Object.entries(resultGroups).map(([leadId, items]) => {
+          const conflict = items.find((item) => item.alternateParentEmail);
+          return <section key={leadId} className="border-y border-border">
+            {showFamilyLead && <p className="pt-4 text-label text-muted-foreground">Family · {leadId}</p>}
+            {conflict && <p className="pt-3 text-label text-destructive">Two parent emails are saved: {conflict.parentEmail} and {conflict.alternateParentEmail}. The parent must confirm the main email in Parent contact.</p>}
+            <ul className="divide-y divide-border">
+              {items.map((item) => <li key={item.objectId} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0"><p className="text-body font-semibold break-words">{item.studentName} {item.lastName}</p><p className="text-label text-muted-foreground break-all">{item.parentEmail || "No parent email recorded"}</p><p className="mt-1 text-label">{searchItemStatus(item)}</p></div>
+                <Button variant="outline" className="min-h-11 shrink-0" onClick={() => void open(item)}>View registration<span className="sr-only"> for {item.studentName} {item.lastName}</span></Button>
+              </li>)}
+            </ul>
+          </section>;
+        })}
+      </div>}
+      {searched && results.length === 0 && <p className="text-body">No saved registration matches this email or lead ID.</p>}
     </>}
     {busy && <p role="status" className="text-body text-muted-foreground">{message || "Loading…"}</p>}
     {target && !busy && message && <p role="alert" className="text-body text-destructive">{message}</p>}

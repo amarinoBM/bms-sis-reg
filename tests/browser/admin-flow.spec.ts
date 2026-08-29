@@ -79,7 +79,7 @@ test("families without an email see support instead of an active send action", a
   expect(sendRequests).toBe(0);
 });
 
-test("searches one group at a time, appends results, and looks up lead IDs directly", async ({ page, request }, testInfo) => {
+test("searches exact identifiers progressively and falls back without extra controls", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   await page.goto("/admin/login");
   await page.getByLabel("Work email").fill("am@brilliantmicroschool.org");
@@ -89,32 +89,72 @@ test("searches one group at a time, appends results, and looks up lead IDs direc
   await page.getByLabel("Login code").fill(code);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Find a registration" })).toBeVisible();
+  await expect(page.getByLabel("Search by")).toHaveCount(0);
+  await expect(page.getByLabel("Registration status")).toHaveCount(0);
+  let releaseEnrolled!: () => void;
+  let releaseOther!: () => void;
+  let releaseOld!: () => void;
+  const enrolledGate = new Promise<void>((resolve) => { releaseEnrolled = resolve; });
+  const otherGate = new Promise<void>((resolve) => { releaseOther = resolve; });
+  const oldGate = new Promise<void>((resolve) => { releaseOld = resolve; });
   await page.route("**/api/admin/search", async (route) => {
     const input = route.request().postDataJSON();
-    if (input.offset === 100) {
-      await route.fulfill({ json: { success: true, data: { results: [], nextOffset: null, matchedFamily: false } } });
+    if (input.query === "family@example.test" && input.scope === "enrolled") {
+      if (input.offset === 0) {
+        await route.fulfill({ json: { success: true, data: { results: [], nextOffset: 100, scope: "enrolled" } } });
+      } else {
+        await enrolledGate;
+        await route.fulfill({ json: { success: true, data: { results: [
+          { objectId: "student-1", leadId: "lead_family", studentName: "Alex", lastName: "Example", parentEmail: "family@example.test", completed: true, enrolled: true, savedSections: 14 },
+          { objectId: "student-2", leadId: "lead_family", studentName: "Taylor", lastName: "Example", parentEmail: "family@example.test", completed: false, enrolled: true, savedSections: 3 },
+        ], nextOffset: null, scope: "enrolled" } } });
+      }
       return;
     }
-    const response = await route.fetch();
-    const body = await response.json();
-    body.data.nextOffset = 100;
-    await route.fulfill({ json: body });
+    if (input.query === "saved.parent@example.test") {
+      if (input.scope === "enrolled") {
+        await route.fulfill({ json: { success: true, data: { results: [], nextOffset: null, scope: "enrolled" } } });
+      } else {
+        await otherGate;
+        await route.fulfill({ json: { success: true, data: { results: [
+          { objectId: "student-9", leadId: "lead_saved", studentName: "Archived", lastName: "Registration", parentEmail: "saved.parent@example.test", completed: false, enrolled: false, savedSections: 1 },
+        ], nextOffset: null, scope: "other" } } });
+      }
+      return;
+    }
+    if (input.query === "slow@example.test") {
+      await oldGate;
+      await route.fulfill({ json: { success: true, data: { results: [
+        { objectId: "stale", leadId: "lead_stale", studentName: "Stale result", lastName: "", parentEmail: "slow@example.test", completed: false, enrolled: true, savedSections: 0 },
+      ], nextOffset: null, scope: "enrolled" } } });
+      return;
+    }
+    await route.continue();
   });
   try {
-    await page.getByLabel("Search registrations").fill("Example");
+    await page.getByLabel("Search registrations").fill("family@example.test");
     await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(page.getByText("Searching enrolled students…")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Stop search" })).toBeEnabled();
+    releaseEnrolled();
     const open = page.getByRole("button", { name: "View registration for Alex Example" });
     await expect(open).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Search next group" })).toBeEnabled();
-    const continuing = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().offset === 100);
-    await page.getByRole("button", { name: "Search next group" }).click();
-    await continuing;
     await expect(page.getByRole("button", { name: "Search next group" })).toHaveCount(0);
-    await page.screenshot({ path: testInfo.outputPath("admin-search-groups.png"), fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath("admin-smart-search.png"), fullPage: true });
     await open.click();
     await expect(page.getByLabel("Nickname")).toBeVisible();
-    await page.unrouteAll({ behavior: "wait" });
     await page.getByRole("button", { name: "Back to search" }).click();
+
+    await page.getByLabel("Search registrations").fill("saved.parent@example.test");
+    const fallback = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().scope === "other");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await fallback;
+    await expect(page.getByText("No enrolled registration found. Checking other saved registrations…")).toBeVisible();
+    releaseOther();
+    await page.getByRole("button", { name: "View registration for Archived Registration" }).click();
+    await expect(page.getByRole("heading", { name: "Archived", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Back to search" }).click();
+
     await page.getByLabel("Search registrations").fill("lead_family");
     await expect(page.getByRole("button", { name: /View registration for/ })).toHaveCount(0);
     const searched = page.waitForResponse("**/api/admin/search");
@@ -123,40 +163,19 @@ test("searches one group at a time, appends results, and looks up lead IDs direc
     await expect(page.getByRole("button", { name: /View registration for/ })).toHaveCount(2);
     await expect(page.getByRole("button", { name: "View registration for Taylor Example" })).toBeEnabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    // Changing the query cancels an old request and clears its visible results.
-    let releaseOld!: () => void;
-    const oldGate = new Promise<void>((resolve) => { releaseOld = resolve; });
-    await page.route("**/api/admin/search", async (route) => {
-      if (route.request().postDataJSON().query !== "old query") { await route.continue(); return; }
-      await oldGate;
-      await route.fulfill({ json: { success: true, data: { results: [{ objectId: "stale", leadId: "lead_stale", studentName: "Stale result", lastName: "", parentEmail: "", completed: false }], nextOffset: null, matchedFamily: false } } });
-    });
-    try {
-      await page.getByLabel("Search registrations").fill("old query");
-      const pending = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().query === "old query");
-      await page.getByRole("button", { name: "Search", exact: true }).click();
-      await pending;
-      await expect(page.getByRole("button", { name: "Stop search" })).toBeEnabled();
-      await page.getByLabel("Search registrations").fill("Taylor");
-      await page.getByRole("button", { name: "Search", exact: true }).click();
-      await expect(page.getByRole("button", { name: "View registration for Taylor Example" })).toBeEnabled();
-      releaseOld();
-      await expect(page.getByText("Stale result", { exact: true })).toHaveCount(0);
-      await page.unrouteAll({ behavior: "wait" });
-    } finally { releaseOld(); }
-    // A failed requested group keeps usable partial results and explains what failed.
-    await page.route("**/api/admin/search", async (route) => {
-      if (route.request().postDataJSON().offset === 100) { await route.abort("failed"); return; }
-      const body = await (await route.fetch()).json(); body.data.nextOffset = 100;
-      await route.fulfill({ json: body });
-    });
-    await page.getByLabel("Search registrations").fill("Example");
+
+    await page.getByLabel("Search registrations").fill("slow@example.test");
+    const pending = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().query === "slow@example.test");
     await page.getByRole("button", { name: "Search", exact: true }).click();
-    await expect(page.getByRole("button", { name: "View registration for Alex Example" })).toBeEnabled();
-    await page.getByRole("button", { name: "Search next group" }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "This search group could not be checked" })).toBeVisible();
-    await page.unroute("**/api/admin/search");
-  } finally { await page.unrouteAll({ behavior: "ignoreErrors" }); }
+    await pending;
+    await page.getByLabel("Search registrations").fill("slow2@example.test");
+    await expect(page.getByRole("button", { name: "Stop search" })).toHaveCount(0);
+    releaseOld();
+    await expect(page.getByText("Stale result", { exact: true })).toHaveCount(0);
+  } finally {
+    releaseEnrolled(); releaseOther(); releaseOld();
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+  }
 });
 test("admin signs in, searches, edits, switches students, and signs out", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
@@ -172,7 +191,7 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   await page.getByLabel("Login code").fill(code);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Find a registration" })).toBeVisible();
-  await page.getByLabel("Search registrations").fill("Example");
+  await page.getByLabel("Search registrations").fill("parent@example.test");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await page.getByRole("button", { name: "View registration for Alex Example" }).click();
   await expect(page.getByText("Admin · View and edit")).toBeVisible();
@@ -294,7 +313,7 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   const discardDialog = page.getByRole("alertdialog");
   await expect(discardDialog).toBeVisible();
   await discardDialog.getByRole("button", { name: "Discard answers" }).click();
-  await expect(page.getByLabel("Search registrations")).toHaveValue("Example");
+  await expect(page.getByLabel("Search registrations")).toHaveValue("parent@example.test");
   await expect(page.getByRole("button", { name: "View registration for Alex Example" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("admin-search.png"), fullPage: true });
   await page.getByRole("button", { name: "Sign out", exact: true }).click();

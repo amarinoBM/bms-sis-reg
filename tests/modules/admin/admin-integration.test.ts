@@ -213,17 +213,24 @@ describe("admin APIs and parent boundaries", () => {
       expect((await search(req("/api/admin/search", { query: "Alex" }, origin))).status).toBe(403);
     }
   });
-  it("finds eligible students, including encrypted emails, and excludes planning slots", async () => {
+  it("finds enrolled families by either exact encrypted email field", async () => {
     await createAdminSession(ADMIN_EMAIL);
     backend.records[0].parent_email = "sis:v1:encrypted@example.test";
-    const response = await search(req("/api/admin/search", { query: "encrypted@" }));
+    backend.records[0].email = "sis:v1:other@example.test";
+    const response = await search(req("/api/admin/search", {
+      query: "other@example.test", scope: "enrolled", offset: 0,
+    }));
     expect(response.headers.get("Cache-Control")).toContain("no-store");
     const body = await response.json();
-    expect(body.data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1"]);
+    expect(body.data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1", "student-2"]);
+    expect(body.data.results[0]).toMatchObject({
+      parentEmail: "encrypted@example.test",
+      alternateParentEmail: "other@example.test",
+      enrolled: true,
+    });
     expect(JSON.stringify(body)).not.toContain("must-never-leak");
-    expect((await (await search(req("/api/admin/search", { query: "Inactive" }))).json()).data.results).toEqual([]);
   });
-  it("returns every enrolled child and stops when a full email matches the family", async () => {
+  it("returns every enrolled child and every matching lead for an email", async () => {
     await createAdminSession(ADMIN_EMAIL);
     backend.records[0].parent_email = "sis:v1:family@example.test";
     backend.records[1].parent_email = "";
@@ -231,85 +238,82 @@ describe("admin APIs and parent boundaries", () => {
       objectId: "student-7", lead_id: "lead_family", student_name: "Riley", student_last_name: "Example",
       slots: [{ status: "enrolled" }], updated: 1,
     });
+    backend.records.push({
+      objectId: "student-other-family", lead_id: "lead_other_family", student_name: "Another", student_last_name: "Family",
+      parent_email: "family@example.test", slots: [{ status: "enrolled" }], updated: 2,
+    });
 
     const data = (await (await search(req("/api/admin/search", {
-      query: "family@example.test", mode: "email", status: "all",
+      query: "family@example.test", scope: "enrolled", offset: 0,
     }))).json()).data;
 
-    expect(data.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-1", "student-2", "student-7"]);
-    expect(data.results.map((row: { parentEmail: string }) => row.parentEmail)).toEqual([
-      "family@example.test", "family@example.test", "family@example.test",
-    ]);
-    expect(data.matchedFamily).toBe(true);
+    expect(new Set(data.results.map((row: { objectId: string }) => row.objectId))).toEqual(new Set([
+      "student-1", "student-2", "student-7", "student-other-family",
+    ]));
+    expect(new Set(data.results.map((row: { leadId: string }) => row.leadId))).toEqual(new Set([
+      "lead_family", "lead_other_family",
+    ]));
     expect(data.nextOffset).toBeNull();
   });
-  it("filters family results by registration status", async () => {
+  it("searches recently updated enrolled records first and continues pages automatically", async () => {
     await createAdminSession(ADMIN_EMAIL);
-    backend.records[0].parent_email = "family@example.test";
-    backend.records[0].is_complete_sis = true;
-    backend.records[1].is_complete_sis = false;
+    for (let i = 0; i < 101; i++) backend.records.push({
+      objectId: "recent-" + i, lead_id: "lead_recent_" + i, student_name: "Recent " + i,
+      parent_email: "recent" + i + "@example.test", slots: [{ status: "enrolled" }], updated: 1000 - i,
+    });
+    const calls = vi.fn(backend.fetch); vi.stubGlobal("fetch", calls);
 
-    const submitted = (await (await search(req("/api/admin/search", {
-      query: "family@example.test", mode: "email", status: "submitted",
+    const first = (await (await search(req("/api/admin/search", {
+      query: "parent@example.test", scope: "enrolled", offset: 0,
     }))).json()).data;
-    const inProgress = (await (await search(req("/api/admin/search", {
-      query: "family@example.test", mode: "email", status: "in_progress",
+    const second = (await (await search(req("/api/admin/search", {
+      query: "parent@example.test", scope: "enrolled", offset: first.nextOffset,
     }))).json()).data;
 
-    expect(submitted.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-1"]);
-    expect(inProgress.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-2"]);
-  });
-  it("continues past the first source page, even when it contains no matches", async () => {
-    await createAdminSession(ADMIN_EMAIL);
-    for (let i = 0; i < 101; i++) backend.records.push({ objectId: "page-" + i, lead_id: "lead_page", student_name: i === 100 ? "Late match" : "Other student", slots: [{ status: "enrolled" }] });
-    const first = (await (await search(req("/api/admin/search", { query: "Late match", offset: 0 }))).json()).data;
     expect(first.results).toEqual([]);
     expect(first.nextOffset).toBe(100);
-    const second = (await (await search(req("/api/admin/search", { query: "Late match", offset: first.nextOffset }))).json()).data;
-    expect(second.results.map((row: { objectId: string }) => row.objectId)).toEqual(["page-100"]);
-    expect(second.nextOffset).toBeNull();
+    expect(second.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-1", "student-2"]);
+    const reads = calls.mock.calls.filter(([url]) => String(url).includes("/data/ms_student_dir?"));
+    expect(new URL(String(reads[0][0])).searchParams.get("sortBy")).toBe("updated desc");
   });
-  it("decrypts only matching students in name mode, not every family's email", async () => {
+  it("falls back to meaningful saved registrations and excludes empty shells", async () => {
     await createAdminSession(ADMIN_EMAIL);
-    backend.records[0].parent_email = "sis:v1:parent@example.test";
-    for (let i = 0; i < 98; i++) backend.records.push({ objectId: "speed-" + i, lead_id: "lead_speed", student_name: "Unrelated", parent_email: "sis:v1:other@example.test", slots: [{ status: "enrolled" }] });
-    const calls = vi.fn(backend.fetch); vi.stubGlobal("fetch", calls);
-    const data = (await (await search(req("/api/admin/search", { query: "Alex", mode: "name" }))).json()).data;
-    expect(data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1"]);
-    expect(data.results[0].parentEmail).toBe("parent@example.test");
-    expect(calls.mock.calls.filter(([url]) => String(url).endsWith("/EncryptDecryptMSStudentDir"))).toHaveLength(1);
-  });
-  it("narrows name searches to the selected registration status in Backendless", async () => {
-    await createAdminSession(ADMIN_EMAIL);
-    const calls = vi.fn(backend.fetch); vi.stubGlobal("fetch", calls);
+    const enrolled = (await (await search(req("/api/admin/search", {
+      query: "saved.parent@example.test", scope: "enrolled", offset: 0,
+    }))).json()).data;
+    const other = (await (await search(req("/api/admin/search", {
+      query: "saved.parent@example.test", scope: "other", offset: 0,
+    }))).json()).data;
+    const empty = (await (await search(req("/api/admin/search", {
+      query: "empty.shell@example.test", scope: "other", offset: 0,
+    }))).json()).data;
 
-    await search(req("/api/admin/search", { query: "Alex", mode: "name", status: "in_progress" }));
+    expect(enrolled.results).toEqual([]);
+    expect(other.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-9", "student-10"]);
+    expect(other.results.every((row: { enrolled: boolean }) => !row.enrolled)).toBe(true);
+    expect(empty.results).toEqual([]);
 
-    const read = calls.mock.calls.find(([url]) => String(url).includes("/data/ms_student_dir?"));
-    const where = new URL(String(read?.[0])).searchParams.get("where");
-    expect(where).toContain("student_name like '%alex%'");
-    expect(where).toContain("is_complete_sis = false or is_complete_sis is null");
-  });
-  it("still finds encrypted names and partial encrypted email searches", async () => {
-    await createAdminSession(ADMIN_EMAIL);
-    backend.records[0].student_name = "sis:v1:Alex";
-    backend.records[0].parent_email = "sis:v1:unique@example.test";
-    for (const [query, mode] of [["Alex", "name"], ["unique", "email"]]) {
-      const data = (await (await search(req("/api/admin/search", { query, mode }))).json()).data;
-      expect(data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1"]);
-    }
-    const data = (await (await search(req("/api/admin/search", { query: "Alex", mode: "email" }))).json()).data;
-    expect(data.results).toEqual([]);
+    const opened = await load(req("/api/admin/registration", { leadId: "lead_saved", objectId: "student-9" }));
+    expect(opened.status).toBe(200);
+    expect((await opened.json()).data.enrolledStudents.map((row: { objectId: string }) => row.objectId)).toEqual([
+      "student-9", "student-10",
+    ]);
   });
   it.each(["lead_family", "https://example.test/reg/sis?lead_id=lead_family"])('looks up only the exact lead for %s', async (query) => {
     await createAdminSession(ADMIN_EMAIL);
     const calls = vi.fn(backend.fetch); vi.stubGlobal("fetch", calls);
-    const data = (await (await search(req("/api/admin/search", { query, mode: "name" }))).json()).data;
+    const data = (await (await search(req("/api/admin/search", { query, scope: "enrolled", offset: 0 }))).json()).data;
     expect(data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1", "student-2"]);
     expect(data.nextOffset).toBeNull();
     const reads = calls.mock.calls.filter(([url]) => String(url).includes("/data/ms_student_dir?"));
     expect(reads).toHaveLength(1);
     expect(new URL(String(reads[0][0])).searchParams.get("where")).toContain("lead_id='lead_family'");
+  });
+  it("rejects names and partial email searches", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    for (const query of ["Alex", "parent@"] ) {
+      expect((await search(req("/api/admin/search", { query, scope: "enrolled", offset: 0 }))).status).toBe(400);
+    }
   });
   it("strips sensitive fields, guards documents, and never writes registration data when viewing", async () => {
     await createAdminSession(ADMIN_EMAIL);
@@ -348,7 +352,7 @@ describe("admin APIs and parent boundaries", () => {
     await createAdminSession(ADMIN_EMAIL);
     backend.failAudit();
     expect((await load(req("/api/admin/registration", target))).status).toBe(500);
-    expect((await search(req("/api/admin/search", { query: "Example", offset: 1 }))).status).toBe(500);
+    expect((await search(req("/api/admin/search", { query: "parent@example.test", scope: "enrolled", offset: 0 }))).status).toBe(500);
   });
   it.each(["parent_email", "email"])("cannot change the family's parent-login destination through %s", async (emailField) => {
     await createAdminSession(ADMIN_EMAIL);

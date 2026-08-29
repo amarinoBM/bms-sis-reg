@@ -1,4 +1,5 @@
 import { AppError } from "@/core/app-error";
+import { isValidEmail } from "@/lib/field-validation";
 
 export const ADMIN_IDLE_MS = 30 * 60_000;
 export const ADMIN_MAX_MS = 8 * 60 * 60_000;
@@ -19,7 +20,7 @@ export function isAdminSessionActive(
     now - session.issuedAt < ADMIN_MAX_MS && now - session.lastSeenAt < ADMIN_IDLE_MS;
 }
 
-export function normalizeAdminSearch(query: string): { text: string } | { leadId: string } {
+export function normalizeAdminSearch(query: string): { email: string } | { leadId: string } {
   const value = query.trim();
   if (value.length < 2 || value.length > 500) {
     throw new AppError({ code: "INVALID_INPUT", message: "Enter at least 2 characters, or paste a registration link." });
@@ -38,5 +39,20 @@ export function normalizeAdminSearch(query: string): { text: string } | { leadId
     }
     return { leadId };
   }
-  return { text: value.toLowerCase() };
+  if (!isValidEmail(value)) {
+    throw new AppError({
+      code: "INVALID_INPUT",
+      message: "Enter a full parent email, lead ID, or registration link.",
+    });
+  }
+  return { email: value.toLowerCase() };
+}
+
+export function isValidAdminSearchQuery(query: string): boolean {
+  try {
+    normalizeAdminSearch(query);
+    return true;
+  } catch {
+    return false;
+  }
 }
