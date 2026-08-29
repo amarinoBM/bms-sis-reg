@@ -79,7 +79,7 @@ test("families without an email see support instead of an active send action", a
   expect(sendRequests).toBe(0);
 });
 
-test("search results open before the scan finishes and lead IDs work directly", async ({ page, request }, testInfo) => {
+test("searches one group at a time, appends results, and looks up lead IDs directly", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   await page.goto("/admin/login");
   await page.getByLabel("Work email").fill("am@brilliantmicroschool.org");
@@ -89,11 +89,12 @@ test("search results open before the scan finishes and lead IDs work directly", 
   await page.getByLabel("Login code").fill(code);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Find a registration" })).toBeVisible();
-  let release!: () => void;
-  const gate = new Promise<void>((resolve) => { release = resolve; });
   await page.route("**/api/admin/search", async (route) => {
     const input = route.request().postDataJSON();
-    if (input.offset === 100) { await gate; await route.fulfill({ json: { success: true, data: { results: [], nextOffset: null } } }); return; }
+    if (input.offset === 100) {
+      await route.fulfill({ json: { success: true, data: { results: [], nextOffset: null, matchedFamily: false } } });
+      return;
+    }
     const response = await route.fetch();
     const body = await response.json();
     body.data.nextOffset = 100;
@@ -101,15 +102,17 @@ test("search results open before the scan finishes and lead IDs work directly", 
   });
   try {
     await page.getByLabel("Search registrations").fill("Example");
-    const continuing = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().offset === 100);
     await page.getByRole("button", { name: "Search", exact: true }).click();
-    await continuing;
     const open = page.getByRole("button", { name: "View registration for Alex Example" });
     await expect(open).toBeEnabled();
-    await page.screenshot({ path: testInfo.outputPath("admin-search-in-progress.png"), fullPage: true });
+    await expect(page.getByRole("button", { name: "Search next group" })).toBeEnabled();
+    const continuing = page.waitForRequest((r) => r.url().endsWith("/api/admin/search") && r.postDataJSON().offset === 100);
+    await page.getByRole("button", { name: "Search next group" }).click();
+    await continuing;
+    await expect(page.getByRole("button", { name: "Search next group" })).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("admin-search-groups.png"), fullPage: true });
     await open.click();
     await expect(page.getByLabel("Nickname")).toBeVisible();
-    release();
     await page.unrouteAll({ behavior: "wait" });
     await page.getByRole("button", { name: "Back to search" }).click();
     await page.getByLabel("Search registrations").fill("lead_family");
@@ -126,7 +129,7 @@ test("search results open before the scan finishes and lead IDs work directly", 
     await page.route("**/api/admin/search", async (route) => {
       if (route.request().postDataJSON().query !== "old query") { await route.continue(); return; }
       await oldGate;
-      await route.fulfill({ json: { success: true, data: { results: [{ objectId: "stale", leadId: "lead_stale", studentName: "Stale result", lastName: "", parentEmail: "", completed: false }], nextOffset: null } } });
+      await route.fulfill({ json: { success: true, data: { results: [{ objectId: "stale", leadId: "lead_stale", studentName: "Stale result", lastName: "", parentEmail: "", completed: false }], nextOffset: null, matchedFamily: false } } });
     });
     try {
       await page.getByLabel("Search registrations").fill("old query");
@@ -141,7 +144,7 @@ test("search results open before the scan finishes and lead IDs work directly", 
       await expect(page.getByText("Stale result", { exact: true })).toHaveCount(0);
       await page.unrouteAll({ behavior: "wait" });
     } finally { releaseOld(); }
-    // A failed continuation keeps usable partial results and labels them incomplete.
+    // A failed requested group keeps usable partial results and explains what failed.
     await page.route("**/api/admin/search", async (route) => {
       if (route.request().postDataJSON().offset === 100) { await route.abort("failed"); return; }
       const body = await (await route.fetch()).json(); body.data.nextOffset = 100;
@@ -149,10 +152,11 @@ test("search results open before the scan finishes and lead IDs work directly", 
     });
     await page.getByLabel("Search registrations").fill("Example");
     await page.getByRole("button", { name: "Search", exact: true }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "Search could not finish" })).toContainText("results shown may be incomplete");
     await expect(page.getByRole("button", { name: "View registration for Alex Example" })).toBeEnabled();
+    await page.getByRole("button", { name: "Search next group" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "This search group could not be checked" })).toBeVisible();
     await page.unroute("**/api/admin/search");
-  } finally { release(); }
+  } finally { await page.unrouteAll({ behavior: "ignoreErrors" }); }
 });
 test("admin signs in, searches, edits, switches students, and signs out", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
@@ -180,8 +184,12 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
     () => page.getByRole("button", { name: "Sign out", exact: true }).click(),
     () => page.getByRole("link", { name: "Admin sign in" }).click(),
   ]) {
-    page.once("dialog", (dialog) => dialog.dismiss());
     await navigate();
+    const discardDialog = page.getByRole("alertdialog");
+    await expect(discardDialog).toBeVisible();
+    await expect(discardDialog.getByRole("heading", { name: "Discard unsaved answers?" })).toBeVisible();
+    await discardDialog.getByRole("button", { name: "Keep editing" }).click();
+    await expect(discardDialog).toBeHidden();
     await expect(page.getByLabel("Nickname")).toHaveValue("Lex");
     await expect(page.getByLabel("Jump to section")).toHaveValue("1");
     await expect(page.getByLabel("Student", { exact: true })).toHaveValue("student-1");
@@ -281,7 +289,11 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByLabel("Student", { exact: true }).selectOption("student-2");
   await expect(page.getByRole("heading", { name: "Taylor", exact: true })).toBeVisible();
+  await page.getByLabel("Nickname").fill("Tay");
   await page.getByRole("button", { name: "Back to search" }).click();
+  const discardDialog = page.getByRole("alertdialog");
+  await expect(discardDialog).toBeVisible();
+  await discardDialog.getByRole("button", { name: "Discard answers" }).click();
   await expect(page.getByLabel("Search registrations")).toHaveValue("Example");
   await expect(page.getByRole("button", { name: "View registration for Alex Example" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("admin-search.png"), fullPage: true });

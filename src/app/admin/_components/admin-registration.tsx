@@ -12,20 +12,20 @@ export function AdminRegistration({ result, leadId, onSaved, onUploaded, onFormS
   result: AdminRegistrationResult; leadId: string; onSaved: () => Promise<void>;
   onUploaded: (result: AdminUploadResult) => void;
   onFormStateChange: (state: AdminFormState) => void;
-  canNavigate: () => boolean; busy: boolean;
+  canNavigate: () => Promise<boolean>; busy: boolean;
 }) {
   const [stepId, setStepId] = useState<WizardStepId>("1");
   const definition = getStepFormDefinition(stepId);
   const { student, studentInfo } = result;
   const signed = stepId === "12" ? student.honorCodeSigned === "Completed" || student.honorCodeSigned === true : student.ToSBool === true;
   const document = stepId === "12" ? student.honorCodeURL : student.ToSURL;
-  function goToStep(next: WizardStepId) {
-    if (next !== stepId && canNavigate()) setStepId(next);
+  async function goToStep(next: WizardStepId) {
+    if (next !== stepId && await canNavigate()) setStepId(next);
   }
   return <div className="space-y-6">
     <div>
       <label htmlFor="admin-section" className="mb-2 block text-label font-medium">Jump to section</label>
-      <select id="admin-section" value={stepId} disabled={busy} onChange={(e) => goToStep(e.target.value as WizardStepId)} className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-body">
+      <select id="admin-section" value={stepId} disabled={busy} onChange={(e) => void goToStep(e.target.value as WizardStepId)} className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-body">
         {WIZARD_STEPS.map((step) => <option key={step.id} value={step.id}>{step.label}</option>)}
       </select>
     </div>
