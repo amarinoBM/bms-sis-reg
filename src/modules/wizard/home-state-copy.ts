@@ -7,8 +7,8 @@ export const HOME_STATE_COPY = {
   fieldLabel: "Home state",
   intro:
     "Private school students from a state other than Florida need to submit a letter each year to their local school district.",
-  travelLead: "If you often travel, select the state where your ",
-  travelTail: "student will spend most of their time this academic year.",
+  travelLead: "If you often travel, select the state where ",
+  travelTail: " will spend most of their time this academic year.",
   requirementsHeading: "Your state requires some paperwork:",
   studyInformationLead: "We hope the above is clear and suggest you also study the information ",
   studyInformationLink: "here",

@@ -18,6 +18,7 @@ describe("technology-scheduling copy", () => {
 
   it("includes calendar guidance for length of stay", () => {
     expect(LENGTH_OF_STAYING_HINT).toContain("late June");
-    expect(LENGTH_OF_STAYING_HINT).toContain("early August");
+    expect(LENGTH_OF_STAYING_HINT).toContain("mid-August");
+    expect(LENGTH_OF_STAYING_HINT).toContain("instructional-hour requirements");
   });
 });

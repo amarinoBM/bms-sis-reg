@@ -19,4 +19,4 @@ export function lengthOfStayingLabel(studentName: string): string {
 }
 
 export const LENGTH_OF_STAYING_HINT =
-  "When planning your school year, we recommend finishing in late June and starting again in early August — so you meet state hour requirements for the full year.";
+  "The school year runs from mid-August through late June. Plan for your student to follow this schedule so they meet state instructional-hour requirements for the full year.";
