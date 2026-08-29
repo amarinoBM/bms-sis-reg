@@ -12,6 +12,7 @@ import { expandVirtualFormFields } from "@/modules/wizard/field-normalization";
 import { buildStepSavePayload } from "@/modules/wizard/save-service";
 import type { SaveHandlerKey } from "@/modules/wizard/save-handlers";
 import { syncParentMapForContactSave } from "@/modules/parent-maps/sync-parent-map";
+import { collectPreferredParentEmails } from "@/modules/students/parent-emails";
 import type {
   EnrolledStudentSummary,
   MsStudentDirRow,
@@ -230,44 +231,29 @@ export async function saveStudentRecord(
   return { objectId };
 }
 
-function looksLikeEncryptedValue(value: string): boolean {
-  return value.startsWith("sis:v1:");
-}
+export async function findPreferredParentEmails(
+  leadId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string[]> {
+  const enrolledStudents = await findEnrolledStudents(leadId, fetchImpl);
 
-function pickParentEmail(row: MsStudentDirRow): string | null {
-  const candidates = [row.parent_email, row.email];
-
-  for (const candidate of candidates) {
-    if (!candidate || typeof candidate !== "string") {
-      continue;
-    }
-
-    const trimmed = candidate.trim();
-    if (trimmed && !looksLikeEncryptedValue(trimmed)) {
-      return trimmed;
-    }
+  if (enrolledStudents.length === 0) {
+    return [];
   }
 
-  return null;
+  const rows: MsStudentDirRow[] = [];
+  for (const student of enrolledStudents) {
+    const { student: row } = await loadStudentRecord(leadId, student.studentName, fetchImpl);
+    rows.push(row);
+  }
+
+  return collectPreferredParentEmails(rows);
 }
 
 export async function findSuggestedParentEmail(
   leadId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
-  const enrolledStudents = await findEnrolledStudents(leadId, fetchImpl);
-
-  if (enrolledStudents.length === 0) {
-    return null;
-  }
-
-  for (const student of enrolledStudents) {
-    const { student: row } = await loadStudentRecord(leadId, student.studentName, fetchImpl);
-    const email = pickParentEmail(row);
-    if (email) {
-      return email;
-    }
-  }
-
-  return null;
+  const emails = await findPreferredParentEmails(leadId, fetchImpl);
+  return emails[0] ?? null;
 }

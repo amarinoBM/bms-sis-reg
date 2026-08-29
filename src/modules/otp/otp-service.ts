@@ -14,11 +14,9 @@ import {
   recordOtpSend,
 } from "@/server/connectors/backendless/cache-client";
 import { sendOtpEmail } from "@/server/connectors/backendless/email-client";
-import {
-  findEnrolledStudents,
-  findSuggestedParentEmail,
-} from "@/modules/students/repository";
+import { findEnrolledStudents } from "@/modules/students/repository";
 import { getServerEnv } from "@/config/env";
+import { resolveParentEmailChoice } from "@/server/auth/parent-email-choice";
 
 function generateOtp(): string {
   return String(randomInt(100000, 1000000));
@@ -52,6 +50,7 @@ function otpMatches(cached: unknown, input: string): boolean {
 
 export async function sendParentOtp(
   leadId: string,
+  emailChoiceToken?: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ cooldownSeconds: number }> {
   if (!getServerEnv().backendlessCodeUrl) {
@@ -63,7 +62,7 @@ export async function sendParentOtp(
 
   await assertOtpResendCooldown(leadId, fetchImpl);
 
-  const email = await findSuggestedParentEmail(leadId, fetchImpl);
+  const email = await resolveParentEmailChoice(leadId, emailChoiceToken, fetchImpl);
   if (!email) {
     throw new AppError({
       code: "INVALID_INPUT",
