@@ -23,4 +23,12 @@ describe("parent email selection", () => {
       ]),
     ).toEqual(["Parent@Example.test", "fallback@example.test"]);
   });
+
+  it("falls back to the legacy email when the preferred value is invalid", () => {
+    expect(
+      collectPreferredParentEmails([
+        { parent_email: "not an email", email: "fallback@example.test" },
+      ]),
+    ).toEqual(["fallback@example.test"]);
+  });
 });

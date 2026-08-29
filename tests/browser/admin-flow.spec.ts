@@ -59,6 +59,26 @@ test("multi-email families choose a masked destination using an opaque token", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test("families without an email see support instead of an active send action", async ({ page, request }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  let sendRequests = 0;
+  await page.route("**/api/otp/send", async (route) => {
+    sendRequests += 1;
+    await route.continue();
+  });
+
+  await page.goto("/reg?lead_id=lead_no_email");
+
+  await expect(page.getByText("We could not find a parent email for this link.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "help@brilliantmicroschool.org" })).toHaveAttribute(
+    "href",
+    "mailto:help@brilliantmicroschool.org",
+  );
+  await expect(page.getByRole("button", { name: "Send login code" })).toBeDisabled();
+  await expect(page.getByRole("radiogroup")).toHaveCount(0);
+  expect(sendRequests).toBe(0);
+});
+
 test("search results open before the scan finishes and lead IDs work directly", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   await page.goto("/admin/login");

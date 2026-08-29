@@ -46,6 +46,20 @@ describe("protected parent email choices", () => {
     expect(JSON.stringify(options)).not.toContain("second@example.test");
   });
 
+  it("makes colliding masked addresses distinguishable without revealing either address", async () => {
+    findEmails.mockResolvedValue(["john@example.test", "joan@example.test"]);
+
+    const options = await findParentEmailOptions("lead_two");
+
+    expect(options.map((option) => option.maskedEmail)).toEqual([
+      "joh*@example.test",
+      "joa*@example.test",
+    ]);
+    expect(new Set(options.map((option) => option.maskedEmail))).toHaveLength(2);
+    expect(JSON.stringify(options)).not.toContain("john@example.test");
+    expect(JSON.stringify(options)).not.toContain("joan@example.test");
+  });
+
   it("keeps the one-email send path unchanged when no token is supplied", async () => {
     findEmails.mockResolvedValue(["parent@example.test"]);
 

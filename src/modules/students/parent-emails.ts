@@ -1,4 +1,5 @@
 import type { MsStudentDirRow } from "@/modules/students/types";
+import { isValidEmail } from "@/lib/field-validation";
 
 function usableEmail(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -6,7 +7,7 @@ function usableEmail(value: unknown): string | null {
   }
 
   const trimmed = value.trim();
-  if (!trimmed || trimmed.startsWith("sis:v1:")) {
+  if (!isValidEmail(trimmed) || trimmed.startsWith("sis:v1:")) {
     return null;
   }
 

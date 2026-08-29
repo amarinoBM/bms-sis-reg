@@ -30,14 +30,51 @@ function invalidChoice(): never {
   });
 }
 
+function distinctMaskedEmails(emails: string[]): string[] {
+  const labels = emails.map(maskEmail);
+  const collisions = new Map<string, number[]>();
+
+  labels.forEach((label, index) => {
+    const indexes = collisions.get(label) ?? [];
+    indexes.push(index);
+    collisions.set(label, indexes);
+  });
+
+  for (const indexes of collisions.values()) {
+    if (indexes.length < 2) {
+      continue;
+    }
+
+    const localLength = emails[indexes[0]].lastIndexOf("@");
+    for (let visibleCharacters = 2; visibleCharacters < localLength; visibleCharacters += 1) {
+      const candidates = indexes.map((index) => {
+        const email = emails[index];
+        const at = email.lastIndexOf("@");
+        const local = email.slice(0, at);
+        return `${local.slice(0, visibleCharacters)}${"*".repeat(local.length - visibleCharacters)}${email.slice(at)}`;
+      });
+
+      if (new Set(candidates).size === candidates.length) {
+        indexes.forEach((index, candidateIndex) => {
+          labels[index] = candidates[candidateIndex];
+        });
+        break;
+      }
+    }
+  }
+
+  return labels;
+}
+
 export async function findParentEmailOptions(
   leadId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ParentEmailOption[]> {
   const emails = await findPreferredParentEmails(leadId, fetchImpl);
+  const maskedEmails = distinctMaskedEmails(emails);
 
-  return emails.map((email) => ({
-    maskedEmail: maskEmail(email),
+  return emails.map((email, index) => ({
+    maskedEmail: maskedEmails[index],
     choiceToken: choiceToken(leadId, email),
   }));
 }
