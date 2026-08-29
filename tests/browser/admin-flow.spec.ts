@@ -79,6 +79,48 @@ test("families without an email see support instead of an active send action", a
   expect(sendRequests).toBe(0);
 });
 
+test("three-sibling family sees two completed registrations and can continue the unfinished child", async ({ page, request }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  await page.goto("/reg?lead_id=lead_bennett");
+  await expect(page.getByText("b************t@example.test", { exact: true })).toBeVisible();
+
+  const sent = page.waitForResponse("**/api/otp/send");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  expect((await sent).status()).toBe(200);
+  const { code } = await (await request.get("http://127.0.0.1:3039/_test/code")).json();
+  await page.getByLabel("Login code").fill(code);
+  await page.getByRole("button", { name: "Continue to Student Information" }).click();
+
+  await expect(page.getByText("Registering Josiah", { exact: false })).toBeVisible();
+  await expect(page.getByText("0 of 14 sections complete", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Switch student" }).click();
+  await page.getByRole("button", { name: "Noah" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Switch student" }).click();
+  await expect(page.getByText("Registering Noah", { exact: false })).toBeVisible();
+  await expect(page.getByText("14 of 14 sections complete", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit section" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Switch student" }).click();
+  await page.getByRole("button", { name: "Madilyn" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Switch student" }).click();
+  await expect(page.getByText("Registering Madilyn", { exact: false })).toBeVisible();
+  await expect(page.getByText("14 of 14 sections complete", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Switch student" }).click();
+  await page.getByRole("button", { name: "Josiah" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Switch student" }).click();
+  await expect(page.getByText("Registering Josiah", { exact: false })).toBeVisible();
+  await expect(page.getByText("0 of 14 sections complete", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Save section" }).click();
+  await expect(page.getByText("1 of 14 sections complete", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Registering Josiah", { exact: false })).toBeVisible();
+  await expect(page.getByText("1 of 14 sections complete", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit section" })).toBeVisible();
+});
+
 test("searches exact identifiers progressively and falls back without extra controls", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   await page.goto("/admin/login");
@@ -397,7 +439,9 @@ test("parent keeps draft answers during uploads and can add several transcripts"
   expect((await transcriptSave).status()).toBe(200);
   await expect(page.getByRole("button", { name: "Edit section" })).toBeVisible();
   const finalState = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
-  expect(finalState.records[0]["6.1disabled"]).toBe(true);
+  expect(finalState.records[0].UpdateHistory).toEqual(
+    expect.arrayContaining([expect.objectContaining({ step: "save6.1" })]),
+  );
   expect(finalState.records[0].transcriptFiles).toHaveLength(3);
   await page.screenshot({ path: testInfo.outputPath("parent-transcripts.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

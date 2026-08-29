@@ -51,6 +51,17 @@ export function createAdminBackend() {
       "1disabled": true, slots: [{ status: "planning" }], updated: 19 },
     { objectId: "student-11", lead_id: "lead_shell", student_name: "Empty", student_last_name: "Shell",
       parent_email: "empty.shell@example.test", slots: [{ status: "planning" }], updated: 30 },
+    { objectId: "bennett-noah", lead_id: "lead_bennett", student_name: "Noah", student_last_name: "Bennett",
+      parent_email: "bennett.parent@example.test", email: "bennett.parent@example.test",
+      slots: [{ status: "enrolled" }], is_complete_sis: true, honorCodeSigned: "Completed", ToSBool: true, updated: 40 },
+    { objectId: "bennett-madilyn", lead_id: "lead_bennett", student_name: "Madilyn", student_last_name: "Bennett",
+      parent_email: "bennett.parent@example.test", email: "bennett.parent@example.test",
+      slots: [{ status: "enrolled" }], is_complete_sis: true, honorCodeSigned: "Completed", ToSBool: true, updated: 41 },
+    { objectId: "bennett-josiah", lead_id: "lead_bennett", student_name: "Josiah", student_last_name: "Bennett",
+      parent_email: "bennett.parent@example.test", email: "bennett.parent@example.test", parent_name: "Parent",
+      student_birth_date: Date.UTC(2018, 4, 2), male: true, Caucasian: true,
+      studentBirthCert: "https://drive.google.com/file/d/synthetic-josiah-birth/view",
+      slots: [{ status: "enrolled" }], updated: 42 },
   ];
   let failAudit = false;
   let failEmail = false;

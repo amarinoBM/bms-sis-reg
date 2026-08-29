@@ -22,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { isStepDisabled } from "@/modules/wizard/progress";
 import {
   flattenFormValues,
   getStepFormDefinition,
@@ -241,7 +240,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   studentName={payload.studentInfo.studentName}
                   stepId={activeStepId}
                   initialValues={formValues}
-                  disabled={isStepDisabled(activeStepId, payload.student)}
+                  disabled={payload.studentInfo.stepCompletion[activeStepId] === true}
                   onSaved={refreshStudent}
                   onGoToStep={setActiveStepId}
                 />

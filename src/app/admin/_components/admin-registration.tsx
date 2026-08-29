@@ -6,7 +6,6 @@ import { ExternalLink } from "@/app/reg/_components/external-link";
 import { flattenFormValues, getStepFormDefinition } from "@/modules/wizard/step-schemas";
 import { WIZARD_STEPS, type WizardStepId } from "@/modules/wizard/steps";
 import type { AdminRegistrationResult } from "@/server/admin/registrations";
-import { isStepDisabled } from "@/modules/wizard/progress";
 
 export function AdminRegistration({ result, leadId, onSaved, onUploaded, onFormStateChange, canNavigate, busy }: {
   result: AdminRegistrationResult; leadId: string; onSaved: () => Promise<void>;
@@ -31,7 +30,7 @@ export function AdminRegistration({ result, leadId, onSaved, onUploaded, onFormS
     </div>
     <fieldset disabled={busy} className="min-w-0"><StepNav activeStepId={stepId} stepCompletion={studentInfo.stepCompletion} onStepSelect={goToStep} /></fieldset>
     <p className="text-label text-muted-foreground">Changes are saved as admin edits. Blank fields have not been answered. Signing and submission remain parent-only.</p>
-    {definition && <StepForm key={stepId} definition={definition} leadId={leadId} objectId={studentInfo.objectId} studentName={studentInfo.studentName} stepId={stepId} initialValues={flattenFormValues(student)} disabled={isStepDisabled(stepId, student)} persistence={{ kind: "admin", version: result.adminVersion }} onSaved={onSaved} onAdminUploaded={onUploaded} onAdminStateChange={onFormStateChange} onGoToStep={goToStep} />}
+    {definition && <StepForm key={stepId} definition={definition} leadId={leadId} objectId={studentInfo.objectId} studentName={studentInfo.studentName} stepId={stepId} initialValues={flattenFormValues(student)} disabled={studentInfo.stepCompletion[stepId] === true} persistence={{ kind: "admin", version: result.adminVersion }} onSaved={onSaved} onAdminUploaded={onUploaded} onAdminStateChange={onFormStateChange} onGoToStep={goToStep} />}
     {(stepId === "12" || stepId === "13") && <section className="rounded-lg border border-border bg-card p-6">
       <h2 className="text-section font-semibold">{stepId === "12" ? "Honor code" : "Terms of service"}</h2>
       <p className="mt-3 text-body">{signed ? "Signed by the family." : "Not signed yet."}</p>
