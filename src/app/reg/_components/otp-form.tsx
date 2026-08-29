@@ -14,7 +14,7 @@ import { messageFromRegApiError } from "@/lib/reg-api-errors";
 
 type OtpFormProps = {
   leadId: string;
-  maskedEmail?: string | null;
+  emailOptions: { maskedEmail: string; choiceToken: string }[];
 };
 
 type SendResponse = { cooldownSeconds: number };
@@ -28,15 +28,22 @@ function sanitizeOtp(value: string): string {
   return value.replace(/\D/g, "").slice(0, 6);
 }
 
-export function OtpForm({ leadId, maskedEmail }: OtpFormProps) {
+export function OtpForm({ leadId, emailOptions }: OtpFormProps) {
   const router = useRouter();
   const [otp, setOtp] = useState("");
+  const [emailChoiceToken, setEmailChoiceToken] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [sendLabel, setSendLabel] = useState("Send login code");
   const [sendInFlight, setSendInFlight] = useState(false);
   const [verifyDisabled, setVerifyDisabled] = useState(false);
   const cooldownIntervalRef = useRef<number | null>(null);
-  const sendDisabled = sendInFlight || sendLabel !== "Send login code" || !maskedEmail;
+  const hasMultipleEmails = emailOptions.length > 1;
+  const maskedEmail = emailOptions.length === 1 ? emailOptions[0].maskedEmail : null;
+  const sendDisabled =
+    sendInFlight ||
+    sendLabel !== "Send login code" ||
+    emailOptions.length === 0 ||
+    (hasMultipleEmails && !emailChoiceToken);
 
   useEffect(() => {
     return () => {
@@ -47,8 +54,13 @@ export function OtpForm({ leadId, maskedEmail }: OtpFormProps) {
   }, []);
 
   async function handleSendOtp() {
-    if (!maskedEmail) {
+    if (emailOptions.length === 0) {
       toast.error("We do not have a parent email on file for this link.");
+      return;
+    }
+
+    if (hasMultipleEmails && !emailChoiceToken) {
+      toast.error("Choose where to send the login code.");
       return;
     }
 
@@ -58,6 +70,7 @@ export function OtpForm({ leadId, maskedEmail }: OtpFormProps) {
     try {
       const result = await postApi<SendResponse>("/api/otp/send", {
         leadId,
+        ...(hasMultipleEmails ? { emailChoiceToken } : {}),
       });
 
       setCodeSent(true);
@@ -122,11 +135,51 @@ export function OtpForm({ leadId, maskedEmail }: OtpFormProps) {
       }}
     >
       <div className="space-y-4">
-        <p className="text-body text-foreground">
-          We will send a login code to{" "}
-          <span className="font-medium">{maskedEmail ?? "the parent email on file"}</span>.
-        </p>
-        {!maskedEmail ? (
+        {hasMultipleEmails ? (
+          <fieldset
+            role="radiogroup"
+            aria-labelledby="parent-email-choice-label"
+            className="min-w-0 space-y-3"
+          >
+            <legend
+              id="parent-email-choice-label"
+              className="text-body font-medium text-foreground"
+            >
+              Where should we send the login code?
+            </legend>
+            <p className="text-label text-muted-foreground">
+              Choose a parent email already on file.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {emailOptions.map((option) => (
+                <label
+                  key={option.choiceToken}
+                  className={cn(
+                    REG_TOUCH_CLASS,
+                    "flex min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-label text-foreground",
+                    "has-[:checked]:border-primary has-[:checked]:bg-primary/5",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="parent-email-choice"
+                    value={option.choiceToken}
+                    checked={emailChoiceToken === option.choiceToken}
+                    onChange={() => setEmailChoiceToken(option.choiceToken)}
+                    className="h-5 w-5 shrink-0 accent-primary"
+                  />
+                  <span className="min-w-0 break-all font-medium">{option.maskedEmail}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : (
+          <p className="text-body text-foreground">
+            We will send a login code to{" "}
+            <span className="font-medium">{maskedEmail ?? "the parent email on file"}</span>.
+          </p>
+        )}
+        {emailOptions.length === 0 ? (
           <p className="text-label text-muted-foreground">
             We could not find a parent email for this link. Contact{" "}
             <a href="mailto:help@brilliantmicroschool.org" className="text-primary underline">

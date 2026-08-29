@@ -1,6 +1,84 @@
 import { test, expect } from "@playwright/test";
 import { sealData } from "iron-session";
 test.skip(!process.env.ADMIN_BROWSER_TESTS, "Run with npm run test:browser:admin against the synthetic backend.");
+
+test("one-email families send as before without an email chooser", async ({ page, request }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  let sendBody: Record<string, unknown> | undefined;
+  await page.route("**/api/otp/send", async (route) => {
+    sendBody = route.request().postDataJSON();
+    await route.continue();
+  });
+
+  await page.goto("/reg?lead_id=lead_family");
+  await expect(page.getByRole("radiogroup")).toHaveCount(0);
+  await expect(page.getByText("p****t@example.test", { exact: true })).toBeVisible();
+  const sent = page.waitForResponse("**/api/otp/send");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  expect((await sent).status()).toBe(200);
+  expect(sendBody).toEqual({ leadId: "lead_family" });
+
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.emails).toHaveLength(1);
+  expect(state.emails[0].to).toBe("parent@example.test");
+});
+
+test("multi-email families choose a masked destination using an opaque token", async ({ page, request }, testInfo) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  const rawEmails = ["first.parent@example.test", "second.parent@example.test"];
+  let sendBody: Record<string, unknown> | undefined;
+  await page.route("**/api/otp/send", async (route) => {
+    sendBody = route.request().postDataJSON();
+    await route.continue();
+  });
+
+  await page.goto("/reg?lead_id=lead_multi_email");
+  const choices = page.getByRole("radiogroup", { name: "Where should we send the login code?" });
+  await expect(choices).toBeVisible();
+  await expect(page.getByLabel("f**********t@example.test")).toBeVisible();
+  await expect(page.getByLabel("s***********t@example.test")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send login code" })).toBeDisabled();
+  for (const rawEmail of rawEmails) {
+    expect(await page.locator("body").textContent()).not.toContain(rawEmail);
+    expect(await page.content()).not.toContain(rawEmail);
+  }
+
+  await page.getByLabel("s***********t@example.test").check();
+  const sent = page.waitForResponse("**/api/otp/send");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  expect((await sent).status()).toBe(200);
+  expect(sendBody?.leadId).toBe("lead_multi_email");
+  expect(sendBody?.emailChoiceToken).toMatch(/^[a-f0-9]{64}$/);
+  expect(JSON.stringify(sendBody)).not.toContain(rawEmails[0]);
+  expect(JSON.stringify(sendBody)).not.toContain(rawEmails[1]);
+
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.emails).toHaveLength(1);
+  expect(state.emails[0].to).toBe(rawEmails[1]);
+  await page.screenshot({ path: testInfo.outputPath("parent-email-choice.png"), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("families without an email see support instead of an active send action", async ({ page, request }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  let sendRequests = 0;
+  await page.route("**/api/otp/send", async (route) => {
+    sendRequests += 1;
+    await route.continue();
+  });
+
+  await page.goto("/reg?lead_id=lead_no_email");
+
+  await expect(page.getByText("We could not find a parent email for this link.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "help@brilliantmicroschool.org" })).toHaveAttribute(
+    "href",
+    "mailto:help@brilliantmicroschool.org",
+  );
+  await expect(page.getByRole("button", { name: "Send login code" })).toBeDisabled();
+  await expect(page.getByRole("radiogroup")).toHaveCount(0);
+  expect(sendRequests).toBe(0);
+});
+
 test("search results open before the scan finishes and lead IDs work directly", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   await page.goto("/admin/login");

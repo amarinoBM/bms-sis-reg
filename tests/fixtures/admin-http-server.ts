@@ -9,7 +9,7 @@ createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify({ code })); return;
   }
   if (url.pathname === "/_test/state") {
-    res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify({ audit: backend.audit, writes: backend.writes, records: backend.records })); return;
+    res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify({ audit: backend.audit, emails: backend.emails, writes: backend.writes, records: backend.records })); return;
   }
   if (url.pathname === "/health") { res.end("ok"); return; }
   const chunks: Buffer[] = [];

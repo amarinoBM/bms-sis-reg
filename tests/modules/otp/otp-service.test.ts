@@ -32,7 +32,7 @@ describe("otp service", () => {
     process.env.BACKENDLESS_REST_URL = "https://api.backendless.com/app/key";
     process.env.BACKENDLESS_CODE_URL = "https://api.backendless.com/app/code";
 
-    await expect(sendParentOtp("lead_test", fetchImpl)).rejects.toMatchObject({
+    await expect(sendParentOtp("lead_test", undefined, fetchImpl)).rejects.toMatchObject({
       code: "INVALID_INPUT",
       message: expect.stringContaining("parent email on file"),
     });
@@ -111,7 +111,7 @@ describe("otp service", () => {
     process.env.BACKENDLESS_REST_URL = "https://api.backendless.com/app/key";
     process.env.BACKENDLESS_CODE_URL = "https://api.backendless.com/app/code";
 
-    await expect(sendParentOtp("lead_test", fetchImpl)).rejects.toMatchObject({
+    await expect(sendParentOtp("lead_test", undefined, fetchImpl)).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: expect.stringMatching(/Please wait \d+ seconds/),
     });
