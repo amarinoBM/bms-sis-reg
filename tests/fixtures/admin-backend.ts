@@ -44,6 +44,13 @@ export function createAdminBackend() {
       parent_name: "Chris", parent_last_name: "Parent", parent_phone: "+1 555 123 4567",
       parent_address: "2 Test Street", parent_relation: "Parent",
       slots: [{ status: "enrolled" }], updated: 1 },
+    { objectId: "student-9", lead_id: "lead_saved", student_name: "Archived", student_last_name: "Registration",
+      parent_email: "saved.parent@example.test", parent_name: "Pat", "1.5disabled": true,
+      slots: [{ status: "planning" }], updated: 20 },
+    { objectId: "student-10", lead_id: "lead_saved", student_name: "Older", student_last_name: "Sibling",
+      "1disabled": true, slots: [{ status: "planning" }], updated: 19 },
+    { objectId: "student-11", lead_id: "lead_shell", student_name: "Empty", student_last_name: "Shell",
+      parent_email: "empty.shell@example.test", slots: [{ status: "planning" }], updated: 30 },
   ];
   let failAudit = false;
   let failEmail = false;
@@ -93,7 +100,13 @@ export function createAdminBackend() {
       const where = url.searchParams.get("where") ?? "";
       const lead = where.match(/lead_id='([^']+)'/)?.[1];
       const id = where.match(/objectId='([^']+)'/)?.[1];
-      const matching = records.filter((row) => row.slots?.some((s) => s.status === "enrolled") && !row.student_name?.includes("[delete]") && (!lead || row.lead_id === lead) && (!id || row.objectId === id));
+      const enrolledOnly = where.includes("slots.status='enrolled'");
+      const matching = records
+        .filter((row) => (!enrolledOnly || row.slots?.some((s) => s.status === "enrolled")) &&
+          !row.student_name?.includes("[delete]") && (!lead || row.lead_id === lead) && (!id || row.objectId === id))
+        .sort((a, b) => url.searchParams.get("sortBy") === "updated desc"
+          ? Number(b.updated ?? 0) - Number(a.updated ?? 0)
+          : String(a.objectId).localeCompare(String(b.objectId)));
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const props = url.searchParams.get("props")?.split(",");
       return json(matching.slice(offset, offset + 100).map((row) => props ? Object.fromEntries(props.filter((k) => k in row).map((k) => [k, row[k]])) : row));

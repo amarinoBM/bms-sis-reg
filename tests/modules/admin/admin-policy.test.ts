@@ -15,15 +15,14 @@ describe("admin access policy", () => {
     expect(isAdminSessionActive({ issuedAt: now - 8 * 60 * 60_000, lastSeenAt: now }, now)).toBe(false);
     expect(isAdminSessionActive({ issuedAt: now + 1, lastSeenAt: now }, now)).toBe(false);
   });
-  it("accepts names, emails, lead IDs, and current or legacy registration links", () => {
-    expect(normalizeAdminSearch(" Alex Smith ")).toEqual({ text: "alex smith" });
-    expect(normalizeAdminSearch("AM@EXAMPLE.COM")).toEqual({ text: "am@example.com" });
+  it("accepts full emails, lead IDs, and current or legacy registration links", () => {
+    expect(normalizeAdminSearch("AM@EXAMPLE.COM")).toEqual({ email: "am@example.com" });
     expect(normalizeAdminSearch("lead_123")).toEqual({ leadId: "lead_123" });
     expect(normalizeAdminSearch("https://reg.brilliantmicroschools.org/reg?lead_id=lead_123")).toEqual({ leadId: "lead_123" });
     expect(normalizeAdminSearch("https://portal.brilliantgrades.com/Clever/?page=SIS#lead_id=lead_123")).toEqual({ leadId: "lead_123" });
   });
-  it("rejects short queries, malformed links, and unsafe lead IDs", () => {
-    for (const value of ["a", "https://example.com/no-lead", "lead_' OR 1=1", "x".repeat(501)]) {
+  it("rejects names, partial emails, malformed links, and unsafe lead IDs", () => {
+    for (const value of ["a", "Alex Smith", "alex@", "https://example.com/no-lead", "lead_' OR 1=1", "x".repeat(501)]) {
       expect(() => normalizeAdminSearch(value)).toThrow();
     }
   });
