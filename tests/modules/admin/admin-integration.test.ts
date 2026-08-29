@@ -223,6 +223,42 @@ describe("admin APIs and parent boundaries", () => {
     expect(JSON.stringify(body)).not.toContain("must-never-leak");
     expect((await (await search(req("/api/admin/search", { query: "Inactive" }))).json()).data.results).toEqual([]);
   });
+  it("returns every enrolled child and stops when a full email matches the family", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    backend.records[0].parent_email = "sis:v1:family@example.test";
+    backend.records[1].parent_email = "";
+    backend.records.push({
+      objectId: "student-7", lead_id: "lead_family", student_name: "Riley", student_last_name: "Example",
+      slots: [{ status: "enrolled" }], updated: 1,
+    });
+
+    const data = (await (await search(req("/api/admin/search", {
+      query: "family@example.test", mode: "email", status: "all",
+    }))).json()).data;
+
+    expect(data.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-1", "student-2", "student-7"]);
+    expect(data.results.map((row: { parentEmail: string }) => row.parentEmail)).toEqual([
+      "family@example.test", "family@example.test", "family@example.test",
+    ]);
+    expect(data.matchedFamily).toBe(true);
+    expect(data.nextOffset).toBeNull();
+  });
+  it("filters family results by registration status", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    backend.records[0].parent_email = "family@example.test";
+    backend.records[0].is_complete_sis = true;
+    backend.records[1].is_complete_sis = false;
+
+    const submitted = (await (await search(req("/api/admin/search", {
+      query: "family@example.test", mode: "email", status: "submitted",
+    }))).json()).data;
+    const inProgress = (await (await search(req("/api/admin/search", {
+      query: "family@example.test", mode: "email", status: "in_progress",
+    }))).json()).data;
+
+    expect(submitted.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-1"]);
+    expect(inProgress.results.map((row: { objectId: string }) => row.objectId)).toEqual(["student-2"]);
+  });
   it("continues past the first source page, even when it contains no matches", async () => {
     await createAdminSession(ADMIN_EMAIL);
     for (let i = 0; i < 101; i++) backend.records.push({ objectId: "page-" + i, lead_id: "lead_page", student_name: i === 100 ? "Late match" : "Other student", slots: [{ status: "enrolled" }] });
@@ -242,6 +278,17 @@ describe("admin APIs and parent boundaries", () => {
     expect(data.results.map((r: { objectId: string }) => r.objectId)).toEqual(["student-1"]);
     expect(data.results[0].parentEmail).toBe("parent@example.test");
     expect(calls.mock.calls.filter(([url]) => String(url).endsWith("/EncryptDecryptMSStudentDir"))).toHaveLength(1);
+  });
+  it("narrows name searches to the selected registration status in Backendless", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    const calls = vi.fn(backend.fetch); vi.stubGlobal("fetch", calls);
+
+    await search(req("/api/admin/search", { query: "Alex", mode: "name", status: "in_progress" }));
+
+    const read = calls.mock.calls.find(([url]) => String(url).includes("/data/ms_student_dir?"));
+    const where = new URL(String(read?.[0])).searchParams.get("where");
+    expect(where).toContain("student_name like '%alex%'");
+    expect(where).toContain("is_complete_sis = false or is_complete_sis is null");
   });
   it("still finds encrypted names and partial encrypted email searches", async () => {
     await createAdminSession(ADMIN_EMAIL);
@@ -279,6 +326,16 @@ describe("admin APIs and parent boundaries", () => {
     const audit = JSON.stringify(backend.audit);
     for (const sensitive of [ADMIN_EMAIL, "lead_family", "student-1", "Alex", "parent@example.test"]) expect(audit).not.toContain(sensitive);
     expect(backend.audit.map((a) => a.event)).toEqual(["view", "document"]);
+  });
+  it("displays the legacy email when parent_email is empty", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    backend.records[0].parent_email = "";
+    backend.records[0].email = "legacy.parent@example.test";
+
+    const data = await loaded();
+
+    expect(data.student.parent_email).toBe("legacy.parent@example.test");
+    expect(backend.writes).toHaveLength(0);
   });
   it("denies mismatched students and unsafe document redirects", async () => {
     await createAdminSession(ADMIN_EMAIL);

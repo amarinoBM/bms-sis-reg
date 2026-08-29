@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { collectPreferredParentEmails } from "@/modules/students/parent-emails";
+import {
+  collectPreferredParentEmails,
+  prepareParentEmailSaveFields,
+  resolveParentEmailState,
+} from "@/modules/students/parent-emails";
 
 describe("parent email selection", () => {
   it("uses each student's parent email and only falls back to email when needed", () => {
@@ -30,5 +34,44 @@ describe("parent email selection", () => {
         { parent_email: "not an email", email: "fallback@example.test" },
       ]),
     ).toEqual(["fallback@example.test"]);
+  });
+
+  it.each([
+    [{}, "missing", null],
+    [{ parent_email: "parent@example.test" }, "parent_only", "parent@example.test"],
+    [{ email: "legacy@example.test" }, "legacy_only", "legacy@example.test"],
+    [
+      { parent_email: "Parent@example.test", email: "parent@EXAMPLE.test" },
+      "matching",
+      "Parent@example.test",
+    ],
+    [
+      { parent_email: "one@example.test", email: "two@example.test" },
+      "different",
+      "one@example.test",
+    ],
+  ] as const)("resolves %j as %s", (row, status, effectiveEmail) => {
+    expect(resolveParentEmailState(row)).toMatchObject({ status, effectiveEmail });
+  });
+
+  it("prefills a missing parent email without trusting a submitted legacy email field", () => {
+    expect(
+      prepareParentEmailSaveFields(
+        { parent_email: "legacy@example.test", email: "attacker@example.test" },
+        { email: "legacy@example.test" },
+      ),
+    ).toEqual({ parent_email: "legacy@example.test" });
+  });
+
+  it("swaps differing stored addresses when the parent chooses the legacy address", () => {
+    expect(
+      prepareParentEmailSaveFields(
+        { parent_email: "legacy@example.test", email: "legacy@example.test" },
+        { parent_email: "current@example.test", email: "legacy@example.test" },
+      ),
+    ).toEqual({
+      parent_email: "legacy@example.test",
+      email: "current@example.test",
+    });
   });
 });

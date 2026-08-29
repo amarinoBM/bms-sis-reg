@@ -5,6 +5,7 @@ import { signTermsOfService } from "@/modules/tos/sign-tos";
 import { loadStudentRecord } from "@/modules/students/repository";
 import { runRoute } from "@/server/http/route-handler";
 import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
+import { preferredParentEmail } from "@/modules/students/parent-emails";
 
 const bodySchema = z.object({
   leadId: z.string().min(1),
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       return { tosURL: current.student.ToSURL };
     }
 
-    const email = String(current.student.parent_email ?? "").trim();
+    const email = preferredParentEmail(current.student) ?? "";
     if (!email) {
       throw new AppError({
         code: "INVALID_INPUT",

@@ -1,7 +1,9 @@
 import { AppError } from "@/core/app-error";
 import { requireBackendlessRestUrl } from "@/config/env";
+import { isValidEmail } from "@/lib/field-validation";
 import { normalizeAdminSearch } from "@/modules/admin/policy";
 import { findEnrolledStudents } from "@/modules/students/repository";
+import { preferredParentEmail } from "@/modules/students/parent-emails";
 import { buildStudentInfoState } from "@/modules/students/student-info-state";
 import { hydrateUploadMetadata } from "@/modules/students/upload-metadata";
 import { toStudentLoadResultDto } from "@/modules/students/student-wizard-dto";
@@ -19,6 +21,7 @@ function quote(value: string) { return value.replace(/'/g, "''"); }
 export type AdminSearchItem = {
   leadId: string; objectId: string; studentName: string; lastName: string; parentEmail: string; completed: boolean;
 };
+export type AdminSearchStatus = "all" | "in_progress" | "submitted";
 async function rows(where: string, offset = 0, props?: string): Promise<MsStudentDirRow[]> {
   const params = new URLSearchParams({ where, pageSize: String(PAGE_SIZE), offset: String(offset), sortBy: "objectId" });
   if (props) params.set("props", props);
@@ -30,13 +33,64 @@ async function rows(where: string, offset = 0, props?: string): Promise<MsStuden
   return data as MsStudentDirRow[];
 }
 
-export async function searchRegistrations(query: string, offset: number, mode: "name" | "email" | "all" = "all") {
+function matchesStatus(item: AdminSearchItem, status: AdminSearchStatus): boolean {
+  return status === "all" || (status === "submitted" ? item.completed : !item.completed);
+}
+
+function statusWhereClause(status: AdminSearchStatus): string {
+  if (status === "submitted") return " and is_complete_sis = true";
+  if (status === "in_progress") return " and (is_complete_sis = false or is_complete_sis is null)";
+  return "";
+}
+
+function toSearchItem(row: MsStudentDirRow, value: MsStudentDirRow, familyEmail?: string): AdminSearchItem | null {
+  if (!row.lead_id || !row.objectId || !value.student_name) return null;
+  return {
+    leadId: String(row.lead_id),
+    objectId: String(row.objectId),
+    studentName: String(value.student_name),
+    lastName: String(value.student_last_name ?? ""),
+    parentEmail: preferredParentEmail(value) ?? familyEmail ?? "",
+    completed: value.is_complete_sis === true,
+  };
+}
+
+async function decryptSearchRow(row: MsStudentDirRow): Promise<MsStudentDirRow> {
+  const needsDecryption = Object.values(row).some((value) => typeof value === "string" && value.startsWith("sis:v1:"));
+  return needsDecryption ? await decryptStudentDirRow(String(row.lead_id), row) as MsStudentDirRow : row;
+}
+
+async function familySearchItems(leadId: string, familyEmail: string, status: AdminSearchStatus): Promise<AdminSearchItem[]> {
+  const familyRows = await rows(
+    ENROLLED + " and lead_id='" + quote(leadId) + "'",
+    0,
+    "objectId,lead_id,student_name,student_last_name,parent_email,email,is_complete_sis",
+  );
+  const items = await Promise.all(familyRows.map(async (row) => toSearchItem(row, await decryptSearchRow(row), familyEmail)));
+  return items.filter((item): item is AdminSearchItem => item !== null && matchesStatus(item, status));
+}
+
+export async function searchRegistrations(
+  query: string,
+  offset: number,
+  mode: "name" | "email" | "all" = "all",
+  status: AdminSearchStatus = "all",
+) {
   const search = normalizeAdminSearch(query);
-  const where = ENROLLED + ("leadId" in search ? " and lead_id='" + quote(search.leadId) + "'" : "");
-  // Search one bounded source page per request. The client continues pages until the census
-  // is complete; encrypted email fields are matched only after decryption on the server.
+  let where = ENROLLED + ("leadId" in search ? " and lead_id='" + quote(search.leadId) + "'" : "");
+  // Email can live on a submitted sibling while another child is still in progress,
+  // so email searches find the family first and apply status after expansion.
+  if (mode !== "email") where += statusWhereClause(status);
+  if ("text" in search && mode === "name") {
+    const term = quote(search.text);
+    // Names are normally plaintext, so let Backendless narrow the source set.
+    // Keep encrypted-name rows in the candidate set so older records remain searchable.
+    where += " and (student_name like '%" + term + "%' or student_last_name like '%" + term +
+      "%' or student_name like 'sis:v1:%' or student_last_name like 'sis:v1:%')";
+  }
   const page = await rows(where, offset, "objectId,lead_id,student_name,student_last_name,parent_email,email,is_complete_sis");
   const results: AdminSearchItem[] = [];
+  const exactEmail = "text" in search && mode === "email" && isValidEmail(search.text) ? search.text : null;
   for (let i = 0; i < page.length; i += 5) {
     const batch = await Promise.all(page.slice(i, i + 5).map(async (row) => {
       if (!row.lead_id || !row.objectId || !row.student_name) return null;
@@ -46,23 +100,28 @@ export async function searchRegistrations(query: string, offset: number, mode: "
       if ("text" in search && mode === "name" &&
           !names.some((value) => typeof value === "string" && value.startsWith("sis:v1:")) &&
           !names.join(" ").toLowerCase().includes(search.text)) return null;
-      const leadId = String(row.lead_id);
-      const needsDecryption = Object.values(row).some((v) => typeof v === "string" && v.startsWith("sis:v1:"));
-      const value = needsDecryption ? await decryptStudentDirRow(leadId, row) : row;
-      const item: AdminSearchItem = {
-        leadId, objectId: String(row.objectId), studentName: String(value.student_name ?? ""),
-        lastName: String(value.student_last_name ?? ""),
-        parentEmail: String(value.parent_email ?? value.email ?? ""),
-        completed: value.is_complete_sis === true,
-      };
+      const value = await decryptSearchRow(row);
+      const item = toSearchItem(row, value);
+      if (!item) return null;
       const text = [item.studentName, item.lastName].join(" ").toLowerCase();
       const emails = [value.parent_email, value.email].filter((v): v is string => typeof v === "string");
-      return "leadId" in search || (mode !== "email" && text.includes(search.text)) ||
-        (mode !== "name" && emails.some((v) => v.toLowerCase().includes(search.text))) ? item : null;
+      const emailMatched = "text" in search && mode !== "name" && emails.some((v) => v.trim().toLowerCase().includes(search.text));
+      const matched = "leadId" in search || ("text" in search && mode !== "email" && text.includes(search.text)) || emailMatched;
+      return matched ? { item, emailMatched } : null;
     }));
-    for (const item of batch) if (item) results.push(item);
+    if (exactEmail) {
+      const familyLead = batch.find((match) => match?.emailMatched)?.item.leadId;
+      if (familyLead) {
+        return {
+          results: await familySearchItems(familyLead, exactEmail, status),
+          nextOffset: null,
+          matchedFamily: true,
+        };
+      }
+    }
+    for (const match of batch) if (match && matchesStatus(match.item, status)) results.push(match.item);
   }
-  return { results, nextOffset: page.length === PAGE_SIZE ? offset + PAGE_SIZE : null };
+  return { results, nextOffset: page.length === PAGE_SIZE ? offset + PAGE_SIZE : null, matchedFamily: false };
 }
 
 export async function loadAdminStudent(leadId: string, objectId: string): Promise<Omit<StudentLoadResult, "enrolledStudents">> {
@@ -102,6 +161,10 @@ export function adminDocumentUrl(student: Record<string, unknown>, field: string
 export function withAdminDocumentLinks(result: StudentLoadResult, leadId: string): StudentLoadResult {
   const dto = toStudentLoadResultDto(result);
   const student = { ...dto.student };
+  if (typeof student.parent_email !== "string" || !student.parent_email.trim()) {
+    const legacyFallback = preferredParentEmail(student);
+    if (legacyFallback) student.parent_email = legacyFallback;
+  }
   // Upload metadata contains raw Drive IDs and URLs. Admin clients only receive
   // the guarded document links, including when new upload metadata is added.
   for (const field of Object.keys(student)) {

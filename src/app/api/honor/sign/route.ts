@@ -5,6 +5,7 @@ import { signHonorCode } from "@/modules/honor/sign-honor";
 import { loadStudentRecord } from "@/modules/students/repository";
 import { runRoute } from "@/server/http/route-handler";
 import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
+import { preferredParentEmail } from "@/modules/students/parent-emails";
 
 const bodySchema = z.object({
   leadId: z.string().min(1),
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       return { honorCodeURL: current.student.honorCodeURL };
     }
 
-    const email = String(current.student.parent_email ?? "").trim();
+    const email = preferredParentEmail(current.student) ?? "";
     if (!email) {
       throw new AppError({
         code: "INVALID_INPUT",

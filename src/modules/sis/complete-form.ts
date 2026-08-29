@@ -6,6 +6,7 @@ import {
   isSisCompletedFormSuccess,
 } from "@/modules/sis/complete-result";
 import { AppError } from "@/core/app-error";
+import { preferredParentEmail } from "@/modules/students/parent-emails";
 
 type CompleteSisInput = {
   leadId: string;
@@ -26,7 +27,7 @@ export async function completeSisRegistration(
     student_name: pickString(input.student.student_name),
     student_nick_name: pickString(input.student.student_nick_name),
     student_last_name: pickString(input.student.student_last_name),
-    email: pickString(input.student.email),
+    email: preferredParentEmail(input.student) ?? "",
     contact_id: pickString(input.student.contact_id),
     home_state: pickString(input.student.home_state),
     subjects: pickString(input.student.subjects),

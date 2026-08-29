@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
-  testDir: "tests/browser", testMatch: "admin-flow.spec.ts", fullyParallel: false, workers: 1,
+  testDir: "tests/browser", testMatch: ["admin-flow.spec.ts", "parent-email-repair.spec.ts"], fullyParallel: false, workers: 1,
   use: { baseURL: "http://127.0.0.1:3028", trace: "retain-on-failure" },
   projects: [{ name: "desktop", use: { ...devices["Desktop Chrome"] } }, { name: "mobile", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } }],
   webServer: [

@@ -35,6 +35,15 @@ export function createAdminBackend() {
       parent_email: "second.parent@example.test", slots: [{ status: "enrolled" }], updated: 1 },
     { objectId: "student-6", lead_id: "lead_no_email", student_name: "Casey", student_last_name: "Support",
       slots: [{ status: "enrolled" }], updated: 1 },
+    { objectId: "student-7", lead_id: "lead_legacy_email", student_name: "Legacy", student_last_name: "Repair",
+      email: "legacy.parent@example.test", parent_name: "Lee", parent_last_name: "Parent",
+      parent_phone: "+1 555 123 4567", parent_address: "1 Test Street", parent_relation: "Parent",
+      slots: [{ status: "enrolled" }], updated: 1 },
+    { objectId: "student-8", lead_id: "lead_conflicting_email", student_name: "Conflict", student_last_name: "Repair",
+      parent_email: "current.parent@example.test", email: "legacy.parent@example.test",
+      parent_name: "Chris", parent_last_name: "Parent", parent_phone: "+1 555 123 4567",
+      parent_address: "2 Test Street", parent_relation: "Parent",
+      slots: [{ status: "enrolled" }], updated: 1 },
   ];
   let failAudit = false;
   let failEmail = false;
