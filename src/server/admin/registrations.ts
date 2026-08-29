@@ -11,7 +11,6 @@ import { decryptStudentDirRow } from "@/server/connectors/backendless/cloud-code
 import { TRANSCRIPT_DELIVERY_UPLOAD } from "@/modules/wizard/transcript-fields";
 import { buildStepCompletionMap } from "@/modules/wizard/progress";
 import { SAVE_HANDLERS } from "@/modules/wizard/save-handlers";
-import { WIZARD_STEPS } from "@/modules/wizard/steps";
 import { DOCUMENT_FIELDS, isDriveDocument, readDocumentFiles, readIepFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 export { preserveDocumentFields } from "@/modules/uploads/document-files";
 import { adminRef } from "./store";
@@ -19,10 +18,9 @@ import { adminRef } from "./store";
 const ENROLLED = "student_name not like '%[delete]%' and slots.status='enrolled'";
 const SAVED_CANDIDATES = "student_name is not null and student_name not like '%[delete]%' and lead_id is not null";
 const PAGE_SIZE = 100;
-const COMPLETION_FIELDS = WIZARD_STEPS.map((step) => `${step.completionKey}disabled`);
 const SEARCH_PROPS = [
   "objectId", "lead_id", "student_name", "student_last_name", "parent_email", "email",
-  "is_complete_sis", "updated", "honorCodeSigned", "ToSBool", ...COMPLETION_FIELDS,
+  "is_complete_sis", "updated", "honorCodeSigned", "ToSBool",
 ].join(",");
 const IDENTITY_ONLY_FIELDS = new Set(["student_name", "student_last_name", "parent_email", "email"]);
 const REGISTRATION_ANSWER_FIELDS = [...new Set(Object.values(SAVE_HANDLERS).flat())]

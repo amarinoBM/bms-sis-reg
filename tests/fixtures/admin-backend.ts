@@ -109,6 +109,9 @@ export function createAdminBackend() {
           : String(a.objectId).localeCompare(String(b.objectId)));
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const props = url.searchParams.get("props")?.split(",");
+      if (props?.some((property) => /^\d/.test(property))) {
+        return json({ code: 1054, message: "Numeric-leading properties cannot be selected through props." }, 400);
+      }
       return json(matching.slice(offset, offset + 100).map((row) => props ? Object.fromEntries(props.filter((k) => k in row).map((k) => [k, row[k]])) : row));
     }
     if (path.includes("/data/ms_student_dir/") && method === "PUT") {
