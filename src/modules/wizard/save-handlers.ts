@@ -37,6 +37,7 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
     "transgender",
   ],
   "save1.5": [
+    "email",
     "parent_address",
     "parent_email",
     "parent_last_name",

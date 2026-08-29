@@ -12,7 +12,10 @@ import { expandVirtualFormFields } from "@/modules/wizard/field-normalization";
 import { buildStepSavePayload } from "@/modules/wizard/save-service";
 import type { SaveHandlerKey } from "@/modules/wizard/save-handlers";
 import { syncParentMapForContactSave } from "@/modules/parent-maps/sync-parent-map";
-import { collectPreferredParentEmails } from "@/modules/students/parent-emails";
+import {
+  collectPreferredParentEmails,
+  prepareParentEmailSaveFields,
+} from "@/modules/students/parent-emails";
 import type {
   EnrolledStudentSummary,
   MsStudentDirRow,
@@ -173,10 +176,14 @@ export async function saveStudentStep(
   fetchImpl: typeof fetch = fetch,
   actor?: AdminEditActor,
 ): Promise<{ objectId: string }> {
-  const normalizedFields = expandVirtualFormFields(
+  let normalizedFields = expandVirtualFormFields(
     saveStep,
     { ...fields },
   );
+
+  if (saveStep === "save1.5") {
+    normalizedFields = prepareParentEmailSaveFields(normalizedFields, previousRow);
+  }
 
   if (saveStep === "save1.5" && typeof normalizedFields.share_contact === "boolean") {
     normalizedFields.share_contact = normalizedFields.share_contact ? "Yes" : "No";

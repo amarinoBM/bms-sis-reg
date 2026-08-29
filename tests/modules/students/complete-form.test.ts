@@ -15,6 +15,34 @@ describe("authoritative registration completion", () => {
     expect(getAppRow).toHaveBeenCalledWith("ms_student_dir", input.objectId, expect.any(Function));
     expect(saveStudentRecord).not.toHaveBeenCalled();
   });
+  it("uses the canonical parent email and falls back to the legacy email", async () => {
+    await completeSisRegistration({
+      ...input,
+      student: {
+        student_name: "Synthetic",
+        parent_email: "parent@example.test",
+        email: "legacy@example.test",
+      },
+    });
+    expect(completeSisForm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        StudentData: expect.objectContaining({ email: "parent@example.test" }),
+      }),
+      expect.any(Function),
+    );
+
+    vi.mocked(completeSisForm).mockClear();
+    await completeSisRegistration({
+      ...input,
+      student: { student_name: "Synthetic", email: "legacy@example.test" },
+    });
+    expect(completeSisForm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        StudentData: expect.objectContaining({ email: "legacy@example.test" }),
+      }),
+      expect.any(Function),
+    );
+  });
   it.each([null, { ...saved, is_complete_sis: false }, { ...saved, lead_id: "another-lead" }, { ...saved, objectId: "another-student" }])("does not claim success without matching completion evidence", async (row) => {
     vi.mocked(getAppRow).mockResolvedValue(row);
     await expect(completeSisRegistration(input)).rejects.toMatchObject({ code: "EXTERNAL_READBACK_MISMATCH" });

@@ -19,6 +19,7 @@ import { HomeStateFields } from "@/app/reg/_components/home-state-fields";
 import { InterestsFields } from "@/app/reg/_components/interests-fields";
 import { LearningProfileFields } from "@/app/reg/_components/learning-profile-fields";
 import { PriorSchoolFields } from "@/app/reg/_components/prior-school-fields";
+import { ParentEmailRepair } from "@/app/reg/_components/parent-email-repair";
 import { ConfidenceScaleFields } from "@/app/reg/_components/confidence-scale-fields";
 import { RegSpinner } from "@/app/reg/_components/reg-spinner";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ import {
   type StepFieldErrors,
   validateStepForSave,
 } from "@/modules/wizard/step-validation";
+import { resolveParentEmailState } from "@/modules/students/parent-emails";
 
 export type AdminFormState = { dirty: boolean; busy: boolean };
 export type AdminUploadResult = { fieldKey: string; url: string; adminVersion: string };
@@ -160,7 +162,15 @@ export function StepForm({
     adminState.current = { ...adminState.current, ...next };
     if (persistence.kind === "admin") onAdminStateChange?.(adminState.current);
   }
-  const [values, setValues] = useState<Record<string, unknown>>(initialValues);
+  const parentEmailState = resolveParentEmailState(initialValues);
+  const displayedInitialValues =
+    stepId === "2" &&
+    persistence.kind === "parent" &&
+    parentEmailState.status === "legacy_only" &&
+    parentEmailState.effectiveEmail
+      ? { ...initialValues, parent_email: parentEmailState.effectiveEmail }
+      : initialValues;
+  const [values, setValues] = useState<Record<string, unknown>>(displayedInitialValues);
   const [saving, setSaving] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -180,7 +190,7 @@ export function StepForm({
 
   const sectionComplete = (disabled || justSaved) && !isEditing;
   const readOnly = sectionComplete;
-  const activeValues = readOnly && !justSaved ? initialValues : values;
+  const activeValues = readOnly && !justSaved ? displayedInitialValues : values;
   const visibleFields = visibleStepFields(stepId, definition.fields, activeValues);
   const fieldGroups = groupStepFields(visibleFields);
   const uploadOnlyStep = !definition.saveHandler && visibleFields.some((f) => f.type === "file");
@@ -194,7 +204,7 @@ export function StepForm({
         objectId,
         stepId,
       });
-      setValues(initialValues);
+      setValues(displayedInitialValues);
       setJustSaved(false);
       setFieldErrors({});
       setIsEditing(true);
@@ -402,6 +412,14 @@ export function StepForm({
 
       <fieldset disabled={saving || uploadingKey !== null} className="min-w-0 space-y-6 p-6">
         {persistence.kind === "admin" && stepId === "2" && <p className="text-label text-muted-foreground">Parent sign-in email is locked in admin mode. It controls who can sign and submit this registration.</p>}
+        {persistence.kind === "parent" && stepId === "2" ? (
+          <ParentEmailRepair
+            state={parentEmailState}
+            selectedEmail={typeof activeValues.parent_email === "string" ? activeValues.parent_email : ""}
+            disabled={readOnly}
+            onSelect={(email) => updateValue("parent_email", email)}
+          />
+        ) : null}
         {Object.keys(fieldErrors).length > 0 ? (
           <FormValidationSummary fieldErrors={fieldErrors} />
         ) : null}
