@@ -8,16 +8,19 @@ export const TOS_HIGHLIGHT_BULLETS = [
   "Please ensure the accuracy of all the information you give us during our admissions process.",
   "Remember, our school follows Florida's laws and while we provide experience and guidance on all other states and locations, we are not legal professionals on your state's legal obligations.",
   "We offer a nurturing, inclusive environment that is led by experts and tailored to students who learn differently, but this is a joint effort with you; educational outcomes may vary, and our special education services have certain limits versus public schools.",
-  "To ensure uninterrupted service, your enrollment is set to auto-renew at $690/month (Gen Ed Program) or $650/month (ESE Program). Payments are due on the 1st of each month. This means you authorize us to take this amount from your account each month. Once you've paid $2,070 (GE) or $1,950 (ESE) total per student (this doesn't apply to Q4 or Summer enrollments), you can cancel anytime—just let us know before the 15th of the prior month by emailing Parent Support. During this cancellation notice period, the School delivers vital services such as compiling student records and preparing transcripts. These tasks are mandatory for compliance with legal and academic requirements. Hence, unused portions of the Subscription Plan cannot be refunded, and accredited transcripts will be forfeited if full Tuition is unpaid. The 1:1 program requires a minimum of two weeks' notice to cancel the $240 bi-weekly auto-subscription.",
+  "Your selected Service and starting price appear in the table above. Payments follow the billing schedule for the selected Service and renew automatically until canceled under the rules below.",
+  "Card-paying Microschool families commit to at least three months of Tuition. After that, written cancellation notice must be received by Parent Support no later than the fifteenth (15th) day of the month before cancellation takes effect. ESA and scholarship enrollments follow the applicable program rules and prepaid quarterly cycle. During the cancellation notice period, the School compiles student records and prepares transcripts. Unused portions of the Subscription Plan are non-refundable, and accredited transcripts will be forfeited if full Tuition is unpaid.",
+  "The 1:1 Program requires at least two weeks’ written notice to cancel.",
 ] as const;
 
+/** Guided Study uses the same cancel rules; starting price lives on the signed sheet table. */
 export const TOS_GUIDED_STUDY_BULLET =
-  "The Guided Study Program renews automatically at $385/month. Payments are due on the 1st of each month as part of an auto-subscription. The cancellation policy for the monthly program, as mentioned above, applies. The program includes 2 hours of live class per day, 4 days a week, and allows for up to 2 electives.";
+  "If your selected Service is Guided Study, your starting price appears in the signed-sheet table. Payments renew automatically on that Service’s billing schedule until canceled under the rules above.";
 
 export const TOS_SUMMER_HEADING = "Summer School Program:";
 
 export const TOS_SUMMER_BULLET =
-  "The Summer School Program requires a one-time, non-refundable payment of $385. Payment must be completed within three (3) days of completing the Meet & Greet with your chosen teacher. If you choose to continue with our services for the upcoming school year, the card on file will only be used to activate a recurring subscription with your explicit consent. Please note that no cancellations or refunds are applicable for the Summer School Program.";
+  "Summer School requires a one-time payment and is non-refundable. Your starting price appears in the signed-sheet table. The card on file is only used to start a recurring school-year subscription with your explicit consent.";
 
 export const TOS_PRIVACY_PREFIX = "Please make sure you also review our";
 
