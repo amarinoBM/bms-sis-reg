@@ -7,7 +7,7 @@ vi.mock("next/headers", () => ({
 import { createAdminBackend } from "../../fixtures/admin-backend";
 import { sendAdminOtp, verifyAdminOtp } from "@/server/admin/otp";
 import { createAdminSession, requireAdminSession, destroyAdminSession, ADMIN_COOKIE } from "@/server/admin/session";
-import { ADMIN_EMAIL, ADMIN_IDLE_MS, ADMIN_MAX_MS } from "@/modules/admin/policy";
+import { ADMIN_EMAIL, ADMIN_IDLE_MS, ADMIN_MAX_MS, DANAE_ADMIN_EMAIL } from "@/modules/admin/policy";
 import { clearBackendlessGuestToken } from "@/server/connectors/backendless/guest-session";
 import { sendOtpEmail } from "@/server/connectors/backendless/email-client";
 import { writeAdminValue } from "@/server/admin/store";
@@ -45,8 +45,8 @@ beforeEach(() => {
   backend = createAdminBackend(); vi.stubGlobal("fetch", backend.fetch);
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
-async function otp() {
-  const result = await sendAdminOtp(ADMIN_EMAIL);
+async function otp(email = ADMIN_EMAIL) {
+  const result = await sendAdminOtp(email);
   const code = String(backend.emails.at(-1)?.body_html).match(/>\s*(\d{6})\s*</)?.[1];
   expect(code).toBeTruthy();
   return { ...result, code: code! };
@@ -73,6 +73,18 @@ describe("admin authentication with the real store and session chain", () => {
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     await expect(verifyAdminOtp(ADMIN_EMAIL, challenge.challengeId, challenge.code)).rejects.toThrow();
     expect(backend.writes).toHaveLength(0);
+  });
+  it("delivers and verifies a code for each approved admin mailbox", async () => {
+    const challenge = await otp(DANAE_ADMIN_EMAIL);
+    expect(backend.emails[0]).toMatchObject({ to: DANAE_ADMIN_EMAIL, lead_id: "lead_adminDelivery" });
+    await expect(verifyAdminOtp(ADMIN_EMAIL, challenge.challengeId, challenge.code)).rejects.toThrow();
+    await expect(verifyAdminOtp(DANAE_ADMIN_EMAIL, challenge.challengeId, challenge.code)).resolves.toBe(DANAE_ADMIN_EMAIL);
+  });
+  it("keeps approved admin OTP cooldowns separate", async () => {
+    await otp(ADMIN_EMAIL);
+    const challenge = await otp(DANAE_ADMIN_EMAIL);
+    expect(backend.emails).toHaveLength(2);
+    await expect(verifyAdminOtp(DANAE_ADMIN_EMAIL, challenge.challengeId, challenge.code)).resolves.toBe(DANAE_ADMIN_EMAIL);
   });
   it("rejects a valid code after five wrong guesses", async () => {
     const challenge = await otp();

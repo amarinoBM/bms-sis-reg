@@ -5,10 +5,16 @@ export const ADMIN_IDLE_MS = 30 * 60_000;
 export const ADMIN_MAX_MS = 8 * 60 * 60_000;
 export const ADMIN_OTP_SECONDS = 300;
 export const ADMIN_EMAIL = "am@brilliantmicroschool.org";
+export const DANAE_ADMIN_EMAIL = "danae.stellaki@brilliantmicroschool.org";
+export const ADMIN_EMAILS = [ADMIN_EMAIL, DANAE_ADMIN_EMAIL] as const;
 export type AdminEditActor = { role: "admin"; actorRef: string; operationId: string };
 
+export function normalizeAdminEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 export function isAllowedAdmin(email: string): boolean {
-  return email.trim().toLowerCase() === ADMIN_EMAIL;
+  return ADMIN_EMAILS.includes(normalizeAdminEmail(email) as typeof ADMIN_EMAILS[number]);
 }
 
 export function isAdminSessionActive(
