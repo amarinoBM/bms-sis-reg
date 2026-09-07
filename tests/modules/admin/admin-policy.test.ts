@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isAllowedAdmin, isAdminSessionActive, normalizeAdminSearch } from "@/modules/admin/policy";
+import { ADMIN_EMAIL, DANAE_ADMIN_EMAIL, isAllowedAdmin, isAdminSessionActive, normalizeAdminSearch } from "@/modules/admin/policy";
 
 describe("admin access policy", () => {
-  it("allows only Andreas's exact mailbox, case-insensitively", () => {
-    expect(isAllowedAdmin(" AM@brilliantmicroschool.org ")).toBe(true);
+  it("allows only approved BMS admin mailboxes, case-insensitively", () => {
+    expect(isAllowedAdmin(` ${ADMIN_EMAIL.toUpperCase()} `)).toBe(true);
+    expect(isAllowedAdmin(` ${DANAE_ADMIN_EMAIL.toUpperCase()} `)).toBe(true);
     for (const email of ["other@brilliantmicroschool.org", "am+test@brilliantmicroschool.org", "am@brilliantmicroschool.org.evil.test", ""]) {
       expect(isAllowedAdmin(email)).toBe(false);
     }

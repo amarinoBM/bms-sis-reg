@@ -2,7 +2,7 @@
 
 ## Scope
 
-Staff can sign in from the registration footer, search registration-eligible students, inspect all sections, edit answers, and upload documents. Only `am@brilliantmicroschool.org` is allowed. Parents alone sign agreements and submit registration. The parent login email stays read-only: changing it would let staff receive a parent code and bypass that boundary. Browsing does not change registration progress or notify parents.
+Staff can sign in from the registration footer, search registration-eligible students, inspect all sections, edit answers, and upload documents. Only `am@brilliantmicroschool.org` and `danae.stellaki@brilliantmicroschool.org` are allowed. Parents alone sign agreements and submit registration. The parent login email stays read-only: changing it would let staff receive a parent code and bypass that boundary. Browsing does not change registration progress or notify parents.
 
 Admin codes and cookies are separate from parent credentials. Server-side sessions and OTP records are encrypted with a separate secret. Codes expire after 5 minutes; sessions expire after 30 idle minutes or 8 hours total. The user confirmed mailbox two-step verification. Email OTP remains vulnerable to phishing.
 
@@ -15,7 +15,7 @@ This branch does not enable or deploy production access. Configure:
 - `ADMIN_ACCESS_ENABLED=true` only after the checks below
 - `ADMIN_AUTH_SECRET`: a new random secret of at least 32 characters, different from `AUTH_SECRET`
 - `ADMIN_AUDIT_TABLE=reg_admin_audit`
-- `ADMIN_EMAIL_LEAD_ID`: an explicitly approved test/internal Close lead used only for email routing. The recipient remains the fixed admin allowlist address, not the lead's contacts. Close stores the email body on this lead, so restrict who can read its email activities.
+- `ADMIN_EMAIL_LEAD_ID`: an explicitly approved test/internal Close lead used only for email routing. The recipient remains the approved admin address that requested the code, not the lead's contacts. Close stores the email body on this lead, so restrict who can read its email activities.
 - existing Backendless settings and the correct `NEXT_PUBLIC_APP_URL`
 - `EXTERNAL_WRITES_ENABLED=true` only where registration edits are authorized
 
