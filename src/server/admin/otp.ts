@@ -9,19 +9,23 @@ type Challenge = { digest: string; email: string; expiresAt: number };
 function invalidCode(): never {
   throw new AppError({ code: "INVALID_INPUT", message: "That code is invalid or expired. Request a new code if needed." });
 }
+function throttleRef(email: string): string {
+  return adminRef("otp-throttle", email);
+}
 export async function sendAdminOtp(email: string): Promise<{ challengeId: string; cooldownSeconds: number }> {
   const { emailLeadId } = adminConfig();
   const challengeId = randomUUID();
   const adminEmail = normalizeAdminEmail(email);
   // Same public response for every address; only the exact allowlisted address receives mail.
   if (!isAllowedAdmin(adminEmail)) return { challengeId, cooldownSeconds: 30 };
-  const lastSend = await readAdminValue<number>("last-send");
+  const throttle = throttleRef(adminEmail);
+  const lastSend = await readAdminValue<number>("last-send:" + throttle);
   if (lastSend && Date.now() - lastSend < 30_000) {
     throw new AppError({ code: "FORBIDDEN", message: "Please wait 30 seconds before requesting another code." });
   }
-  await adminRateLimit("send", 3600, 10);
-  await adminRateLimit("send-cooldown", 30, 1);
-  await writeAdminValue("last-send", Date.now(), 30);
+  await adminRateLimit("send:" + throttle, 3600, 10);
+  await adminRateLimit("send-cooldown:" + throttle, 30, 1);
+  await writeAdminValue("last-send:" + throttle, Date.now(), 30);
   const otp = String(randomInt(100000, 1000000));
   const name = "otp:" + challengeId;
   await writeAdminValue(name, {
@@ -41,7 +45,7 @@ export async function verifyAdminOtp(email: string, challengeId: string, otp: st
   adminConfig();
   const adminEmail = normalizeAdminEmail(email);
   if (!isAllowedAdmin(adminEmail)) invalidCode();
-  await adminRateLimit("verify", 300, 20);
+  await adminRateLimit("verify:" + throttleRef(adminEmail), 300, 20);
   const name = "otp:" + challengeId;
   const challenge = await readAdminValue<Challenge>(name);
   if (!challenge || challenge.email !== adminEmail || challenge.expiresAt <= Date.now()) invalidCode();
