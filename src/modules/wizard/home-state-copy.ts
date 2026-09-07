@@ -6,7 +6,7 @@
 export const HOME_STATE_COPY = {
   fieldLabel: "Home state",
   intro:
-    "Private school students from a state other than Florida need to submit a letter each year to their local school district.",
+    "Your home state helps us identify the paperwork and immunization records we may need for this school year.",
   travelLead: "If you often travel, select the state where ",
   travelTail: " will spend most of their time this academic year.",
   requirementsHeading: "Your state requires some paperwork:",
@@ -31,17 +31,37 @@ export const HOME_STATE_COPY = {
     "b. permanent medical exemption DH Form 680, Part C (DOE Code 3) or",
     "c. Religious Exemption (DH Form 681)(DOE Code 4)",
   ],
+  texasImmunization: [
+    "Texas schools report immunization status for kindergarten and seventh grade students each year.",
+    "Please upload your child's current immunization record or exemption document if you have it.",
+    "We will review the record and use it to complete the school's Texas report.",
+  ],
+  texasImmunizationGuideUrl:
+    "https://www.dshs.texas.gov/sites/default/files/LIDS-Immunizations/pdf/pdf_stock/11-15127.pdf",
+  texasImmunizationGuideLabel: "Read the Texas immunization reporting instructions",
   vaccineSituationPrompt: "Please select your situation from below:",
-  vaccineConfirmingTitle: "Confirming",
+  vaccineConfirmingTitle: "Required form available",
   vaccineConfirmingDetail:
-    "We have already completed the necessary vaccinations and have sent the relevant form to the state.",
-  vaccinePendingTitle: "Pending",
+    "We have the required Florida immunization form and can upload it here or confirm that it was sent to the state.",
+  vaccinePendingTitle: "Form still needed",
   vaccinePendingDetail:
-    "We don't currently have the form, but we will be submitting it shortly.",
-  vaccineExemptionTitle: "Exemption",
+    "We do not have the required Florida form yet and will provide it shortly.",
+  vaccineExemptionTitle: "Exemption document",
   vaccineExemptionDetail:
-    "We are seeking an exemption and will be submitting it soon",
+    "We are using an exemption and will provide the relevant document.",
   vaccineSituationFieldLabel: "Vaccine situation",
+  immunizationUploadLabel: "Immunization record or exemption document",
+  immunizationUploadDescription:
+    "Upload the current record, a physician-signed medical exemption, or a valid conscientious exemption affidavit.",
+  texasSituationPrompt: "What best describes your child's Texas immunization record?",
+  texasRecordTitle: "Record available",
+  texasRecordDetail: "We have a current immunization record to upload.",
+  texasProvisionalTitle: "Provisional",
+  texasProvisionalDetail: "The record is in progress or the child is covered by a provisional status.",
+  texasExemptionTitle: "Exemption",
+  texasExemptionDetail: "We have a valid medical or conscientious exemption document.",
+  texasPendingTitle: "Needs follow-up",
+  texasPendingDetail: "We do not have the current record yet and need to provide it later.",
   stepUpQuestion: "Will you submit our invoices to Step Up FES-UA?",
   stepUpYes: "Yes",
   stepUpNo: "No",
@@ -58,4 +78,10 @@ export const PAPERWORK_SUPPORT_NO = "I don't need support with local paperwork";
 export const VACCINE_CONFIRMING = "Confirming";
 export const VACCINE_PENDING = "Pending";
 
+export const TEXAS_RECORD_AVAILABLE = "Texas record available";
+export const TEXAS_PROVISIONAL = "Texas provisional";
+export const TEXAS_EXEMPTION = "Texas exemption";
+export const TEXAS_PENDING = "Texas needs follow-up";
+
 export const FLORIDA_HOME_STATE = "Florida";
+export const TEXAS_HOME_STATE = "Texas";

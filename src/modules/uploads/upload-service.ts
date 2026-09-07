@@ -1,6 +1,6 @@
 import { uploadFileToDrive } from "@/server/connectors/backendless/sis-cloud-code";
 import type { AdminEditActor } from "@/modules/admin/policy";
-import { readStudentTranscriptFiles } from "@/modules/uploads/document-files";
+import { readDocumentFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 import { saveStudentRecord } from "@/modules/students/repository";
 import {
   buildDriveFileUrl,
@@ -72,6 +72,9 @@ export async function uploadStudentFile(
   if (input.uploadType === "transcript") {
     const existingFiles = readStudentTranscriptFiles(input.currentRow ?? {});
     savePayload.transcriptFiles = [...existingFiles, driveUrl];
+  } else if (input.uploadType === "immunization") {
+    const existingFiles = readDocumentFiles(input.currentRow?.immunizationFiles);
+    savePayload.immunizationFiles = [...existingFiles, driveUrl];
   } else {
     savePayload[mapping.fieldKey] = driveUrl;
 

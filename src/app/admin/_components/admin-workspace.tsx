@@ -20,6 +20,7 @@ import { fetchApi, postApi } from "@/lib/client-api";
 import type { AdminSearchItem, AdminSearchScope, AdminRegistrationResult } from "@/server/admin/registrations";
 import type { AdminFormState, AdminUploadResult } from "@/app/reg/sis/_components/step-form";
 import { readTranscriptFiles } from "@/modules/wizard/transcript-fields";
+import { readDocumentFiles } from "@/modules/uploads/document-files";
 
 type SearchPage = { results: AdminSearchItem[]; nextOffset: number | null; scope: AdminSearchScope };
 function groupSearchResults(items: AdminSearchItem[]): Record<string, AdminSearchItem[]> {
@@ -251,7 +252,11 @@ export function AdminWorkspace({ issuedAt, lastSeenAt }: { issuedAt: number; las
     if (!active.current || currentTarget.current !== expected) return;
     setRecord((current) => {
       if (!current || current.studentInfo.objectId !== expected.objectId) return current;
-      const value = upload.fieldKey === "transcriptFiles" ? [...readTranscriptFiles(current.student.transcriptFiles), upload.url] : upload.url;
+      const value = upload.fieldKey === "transcriptFiles"
+        ? [...readTranscriptFiles(current.student.transcriptFiles), upload.url]
+        : upload.fieldKey === "immunizationFiles"
+          ? [...readDocumentFiles(current.student.immunizationFiles), upload.url]
+          : upload.url;
       return { ...current, adminVersion: upload.adminVersion, student: { ...current.student, [upload.fieldKey]: value } };
     });
   }

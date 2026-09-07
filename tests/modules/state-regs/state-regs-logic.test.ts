@@ -5,6 +5,7 @@ import {
   isCustomVaccineSituation,
   PAPERWORK_SUPPORT_YES,
   shouldShowFloridaVaccineSection,
+  shouldShowTexasVaccineSection,
   shouldShowStateRequirementsPanel,
   stateNameForBackendlessQuery,
   toStateRegDto,
@@ -83,6 +84,11 @@ describe("vaccine situation helpers", () => {
   it("shows Florida-only sections for Florida home state", () => {
     expect(shouldShowFloridaVaccineSection("Florida")).toBe(true);
     expect(shouldShowFloridaVaccineSection("Colorado")).toBe(false);
+  });
+
+  it("shows the Texas immunization section only for Texas", () => {
+    expect(shouldShowTexasVaccineSection("Texas")).toBe(true);
+    expect(shouldShowTexasVaccineSection("Florida")).toBe(false);
   });
 });
 

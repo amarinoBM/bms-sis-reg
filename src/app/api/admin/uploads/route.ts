@@ -9,8 +9,8 @@ import { auditAdminAccess } from "@/server/admin/audit";
 import { adminRoute } from "@/server/admin/route";
 import { assertUploadFileAllowed } from "@/modules/uploads/upload-limits";
 import { uploadStudentFile } from "@/modules/uploads/upload-service";
-import { readStudentTranscriptFiles } from "@/modules/uploads/document-files";
-const schema = z.object({ leadId: z.string().min(1).max(160), objectId: z.string().min(1).max(100), version: z.string().length(64), uploadType: z.enum(["birth_cert", "student_pic", "learning", "transcript", "iep"]) });
+import { readImmunizationFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
+const schema = z.object({ leadId: z.string().min(1).max(160), objectId: z.string().min(1).max(100), version: z.string().length(64), uploadType: z.enum(["birth_cert", "student_pic", "learning", "transcript", "iep", "immunization"]) });
 export async function POST(request: Request) {
   return adminRoute(request, async () => {
     const session = await requireAdminSession();
@@ -30,12 +30,22 @@ export async function POST(request: Request) {
       currentRow: current.student, actor: { role: "admin", actorRef: adminRef("actor", session.email), operationId },
     });
     const saved = await loadAdminStudent(input.leadId, input.objectId);
-    const confirmed = input.uploadType === "transcript" ? readStudentTranscriptFiles(saved.student).includes(result.url) : saved.student[result.fieldKey] === result.url;
+    const confirmed = input.uploadType === "transcript"
+      ? readStudentTranscriptFiles(saved.student).includes(result.url)
+      : input.uploadType === "immunization"
+        ? readImmunizationFiles(saved.student).includes(result.url)
+        : saved.student[result.fieldKey] === result.url;
     if (!confirmed) throw new AppError({ code: "EXTERNAL_READBACK_MISMATCH", message: "The upload could not be confirmed. Reload the registration before trying again." });
     await auditAdminAccess("upload_verified", session.email, input, operationId);
     return { fieldKey: result.fieldKey, adminVersion: registrationVersion(saved.student), url: "/api/admin/document?" + new URLSearchParams({
       leadId: input.leadId, objectId: input.objectId, field: result.fieldKey,
-      index: String(input.uploadType === "transcript" ? readStudentTranscriptFiles(saved.student).indexOf(result.url) : 0),
+      index: String(
+        input.uploadType === "transcript"
+          ? readStudentTranscriptFiles(saved.student).indexOf(result.url)
+          : input.uploadType === "immunization"
+            ? readImmunizationFiles(saved.student).indexOf(result.url)
+            : 0,
+      ),
     }) };
   });
 }

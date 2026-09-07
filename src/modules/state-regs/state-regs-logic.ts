@@ -4,6 +4,11 @@ import {
   PAPERWORK_SUPPORT_YES,
   VACCINE_CONFIRMING,
   VACCINE_PENDING,
+  TEXAS_RECORD_AVAILABLE,
+  TEXAS_PROVISIONAL,
+  TEXAS_EXEMPTION,
+  TEXAS_PENDING,
+  TEXAS_HOME_STATE,
 } from "@/modules/wizard/home-state-copy";
 
 import { formatStateRequirementDisplays } from "./requirement-display";
@@ -15,6 +20,10 @@ export {
   PAPERWORK_SUPPORT_YES,
   VACCINE_CONFIRMING,
   VACCINE_PENDING,
+  TEXAS_RECORD_AVAILABLE,
+  TEXAS_PROVISIONAL,
+  TEXAS_EXEMPTION,
+  TEXAS_PENDING,
 };
 
 export function stateNameForBackendlessQuery(stateName: string): string {
@@ -77,6 +86,10 @@ export function isCustomVaccineSituation(value: unknown): boolean {
 
 export function shouldShowFloridaVaccineSection(homeState: unknown): boolean {
   return typeof homeState === "string" && homeState.trim() === FLORIDA_HOME_STATE;
+}
+
+export function shouldShowTexasVaccineSection(homeState: unknown): boolean {
+  return typeof homeState === "string" && homeState.trim() === TEXAS_HOME_STATE;
 }
 
 export function shouldShowFloridaStepUpSection(homeState: unknown): boolean {

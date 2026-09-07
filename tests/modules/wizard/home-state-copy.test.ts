@@ -8,4 +8,10 @@ describe("home state copy", () => {
       "If you often travel, select the state where Noah will spend most of their time this academic year.",
     );
   });
+
+  it("contains parent-facing Texas immunization guidance", () => {
+    expect(HOME_STATE_COPY.texasImmunization.join(" ")).toContain("kindergarten and seventh grade");
+    expect(HOME_STATE_COPY.immunizationUploadLabel).toContain("Immunization");
+    expect(HOME_STATE_COPY.texasImmunizationGuideUrl).toContain("11-15127.pdf");
+  });
 });

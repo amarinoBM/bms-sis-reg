@@ -3,6 +3,7 @@ import { TRANSCRIPT_DELIVERY_OPTIONS } from "@/modules/wizard/transcript-fields"
 export const DOCUMENT_FIELDS = [
   "studentBirthCert", "studentPic", "upload_student_curreny_learning",
   "upload_copy_EIP_504_plan", "honorCodeURL", "ToSURL", "uploadTranscript",
+  "immunizationFiles",
 ] as const;
 
 export function isDriveDocument(value: unknown): boolean {
@@ -42,6 +43,10 @@ export function readIepFiles(student: Record<string, unknown>): string[] {
 
 export function readStudentTranscriptFiles(student: Record<string, unknown>): string[] {
   return readDocumentFiles([...readDocumentFiles(student.transcriptFiles), ...readDocumentFiles(student.uploadTranscript)]);
+}
+
+export function readImmunizationFiles(student: Record<string, unknown>): string[] {
+  return readDocumentFiles(student.immunizationFiles);
 }
 
 /** Form saves change answers, not document locations. Upload endpoints own document changes. */

@@ -20,4 +20,8 @@ describe("document upload preservation", () => {
     expect(payload).not.toHaveProperty("IEPFiles");
     expect(payload).not.toHaveProperty("transcriptFiles");
   });
+  it("appends immunization records without dropping an earlier record", async () => {
+    await uploadStudentFile({ ...input, uploadType: "immunization", currentRow: { immunizationFiles: [existing, existing] } });
+    expect(saveStudentRecord).toHaveBeenCalledWith(input.leadId, input.objectId, { immunizationFiles: [existing, "https://drive.google.com/file/d/new-file/view"] }, expect.any(Function));
+  });
 });

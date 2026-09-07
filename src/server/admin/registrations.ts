@@ -11,7 +11,7 @@ import { decryptStudentDirRow } from "@/server/connectors/backendless/cloud-code
 import { TRANSCRIPT_DELIVERY_UPLOAD } from "@/modules/wizard/transcript-fields";
 import { buildStepCompletionMap } from "@/modules/wizard/progress";
 import { SAVE_HANDLERS } from "@/modules/wizard/save-handlers";
-import { DOCUMENT_FIELDS, isDriveDocument, readDocumentFiles, readIepFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
+import { DOCUMENT_FIELDS, isDriveDocument, readDocumentFiles, readIepFiles, readImmunizationFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 export { preserveDocumentFields } from "@/modules/uploads/document-files";
 import { adminRef } from "./store";
 
@@ -185,6 +185,7 @@ export function registrationVersion(student: Record<string, unknown>): string {
 export function adminDocumentUrl(student: Record<string, unknown>, field: string, index = 0): string | null {
   const value = field === "transcriptFiles" ? readStudentTranscriptFiles(student)[index]
     : field === "IEPFiles" ? readDocumentFiles(student.IEPFiles)[index]
+    : field === "immunizationFiles" ? readImmunizationFiles(student)[index]
     : DOCUMENT_FIELDS.includes(field as typeof DOCUMENT_FIELDS[number]) ? student[field] : null;
   return typeof value === "string" && isDriveDocument(value) ? new URL(value).href : null;
 }
@@ -205,11 +206,15 @@ export function withAdminDocumentLinks(result: StudentLoadResult, leadId: string
     leadId, objectId: result.studentInfo.objectId, field, index: String(index),
   });
   for (const field of DOCUMENT_FIELDS) {
+    if (field === "immunizationFiles") continue;
     if (adminDocumentUrl(student, field)) student[field] = link(field);
     else if (typeof student[field] === "string" && /^https?:|^javascript:|^data:/i.test(String(student[field]))) delete student[field];
   }
   student.transcriptFiles = readStudentTranscriptFiles(result.student).map((_, index) =>
     adminDocumentUrl(result.student, "transcriptFiles", index) ? link("transcriptFiles", index) : "",
+  ).filter(Boolean);
+  student.immunizationFiles = readImmunizationFiles(result.student).map((_, index) =>
+    adminDocumentUrl(result.student, "immunizationFiles", index) ? link("immunizationFiles", index) : "",
   ).filter(Boolean);
   const currentIep = readIepFiles({ upload_copy_EIP_504_plan: result.student.upload_copy_EIP_504_plan });
   student.IEPFiles = readDocumentFiles(result.student.IEPFiles).map((url, index) => {

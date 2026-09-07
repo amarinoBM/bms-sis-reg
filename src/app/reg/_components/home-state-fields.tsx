@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import {
   FormCheckbox,
+  FormFileUpload,
   FormSelect,
   FormTextarea,
   FormTextInput,
@@ -20,12 +21,18 @@ import {
   PAPERWORK_SUPPORT_YES,
   VACCINE_CONFIRMING,
   VACCINE_PENDING,
+  TEXAS_EXEMPTION,
+  TEXAS_PENDING,
+  TEXAS_PROVISIONAL,
+  TEXAS_RECORD_AVAILABLE,
 } from "@/modules/wizard/home-state-copy";
 import {
   isCustomVaccineSituation,
   shouldShowFloridaStepUpSection,
   shouldShowFloridaVaccineSection,
+  shouldShowTexasVaccineSection,
 } from "@/modules/state-regs/state-regs-logic";
+import { readDocumentFiles } from "@/modules/uploads/document-files";
 import {
   EMPTY_STATE_REGS_LOAD,
   resolveStateRegsView,
@@ -41,6 +48,10 @@ type HomeStateFieldsProps = {
   fieldErrors?: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
   onFieldsChange?: (updates: Record<string, unknown>) => void;
+  immunizationFiles?: string[];
+  pendingImmunizationFileName?: string;
+  uploadingImmunization?: boolean;
+  onUploadImmunization?: (file: File) => void;
 };
 
 type StateRegsResponse = {
@@ -339,6 +350,10 @@ export function HomeStateFields({
   fieldErrors = {},
   onChange,
   onFieldsChange,
+  immunizationFiles = [],
+  pendingImmunizationFileName,
+  uploadingImmunization = false,
+  onUploadImmunization,
 }: HomeStateFieldsProps) {
   const homeState = readString(values.home_state);
   const paperworkYesSelected =
@@ -360,7 +375,9 @@ export function HomeStateFields({
   );
 
   const showFloridaVaccineSection = shouldShowFloridaVaccineSection(homeState);
+  const showTexasVaccineSection = shouldShowTexasVaccineSection(homeState);
   const showFloridaStepUpSection = shouldShowFloridaStepUpSection(homeState);
+  const showImmunizationSection = showFloridaVaccineSection || showTexasVaccineSection;
 
   useEffect(() => {
     setShowExemptionInput(isCustomVaccineSituation(vaccineValue));
@@ -463,49 +480,118 @@ export function HomeStateFields({
         />
       ) : null}
 
-      {showFloridaVaccineSection ? (
+      {showImmunizationSection ? (
         <div className="space-y-4">
           <div className="space-y-1 text-body text-muted-foreground">
-            {HOME_STATE_COPY.floridaImmunization.map((line) => (
+            {(showTexasVaccineSection
+              ? HOME_STATE_COPY.texasImmunization
+              : HOME_STATE_COPY.floridaImmunization
+            ).map((line) => (
               <p key={line}>{line}</p>
             ))}
+            {showTexasVaccineSection ? (
+              <p>
+                <ExternalLink
+                  href={HOME_STATE_COPY.texasImmunizationGuideUrl}
+                  className="font-medium text-[#32325d] underline underline-offset-4 hover:text-[#f5713c]"
+                >
+                  {HOME_STATE_COPY.texasImmunizationGuideLabel}
+                </ExternalLink>
+              </p>
+            ) : null}
           </div>
 
           <p className="text-label font-medium text-foreground">
-            {HOME_STATE_COPY.vaccineSituationPrompt}
+            {showTexasVaccineSection
+              ? HOME_STATE_COPY.texasSituationPrompt
+              : HOME_STATE_COPY.vaccineSituationPrompt}
           </p>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <SituationCard
-              title={HOME_STATE_COPY.vaccineConfirmingTitle}
-              detail={HOME_STATE_COPY.vaccineConfirmingDetail}
-              selected={vaccineValue === VACCINE_CONFIRMING}
-              disabled={readOnly}
-              onClick={handleVaccineConfirming}
-            />
-            <SituationCard
-              title={HOME_STATE_COPY.vaccinePendingTitle}
-              detail={HOME_STATE_COPY.vaccinePendingDetail}
-              selected={vaccineValue === VACCINE_PENDING}
-              disabled={readOnly}
-              onClick={handleVaccinePending}
-            />
-            <SituationCard
-              title={HOME_STATE_COPY.vaccineExemptionTitle}
-              detail={HOME_STATE_COPY.vaccineExemptionDetail}
-              selected={showExemptionInput}
-              disabled={readOnly}
-              onClick={handleVaccineExemption}
-            />
+            {showTexasVaccineSection ? (
+              <>
+                <SituationCard
+                  title={HOME_STATE_COPY.texasRecordTitle}
+                  detail={HOME_STATE_COPY.texasRecordDetail}
+                  selected={vaccineValue === TEXAS_RECORD_AVAILABLE}
+                  disabled={readOnly}
+                  onClick={() => onChange("vaccine_situation", TEXAS_RECORD_AVAILABLE)}
+                />
+                <SituationCard
+                  title={HOME_STATE_COPY.texasProvisionalTitle}
+                  detail={HOME_STATE_COPY.texasProvisionalDetail}
+                  selected={vaccineValue === TEXAS_PROVISIONAL}
+                  disabled={readOnly}
+                  onClick={() => onChange("vaccine_situation", TEXAS_PROVISIONAL)}
+                />
+                <SituationCard
+                  title={HOME_STATE_COPY.texasExemptionTitle}
+                  detail={HOME_STATE_COPY.texasExemptionDetail}
+                  selected={vaccineValue === TEXAS_EXEMPTION}
+                  disabled={readOnly}
+                  onClick={() => onChange("vaccine_situation", TEXAS_EXEMPTION)}
+                />
+                <SituationCard
+                  title={HOME_STATE_COPY.texasPendingTitle}
+                  detail={HOME_STATE_COPY.texasPendingDetail}
+                  selected={vaccineValue === TEXAS_PENDING}
+                  disabled={readOnly}
+                  onClick={() => onChange("vaccine_situation", TEXAS_PENDING)}
+                />
+              </>
+            ) : (
+              <>
+                <SituationCard
+                  title={HOME_STATE_COPY.vaccineConfirmingTitle}
+                  detail={HOME_STATE_COPY.vaccineConfirmingDetail}
+                  selected={vaccineValue === VACCINE_CONFIRMING}
+                  disabled={readOnly}
+                  onClick={handleVaccineConfirming}
+                />
+                <SituationCard
+                  title={HOME_STATE_COPY.vaccinePendingTitle}
+                  detail={HOME_STATE_COPY.vaccinePendingDetail}
+                  selected={vaccineValue === VACCINE_PENDING}
+                  disabled={readOnly}
+                  onClick={handleVaccinePending}
+                />
+                <SituationCard
+                  title={HOME_STATE_COPY.vaccineExemptionTitle}
+                  detail={HOME_STATE_COPY.vaccineExemptionDetail}
+                  selected={showExemptionInput}
+                  disabled={readOnly}
+                  onClick={handleVaccineExemption}
+                />
+              </>
+            )}
           </div>
 
-          {showExemptionInput ? (
+          {fieldErrors.vaccine_situation ? (
+            <p className="text-body text-destructive" role="alert">
+              {fieldErrors.vaccine_situation}
+            </p>
+          ) : null}
+
+          {!showTexasVaccineSection && showExemptionInput ? (
             <FormTextarea
               id="vaccine_situation"
               label={HOME_STATE_COPY.vaccineSituationFieldLabel}
               value={vaccineValue}
               disabled={readOnly}
               onChange={(value) => onChange("vaccine_situation", value)}
+            />
+          ) : null}
+
+          {onUploadImmunization ? (
+            <FormFileUpload
+              id="immunizationFiles"
+              label={HOME_STATE_COPY.immunizationUploadLabel}
+              description={HOME_STATE_COPY.immunizationUploadDescription}
+              fileUrls={readDocumentFiles(immunizationFiles)}
+              pendingFileName={pendingImmunizationFileName}
+              uploading={uploadingImmunization}
+              readOnly={readOnly}
+              onFileSelect={onUploadImmunization}
             />
           ) : null}
         </div>

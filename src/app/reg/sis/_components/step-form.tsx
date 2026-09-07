@@ -50,7 +50,7 @@ import {
   applyGenderSelection,
   isOtherGenderSelected,
 } from "@/modules/wizard/field-options";
-import { readStudentTranscriptFiles } from "@/modules/uploads/document-files";
+import { readDocumentFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
 import {
   type StepFieldErrors,
   validateStepForSave,
@@ -565,6 +565,25 @@ export function StepForm({
             fieldErrors={fieldErrors}
             onChange={updateValue}
             onFieldsChange={updateValues}
+            immunizationFiles={readDocumentFiles(activeValues.immunizationFiles)}
+            pendingImmunizationFileName={
+              pendingUpload?.key === "immunizationFiles" ? pendingUpload.fileName : undefined
+            }
+            uploadingImmunization={uploadingKey === "immunizationFiles"}
+            onUploadImmunization={
+              readOnly
+                ? undefined
+                : (file) =>
+                    handleUpload(
+                      {
+                        key: "immunizationFiles",
+                        label: "Immunization record",
+                        type: "file",
+                        uploadType: "immunization",
+                      },
+                      file,
+                    )
+            }
           />
         ) : null}
 

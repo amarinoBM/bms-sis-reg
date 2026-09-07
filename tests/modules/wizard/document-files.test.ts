@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readIepFiles, readStudentTranscriptFiles, preserveDocumentFields } from "@/modules/uploads/document-files";
+import { readIepFiles, readImmunizationFiles, readStudentTranscriptFiles, preserveDocumentFields } from "@/modules/uploads/document-files";
 import { validateStepForSave } from "@/modules/wizard/step-validation";
 import { validateSubmitReadiness } from "@/modules/wizard/submit-validation";
 import { assertUploadFileAllowed, MAX_UPLOAD_BYTES } from "@/modules/uploads/upload-limits";
@@ -11,6 +11,9 @@ describe("registration documents", () => {
   it("merges current and legacy IEPs and deduplicates Drive IDs", () => {
     expect(readIepFiles({ upload_copy_EIP_504_plan: first, IEPFiles: [first, "https://drive.google.com/open?id=first-file", second] })).toEqual([first, second]);
   });
+  it("reads and deduplicates immunization records", () => {
+    expect(readImmunizationFiles({ immunizationFiles: [first, "https://evil.test/file", first, second] })).toEqual([first, second]);
+  });
   it("handles legacy JSON arrays without accepting unsafe or encrypted links", () => {
     expect(readIepFiles({ IEPFiles: JSON.stringify([first, "javascript:alert(1)", "sis:v1:secret", "https://evil.test/a"]) })).toEqual([first]);
     expect(readIepFiles({ IEPFiles: "[broken" })).toEqual([]);
@@ -19,6 +22,12 @@ describe("registration documents", () => {
     const row = { IEP_or_504_plan: true, IEPFiles: [first] };
     expect(validateStepForSave("8", row).fieldErrors.upload_copy_EIP_504_plan).toBeUndefined();
     expect(validateSubmitReadiness(row).missingKeys).not.toContain("upload_copy_EIP_504_plan");
+  });
+  it("requires an immunization status for Florida and Texas state steps", () => {
+    expect(validateStepForSave("10", { home_state: "Florida" }).fieldErrors.vaccine_situation).toBeTruthy();
+    expect(validateStepForSave("10", { home_state: "Texas" }).fieldErrors.vaccine_situation).toBeTruthy();
+    expect(validateStepForSave("10", { home_state: "Texas", vaccine_situation: "Texas pending" }).valid).toBe(true);
+    expect(validateStepForSave("10", { home_state: "Colorado" }).valid).toBe(true);
   });
 
   it("does not reopen the IEP upload requirement on an already-submitted legacy form", () => {
@@ -31,7 +40,7 @@ describe("registration documents", () => {
   it("includes legacy transcripts and keeps stored documents when answers are saved", () => {
     const row = { uploadTranscript: first, transcriptFiles: [second], IEPFiles: [first], upload_copy_EIP_504_plan: second };
     expect(readStudentTranscriptFiles(row)).toEqual([second, first]);
-    expect(preserveDocumentFields({ uploadTranscript: "I can upload them", transcriptFiles: [], IEPFiles: [], upload_copy_EIP_504_plan: "" }, row)).toEqual({ uploadTranscript: "I can upload them", transcriptFiles: [second, first], IEPFiles: [first], upload_copy_EIP_504_plan: second });
+    expect(preserveDocumentFields({ uploadTranscript: "I can upload them", transcriptFiles: [], IEPFiles: [], upload_copy_EIP_504_plan: "", immunizationFiles: [] }, { ...row, immunizationFiles: [first] })).toEqual({ uploadTranscript: "I can upload them", transcriptFiles: [second, first], IEPFiles: [first], upload_copy_EIP_504_plan: second, immunizationFiles: [first] });
   });
   it("preserves JSON transcript lists throughout form load and save normalization", () => {
     const row = { transcriptFiles: JSON.stringify([first]), uploadTranscript: second };

@@ -10,6 +10,7 @@ export type MsStudentDirRow = Record<string, unknown> & {
   studentPic?: string;
   upload_student_curreny_learning?: string;
   uploadTranscript?: string;
+  immunizationFiles?: string[];
   slots?: WeeklySlotRelation[];
 };
 

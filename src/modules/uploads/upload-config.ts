@@ -3,7 +3,8 @@ export type UploadType =
   | "student_pic"
   | "learning"
   | "transcript"
-  | "iep";
+  | "iep"
+  | "immunization";
 
 export type UploadFieldMapping = {
   fieldKey: string;
@@ -34,6 +35,10 @@ export const UPLOAD_FIELD_MAP: Record<UploadType, UploadFieldMapping> = {
   iep: {
     fieldKey: "upload_copy_EIP_504_plan",
     fileNamePrefix: "IEP_",
+  },
+  immunization: {
+    fieldKey: "immunizationFiles",
+    fileNamePrefix: "Immunization_",
   },
 };
 

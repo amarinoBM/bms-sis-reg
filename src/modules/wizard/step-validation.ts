@@ -281,9 +281,14 @@ function validateStep9(values: Record<string, unknown>): StepFieldErrors {
 
 function validateStep10(values: Record<string, unknown>): StepFieldErrors {
   const errors: StepFieldErrors = {};
+  const homeState = typeof values.home_state === "string" ? values.home_state.trim() : "";
 
   if (!hasText(values.home_state)) {
     setError(errors, "home_state", requiredFieldError("Home state"));
+  }
+
+  if ((homeState === "Florida" || homeState === "Texas") && !hasText(values.vaccine_situation)) {
+    setError(errors, "vaccine_situation", "Choose an immunization status before saving.");
   }
 
   return errors;

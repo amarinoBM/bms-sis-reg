@@ -210,6 +210,15 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
     isMissing: (student) => !hasText(student.home_state),
   },
   {
+    key: "vaccine_situation",
+    label: "Immunization status",
+    stepId: "10",
+    isMissing: (student) => {
+      const homeState = typeof student.home_state === "string" ? student.home_state.trim() : "";
+      return (homeState === "Florida" || homeState === "Texas") && !hasText(student.vaccine_situation);
+    },
+  },
+  {
     key: "honorCodeSigned",
     label: "Sign the Honor Code",
     stepId: "12",

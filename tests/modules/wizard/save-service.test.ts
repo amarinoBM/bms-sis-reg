@@ -59,6 +59,7 @@ describe("step-schemas unflatten", () => {
 describe("upload config", () => {
   it("maps birth cert uploads to studentBirthCert", () => {
     expect(UPLOAD_FIELD_MAP.birth_cert.fieldKey).toBe("studentBirthCert");
+    expect(UPLOAD_FIELD_MAP.immunization.fieldKey).toBe("immunizationFiles");
     expect(buildDriveFileUrl("abc123")).toContain("abc123");
   });
 });

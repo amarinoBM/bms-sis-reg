@@ -31,7 +31,7 @@ export type StepFieldDefinition = {
   type: StepFieldType;
   options?: string[];
   placeholder?: string;
-  uploadType?: "birth_cert" | "student_pic" | "learning" | "transcript" | "iep";
+  uploadType?: "birth_cert" | "student_pic" | "learning" | "transcript" | "iep" | "immunization";
   /** Groups consecutive checkboxes under one fieldset legend. */
   group?: string;
   /** Shown under the fieldset legend (set on the first field in the group). */
@@ -174,7 +174,7 @@ export const STEP_FORM_DEFINITIONS: StepFormDefinition[] = [
     saveHandler: "save7",
     title: "Home state",
     description: () =>
-      "Private school students from a state other than Florida need to submit a letter each year to their local school district.",
+      "Tell us where the student will spend most of the school year so we can identify relevant state paperwork and immunization records.",
     fields: [],
   },
   {
