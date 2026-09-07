@@ -69,6 +69,10 @@ export function createAdminBackend() {
       student_birth_date: Date.UTC(2018, 4, 2), male: true, Caucasian: true,
       studentBirthCert: "https://drive.google.com/file/d/synthetic-josiah-birth/view",
       slots: [{ status: "enrolled" }], updated: 42 },
+    { objectId: "ambiguous-one", lead_id: "lead_ambiguous", student_name: "Same", parent_email: "ambiguous@example.test",
+      slots: [{ status: "enrolled" }], updated: 43 },
+    { objectId: "ambiguous-two", lead_id: "lead_ambiguous", student_name: "Same", parent_email: "ambiguous@example.test",
+      slots: [{ status: "enrolled" }], updated: 44 },
   ];
   let failAudit = false;
   let failEmail = false;

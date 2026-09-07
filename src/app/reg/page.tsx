@@ -1,9 +1,10 @@
 import { RegistrationShell } from "@/app/_components/registration-shell";
 import { OtpForm } from "@/app/reg/_components/otp-form";
+import { parseRegistrationLinkContext } from "@/modules/registration/registration-link";
 import { findParentEmailOptions } from "@/server/auth/parent-email-choice";
 
 type RegPageProps = {
-  searchParams: Promise<{ lead_id?: string }>;
+  searchParams: Promise<{ lead_id?: string; student_name?: string; step?: string }>;
 };
 
 export default async function RegPage({ searchParams }: RegPageProps) {
@@ -31,6 +32,10 @@ export default async function RegPage({ searchParams }: RegPageProps) {
     );
   }
 
+  const linkContext = parseRegistrationLinkContext({
+    studentName: params.student_name,
+    step: params.step,
+  });
   const emailOptions = await findParentEmailOptions(leadId).catch(() => []);
 
   return (
@@ -39,7 +44,12 @@ export default async function RegPage({ searchParams }: RegPageProps) {
       <p className="mt-3 max-w-xl text-body text-muted-foreground">
         We will send a one-time login code to the parent email we already have on file.
       </p>
-      <OtpForm leadId={leadId} emailOptions={emailOptions} />
+      <OtpForm
+        leadId={leadId}
+        emailOptions={emailOptions}
+        requestedStudentName={linkContext.studentName}
+        requestedStepId={linkContext.stepId}
+      />
     </RegistrationShell>
   );
 }

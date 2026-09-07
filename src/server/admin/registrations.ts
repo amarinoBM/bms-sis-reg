@@ -12,6 +12,7 @@ import { TRANSCRIPT_DELIVERY_UPLOAD } from "@/modules/wizard/transcript-fields";
 import { buildStepCompletionMap } from "@/modules/wizard/progress";
 import { SAVE_HANDLERS } from "@/modules/wizard/save-handlers";
 import { DOCUMENT_FIELDS, isDriveDocument, readDocumentFiles, readIepFiles, readImmunizationFiles, readStudentTranscriptFiles } from "@/modules/uploads/document-files";
+import { normalizeRegistrationStudentName } from "@/modules/registration/registration-link";
 export { preserveDocumentFields } from "@/modules/uploads/document-files";
 import { adminRef } from "./store";
 
@@ -170,6 +171,22 @@ export async function loadAdminRegistration(leadId: string, objectId: string): P
         objectId: item.objectId,
       }));
   return { ...student, enrolledStudents: familyStudents };
+}
+
+export async function resolveAdminPreviewTarget(leadId: string, studentName: string): Promise<{ objectId: string }> {
+  const requestedName = normalizeRegistrationStudentName(studentName)?.toLowerCase();
+  if (!requestedName) {
+    throw new AppError({ code: "NOT_FOUND", message: "No unique enrolled student was found for this preview link." });
+  }
+
+  const matches = (await familySearchItems(leadId, "", "enrolled")).filter(
+    (item) => normalizeRegistrationStudentName(item.studentName)?.toLowerCase() === requestedName,
+  );
+  if (matches.length !== 1) {
+    throw new AppError({ code: "NOT_FOUND", message: "No unique enrolled student was found for this preview link." });
+  }
+
+  return { objectId: matches[0].objectId };
 }
 
 export type AdminRegistrationResult = StudentLoadResult & { adminVersion: string };

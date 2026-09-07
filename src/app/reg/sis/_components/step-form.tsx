@@ -71,6 +71,7 @@ type StepFormProps = {
   persistence?:
     | { kind: "parent" }
     | { kind: "admin"; version: string }
+    | { kind: "preview" }
     | { kind: "demo" };
   onAdminStateChange?: (state: AdminFormState) => void;
   onAdminUploaded?: (result: AdminUploadResult) => void;
@@ -192,7 +193,7 @@ export function StepForm({
   );
 
   const sectionComplete = (disabled || justSaved) && !isEditing;
-  const readOnly = persistence.kind === "demo" || sectionComplete;
+  const readOnly = persistence.kind === "demo" || persistence.kind === "preview" || sectionComplete;
   const activeValues = readOnly && !justSaved ? displayedInitialValues : values;
   const visibleFields = visibleStepFields(stepId, definition.fields, activeValues);
   const fieldGroups = groupStepFields(visibleFields);
@@ -200,7 +201,7 @@ export function StepForm({
   const nextStepId = getNextStepId(stepId);
 
   async function handleUnlock() {
-    if (persistence.kind === "demo") {
+    if (persistence.kind === "demo" || persistence.kind === "preview") {
       return;
     }
 
@@ -223,7 +224,7 @@ export function StepForm({
   }
 
   async function handleSave() {
-    if (persistence.kind === "demo") {
+    if (persistence.kind === "demo" || persistence.kind === "preview") {
       return;
     }
 
@@ -266,7 +267,7 @@ export function StepForm({
   }
 
   async function handleUpload(field: StepFieldDefinition, file: File) {
-    if (persistence.kind === "demo") {
+    if (persistence.kind === "demo" || persistence.kind === "preview") {
       return;
     }
 
@@ -686,7 +687,7 @@ export function StepForm({
               : "This section is complete."
           }
           onEdit={
-            definition.saveHandler && sectionComplete && persistence.kind !== "demo"
+              definition.saveHandler && sectionComplete && persistence.kind !== "demo" && persistence.kind !== "preview"
               ? () => void handleUnlock()
               : undefined
           }

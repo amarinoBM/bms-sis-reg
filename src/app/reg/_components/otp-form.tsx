@@ -11,10 +11,13 @@ import { REG_TOUCH_CLASS } from "@/lib/reg-ui";
 import { cn } from "@/lib/utils";
 import { postApi } from "@/lib/client-api";
 import { messageFromRegApiError } from "@/lib/reg-api-errors";
+import type { WizardStepId } from "@/modules/wizard/steps";
 
 type OtpFormProps = {
   leadId: string;
   emailOptions: { maskedEmail: string; choiceToken: string }[];
+  requestedStudentName?: string;
+  requestedStepId: WizardStepId;
 };
 
 type SendResponse = { cooldownSeconds: number };
@@ -28,7 +31,12 @@ function sanitizeOtp(value: string): string {
   return value.replace(/\D/g, "").slice(0, 6);
 }
 
-export function OtpForm({ leadId, emailOptions }: OtpFormProps) {
+export function OtpForm({
+  leadId,
+  emailOptions,
+  requestedStudentName,
+  requestedStepId,
+}: OtpFormProps) {
   const router = useRouter();
   const [otp, setOtp] = useState("");
   const [emailChoiceToken, setEmailChoiceToken] = useState("");
@@ -116,6 +124,8 @@ export function OtpForm({ leadId, emailOptions }: OtpFormProps) {
       const result = await postApi<VerifyResponse>("/api/otp/verify", {
         leadId,
         otp: otp.trim(),
+        ...(requestedStudentName ? { studentName: requestedStudentName } : {}),
+        step: requestedStepId,
       });
       router.push(result.redirectUrl);
     } catch (error) {
