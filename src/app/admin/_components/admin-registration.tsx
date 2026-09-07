@@ -7,13 +7,13 @@ import { flattenFormValues, getStepFormDefinition } from "@/modules/wizard/step-
 import { WIZARD_STEPS, type WizardStepId } from "@/modules/wizard/steps";
 import type { AdminRegistrationResult } from "@/server/admin/registrations";
 
-export function AdminRegistration({ result, leadId, onSaved, onUploaded, onFormStateChange, canNavigate, busy }: {
+export function AdminRegistration({ result, leadId, onSaved, onUploaded, onFormStateChange, canNavigate, busy, readOnly = false, initialStepId = "1" }: {
   result: AdminRegistrationResult; leadId: string; onSaved: () => Promise<void>;
   onUploaded: (result: AdminUploadResult) => void;
   onFormStateChange: (state: AdminFormState) => void;
-  canNavigate: () => Promise<boolean>; busy: boolean;
+  canNavigate: () => Promise<boolean>; busy: boolean; readOnly?: boolean; initialStepId?: WizardStepId;
 }) {
-  const [stepId, setStepId] = useState<WizardStepId>("1");
+  const [stepId, setStepId] = useState<WizardStepId>(initialStepId);
   const definition = getStepFormDefinition(stepId);
   const { student, studentInfo } = result;
   const signed = stepId === "12" ? student.honorCodeSigned === "Completed" || student.honorCodeSigned === true : student.ToSBool === true;
@@ -29,9 +29,13 @@ export function AdminRegistration({ result, leadId, onSaved, onUploaded, onFormS
       </select>
     </div>
     <fieldset disabled={busy} className="min-w-0"><StepNav activeStepId={stepId} stepCompletion={studentInfo.stepCompletion} onStepSelect={goToStep} /></fieldset>
-    <p className="text-label text-muted-foreground">Changes are saved as admin edits. Blank fields have not been answered. Signing and submission remain parent-only.</p>
+    <p className="text-label text-muted-foreground">
+      {readOnly
+        ? "Admin · Read-only preview. Nothing can be saved, uploaded, signed, or submitted from this page."
+        : "Changes are saved as admin edits. Blank fields have not been answered. Signing and submission remain parent-only."}
+    </p>
     <div data-registration-step-frame className="space-y-6 [overflow-anchor:none] md:min-h-[42rem]">
-      {definition && <StepForm key={stepId} definition={definition} leadId={leadId} objectId={studentInfo.objectId} studentName={studentInfo.studentName} stepId={stepId} initialValues={flattenFormValues(student)} disabled={studentInfo.stepCompletion[stepId] === true} persistence={{ kind: "admin", version: result.adminVersion }} onSaved={onSaved} onAdminUploaded={onUploaded} onAdminStateChange={onFormStateChange} onGoToStep={goToStep} />}
+      {definition && <StepForm key={stepId} definition={definition} leadId={leadId} objectId={studentInfo.objectId} studentName={studentInfo.studentName} stepId={stepId} initialValues={flattenFormValues(student)} disabled={readOnly || studentInfo.stepCompletion[stepId] === true} persistence={readOnly ? { kind: "preview" } : { kind: "admin", version: result.adminVersion }} onSaved={onSaved} onAdminUploaded={onUploaded} onAdminStateChange={onFormStateChange} onGoToStep={goToStep} />}
       {(stepId === "12" || stepId === "13") && <section className="rounded-lg border border-border bg-card p-6">
         <h2 className="text-section font-semibold">{stepId === "12" ? "Honor code" : "Terms of service"}</h2>
         <p className="mt-3 text-body">{signed ? "Signed by the family." : "Not signed yet."}</p>

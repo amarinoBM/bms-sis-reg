@@ -71,10 +71,11 @@ describe("otp service", () => {
     process.env.BACKENDLESS_REST_URL = "https://api.backendless.com/app/key";
     process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3010";
 
-    const result = await verifyParentOtp("lead_test", " 654321 ", undefined, fetchImpl);
+    const result = await verifyParentOtp("lead_test", " 654321 ", undefined, fetchImpl, "10");
 
     expect(result.studentName).toBe("Bennett Test");
     expect(result.redirectUrl).toContain("student_name=Bennett%20Test");
+    expect(result.redirectUrl).toContain("step=10");
     expect(result.students).toHaveLength(1);
 
     const deleteCalls = fetchImpl.mock.calls.filter(
@@ -85,6 +86,35 @@ describe("otp service", () => {
     expect(
       fetchImpl.mock.calls.some(([url]) => String(url).includes("/counters/")),
     ).toBe(false);
+  });
+
+  it("keeps a requested enrolled sibling and rejects an unknown student", async () => {
+    const makeFetch = () => vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/cache/parentOTP-lead_test") && init?.method === "DELETE") {
+        return new Response("", { status: 200 });
+      }
+      if (url.includes("/cache/parentOTP-lead_test") && !init?.method) {
+        return new Response(JSON.stringify(654321), { status: 200 });
+      }
+      if (url.includes("/data/ms_student_dir")) {
+        return new Response(JSON.stringify([
+          { objectId: "obj-1", student_name: "Alex Test", slots: [{ status: "enrolled" }] },
+          { objectId: "obj-2", student_name: "Taylor Test", slots: [{ status: "enrolled" }] },
+        ]), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    process.env.BACKENDLESS_REST_URL = "https://api.backendless.com/app/key";
+
+    const siblingFetch = makeFetch();
+    const result = await verifyParentOtp("lead_test", "654321", "Taylor Test", siblingFetch, "10");
+    expect(result.studentName).toBe("Taylor Test");
+    expect(result.redirectUrl).toContain("student_name=Taylor%20Test");
+
+    await expect(verifyParentOtp("lead_test", "654321", "Other Student", makeFetch(), "10"))
+      .rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("returns expired message when cache is empty", async () => {

@@ -39,6 +39,7 @@ type SisWorkspaceProps =
       mode: "live";
       leadId: string;
       initialStudentName: string;
+      initialStepId: WizardStepId;
     }
   | {
       mode: "demo";
@@ -56,9 +57,10 @@ export function SisWorkspace(props: SisWorkspaceProps) {
   const initialStudentName = demoMode
     ? props.demo.studentInfo.studentName
     : props.initialStudentName;
+  const initialStepId = demoMode ? INITIAL_ACTIVE_STEP : props.initialStepId;
   const router = useRouter();
   const [studentName, setStudentName] = useState(initialStudentName);
-  const [activeStepId, setActiveStepId] = useState<WizardStepId>(INITIAL_ACTIVE_STEP);
+  const [activeStepId, setActiveStepId] = useState<WizardStepId>(initialStepId);
   const [loadState, setLoadState] = useState<"loading" | "error" | "ready">(
     initialPayload ? "ready" : "loading",
   );

@@ -142,6 +142,50 @@ test("three-sibling family sees two completed registrations and can continue the
   await expect(page.getByRole("button", { name: "Edit section" })).toBeVisible();
 });
 
+test("student deep links land on the requested sibling and State section", async ({ page, request }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  await page.goto("/reg?lead_id=lead_bennett&student_name=Madilyn&step=10");
+  const sent = page.waitForResponse("**/api/otp/send");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  expect((await sent).status()).toBe(200);
+  const { code } = await (await request.get("http://127.0.0.1:3039/_test/code")).json();
+  await page.getByLabel("Login code").fill(code);
+  const verified = page.waitForResponse("**/api/otp/verify");
+  await page.getByRole("button", { name: "Continue to Student Information" }).click();
+  expect((await verified).status()).toBe(200);
+  await expect(page).toHaveURL(/\/reg\/sis\?.*student_name=Madilyn.*step=10/);
+  await expect(page.getByText("Registering Madilyn", { exact: false })).toBeVisible();
+  await expect(page.getByText("Section 10 of 14 · State", { exact: true })).toBeVisible();
+});
+
+test("admin preview is explicit, read-only, and does not mutate registrations", async ({ page, request }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  await page.goto("/admin/login");
+  await page.getByLabel("Work email").fill("am@brilliantmicroschool.org");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  await expect(page.getByLabel("Login code")).toBeVisible();
+  const { code } = await (await request.get("http://127.0.0.1:3039/_test/code")).json();
+  await page.getByLabel("Login code").fill(code);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Find a registration" })).toBeVisible();
+
+  for (const step of ["10", "12", "13", "14"]) {
+    await page.goto(`/admin/preview?lead_id=lead_bennett&student_name=Madilyn&step=${step}`);
+    await expect(page.getByText("Admin · Read-only preview", { exact: true })).toBeVisible();
+    await expect(page.getByText("This preview follows the family link for Madilyn.", { exact: false })).toBeVisible();
+    await expect(page.getByLabel("Jump to section")).toHaveValue(step);
+    await expect(page.getByRole("button", { name: /save section|edit section|sign|submit|upload/i })).toHaveCount(0);
+  }
+
+  await page.goto("/reg?lead_id=lead_bennett&student_name=Madilyn&step=10");
+  await expect(page.getByRole("heading", { name: "Verify your email" })).toBeVisible();
+
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.writes).toHaveLength(0);
+  expect(state.uploads).toHaveLength(0);
+  expect(state.audit.some((entry: { event: string }) => ["save_requested", "save_verified", "upload_requested", "upload_verified"].includes(entry.event))).toBe(false);
+});
+
 test("searches exact identifiers progressively and falls back without extra controls", async ({ page, request }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   await page.goto("/admin/login");

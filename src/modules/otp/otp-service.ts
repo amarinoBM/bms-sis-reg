@@ -16,6 +16,10 @@ import { sendOtpEmail } from "@/server/connectors/backendless/email-client";
 import { findEnrolledStudents } from "@/modules/students/repository";
 import { getServerEnv } from "@/config/env";
 import { resolveParentEmailChoice } from "@/server/auth/parent-email-choice";
+import {
+  normalizeRegistrationStudentName,
+  parseRegistrationLinkContext,
+} from "@/modules/registration/registration-link";
 
 function generateOtp(): string {
   return String(randomInt(100000, 1000000));
@@ -85,6 +89,7 @@ export async function verifyParentOtp(
   otpInput: string,
   studentName?: string,
   fetchImpl: typeof fetch = fetch,
+  requestedStep?: unknown,
 ): Promise<{
   redirectUrl: string;
   studentName: string;
@@ -123,11 +128,30 @@ export async function verifyParentOtp(
     });
   }
 
-  const resolvedStudentName =
-    studentName?.trim() ? studentName.trim() : students[0].studentName;
+  const requestedStudent = normalizeRegistrationStudentName(studentName);
+  const matchingStudents = requestedStudent
+    ? students.filter(
+        (student) =>
+          normalizeRegistrationStudentName(student.studentName)?.toLowerCase() ===
+          requestedStudent.toLowerCase(),
+      )
+    : [];
+
+  if (requestedStudent && matchingStudents.length !== 1) {
+    throw new AppError({
+      code: "NOT_FOUND",
+      message: "No unique enrolled student was found for this registration link.",
+    });
+  }
+
+  const resolvedStudentName = matchingStudents[0]?.studentName ?? students[0].studentName;
+  const { stepId } = parseRegistrationLinkContext({
+    studentName: resolvedStudentName,
+    step: requestedStep,
+  });
 
   const { publicAppUrl } = getServerEnv();
-  const redirectUrl = `${publicAppUrl}/reg/sis?lead_id=${encodeURIComponent(leadId)}&student_name=${encodeURIComponent(resolvedStudentName)}`;
+  const redirectUrl = `${publicAppUrl}/reg/sis?lead_id=${encodeURIComponent(leadId)}&student_name=${encodeURIComponent(resolvedStudentName)}&step=${encodeURIComponent(stepId)}`;
 
   return {
     redirectUrl,
