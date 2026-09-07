@@ -82,6 +82,9 @@ describe("otp service", () => {
         String(url).includes("/cache/parentOTP-lead_test") && init?.method === "DELETE",
     );
     expect(deleteCalls).toHaveLength(1);
+    expect(
+      fetchImpl.mock.calls.some(([url]) => String(url).includes("/counters/")),
+    ).toBe(false);
   });
 
   it("returns expired message when cache is empty", async () => {

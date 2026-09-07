@@ -117,16 +117,38 @@ export async function incrementRateLimit(
   maxAttempts: number,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  const current = (await getCacheValue<number>(key, fetchImpl)) ?? 0;
+  const window = Math.floor(Date.now() / (ttlSeconds * 1000));
+  const counterKey = `${key}-${window}`;
+  const response = await fetchImpl(
+    `${requireBackendlessRestUrl()}/counters/${encodeCacheKey(counterKey)}/increment/get`,
+    {
+      method: "PUT",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 
-  if (current >= maxAttempts) {
+  if (!response.ok) {
+    throw new AppError({
+      code: "INTERNAL_ERROR",
+      message: "Login security check is temporarily unavailable.",
+    });
+  }
+
+  const current: unknown = await response.json();
+  if (typeof current !== "number" || !Number.isSafeInteger(current) || current < 1) {
+    throw new AppError({
+      code: "INTERNAL_ERROR",
+      message: "Login security check is temporarily unavailable.",
+    });
+  }
+
+  if (current > maxAttempts) {
     throw new AppError({
       code: "FORBIDDEN",
       message: "Too many attempts. Please wait and try again.",
     });
   }
-
-  await putCacheValue(key, current + 1, ttlSeconds, fetchImpl);
 }
 
 export async function assertOtpSendAllowed(
@@ -185,11 +207,4 @@ export async function assertOtpVerifyAllowed(
     OTP_VERIFY_FAIL_MAX,
     fetchImpl,
   );
-}
-
-export async function clearOtpVerifyFailures(
-  leadId: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<void> {
-  await deleteCacheValue(parentOtpVerifyFailKey(leadId), fetchImpl);
 }
