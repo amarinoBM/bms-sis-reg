@@ -44,6 +44,7 @@ type TosStepProps = {
   studentName: string;
   signed: boolean;
   tosURL?: string | null;
+  demoMode?: boolean;
   onSigned: () => Promise<void>;
   onGoToStep: (stepId: WizardStepId) => void;
 };
@@ -54,6 +55,7 @@ export function TosStep({
   studentName,
   signed,
   tosURL,
+  demoMode = false,
   onSigned,
   onGoToStep,
 }: TosStepProps) {
@@ -63,6 +65,10 @@ export function TosStep({
   const nextStepId: WizardStepId = "14";
 
   async function handleSign() {
+    if (demoMode) {
+      return;
+    }
+
     if (!parentSignature.trim()) {
       toast.error("Enter your name before signing.");
       return;
@@ -178,7 +184,7 @@ export function TosStep({
           <Button
             className={cn(REG_TOUCH_CLASS, "bg-[#32325d] hover:bg-[#32325d]/90")}
             onClick={handleSign}
-            disabled={signing || !parentSignature.trim()}
+            disabled={demoMode || signing || !parentSignature.trim()}
             aria-busy={signing}
           >
             {signing ? "Signing…" : TOS_SIGN_BUTTON_LABEL}

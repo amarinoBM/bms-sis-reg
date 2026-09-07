@@ -34,22 +34,36 @@ import {
 } from "@/lib/reg-api-errors";
 import type { StudentLoadResult } from "@/modules/students/types";
 
-type SisWorkspaceProps = {
-  leadId: string;
-  initialStudentName: string;
-};
+type SisWorkspaceProps =
+  | {
+      mode: "live";
+      leadId: string;
+      initialStudentName: string;
+    }
+  | {
+      mode: "demo";
+      demo: StudentLoadResult;
+    };
 
 type LoadOptions = {
   background?: boolean;
 };
 
-export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) {
+export function SisWorkspace(props: SisWorkspaceProps) {
+  const demoMode = props.mode === "demo";
+  const initialPayload = demoMode ? props.demo : undefined;
+  const leadId = demoMode ? props.demo.studentInfo.leadId : props.leadId;
+  const initialStudentName = demoMode
+    ? props.demo.studentInfo.studentName
+    : props.initialStudentName;
   const router = useRouter();
   const [studentName, setStudentName] = useState(initialStudentName);
   const [activeStepId, setActiveStepId] = useState<WizardStepId>(INITIAL_ACTIVE_STEP);
-  const [loadState, setLoadState] = useState<"loading" | "error" | "ready">("loading");
+  const [loadState, setLoadState] = useState<"loading" | "error" | "ready">(
+    initialPayload ? "ready" : "loading",
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [payload, setPayload] = useState<StudentLoadResult | null>(null);
+  const [payload, setPayload] = useState<StudentLoadResult | null>(initialPayload ?? null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [switchDialogOpen, setSwitchDialogOpen] = useState(false);
   const [pendingStudentName, setPendingStudentName] = useState<string | null>(null);
@@ -57,6 +71,12 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
 
   const loadStudent = useCallback(
     async (name: string, options?: LoadOptions) => {
+      if (demoMode && initialPayload) {
+        setPayload(initialPayload);
+        setLoadState("ready");
+        return;
+      }
+
       const background = options?.background === true;
       const requestId = ++loadRequestIdRef.current;
 
@@ -111,7 +131,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
         }
       }
     },
-    [leadId, router],
+    [demoMode, initialPayload, leadId, router],
   );
 
   const refreshStudent = useCallback(() => {
@@ -119,8 +139,11 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
   }, [loadStudent, studentName]);
 
   useEffect(() => {
+    if (demoMode && initialPayload) {
+      return;
+    }
     void loadStudent(initialStudentName);
-  }, [initialStudentName, loadStudent]);
+  }, [demoMode, initialPayload, initialStudentName, loadStudent]);
 
   const handleStudentChangeRequest = (nextStudentName: string) => {
     if (nextStudentName === studentName) {
@@ -162,6 +185,11 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
 
   return (
     <div className="space-y-6 md:space-y-8">
+      {demoMode ? (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-body text-foreground">
+          Demo mode uses made-up information. You can browse every section, but nothing is saved or sent.
+        </div>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-title font-semibold text-foreground">Student Information</h1>
@@ -241,6 +269,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   stepId={activeStepId}
                   initialValues={formValues}
                   disabled={payload.studentInfo.stepCompletion[activeStepId] === true}
+                  persistence={demoMode ? { kind: "demo" } : undefined}
                   onSaved={refreshStudent}
                   onGoToStep={setActiveStepId}
                 />
@@ -258,6 +287,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   }
                   signed={payload.student.honorCodeSigned === "Completed"}
                   honorCodeURL={payload.student.honorCodeURL as string | undefined}
+                  demoMode={demoMode}
                   onSigned={refreshStudent}
                   onGoToStep={setActiveStepId}
                 />
@@ -270,6 +300,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   studentName={payload.studentInfo.studentName}
                   signed={payload.student.ToSBool === true}
                   tosURL={payload.student.ToSURL as string | undefined}
+                  demoMode={demoMode}
                   onSigned={refreshStudent}
                   onGoToStep={setActiveStepId}
                 />
@@ -282,6 +313,7 @@ export function SisWorkspace({ leadId, initialStudentName }: SisWorkspaceProps) 
                   studentName={payload.studentInfo.studentName}
                   student={payload.student}
                   completed={payload.student.is_complete_sis === true}
+                  demoMode={demoMode}
                   onSubmitted={refreshStudent}
                   onGoToStep={setActiveStepId}
                 />

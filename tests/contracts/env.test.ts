@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getServerEnv } from "@/config/env";
+import { getServerEnv, isDemoModeEnabled } from "@/config/env";
 
 describe("server env", () => {
   it("reads external write guard from environment", () => {
@@ -40,5 +40,12 @@ describe("server env", () => {
         AUTH_SECRET: "development-only-secret-min-32-chars!!",
       }),
     ).toThrow("BACKENDLESS_CODE_URL is required in production.");
+  });
+
+  it("allows demo mode only outside production", () => {
+    expect(isDemoModeEnabled({ NODE_ENV: "development", DEMO_MODE: "true" })).toBe(true);
+    expect(isDemoModeEnabled({ NODE_ENV: "test", DEMO_MODE: "true" })).toBe(true);
+    expect(isDemoModeEnabled({ NODE_ENV: "production", DEMO_MODE: "true" })).toBe(false);
+    expect(isDemoModeEnabled({ NODE_ENV: "development", DEMO_MODE: "false" })).toBe(false);
   });
 });

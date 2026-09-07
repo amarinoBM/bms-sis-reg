@@ -6,7 +6,6 @@ import {
   assertOtpResendCooldown,
   assertOtpSendAllowed,
   assertOtpVerifyAllowed,
-  clearOtpVerifyFailures,
   deleteCacheValue,
   getCacheValue,
   parentOtpCacheKey,
@@ -111,7 +110,8 @@ export async function verifyParentOtp(
     });
   }
 
-  await clearOtpVerifyFailures(leadId, fetchImpl);
+  // Keep failed attempts for the fixed window. A correct code is checked before
+  // the failure limiter, so a valid parent can still sign in.
   await deleteCacheValue(parentOtpCacheKey(leadId), fetchImpl);
 
   const students = await findEnrolledStudents(leadId, fetchImpl);

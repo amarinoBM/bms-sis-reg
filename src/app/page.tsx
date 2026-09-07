@@ -1,7 +1,10 @@
 import { RegistrationHeader } from "@/app/_components/registration-header";
 import { RegistrationFooter } from "@/app/_components/registration-footer";
+import { isDemoModeEnabled } from "@/config/env";
 
 export default function Home() {
+  const demoMode = isDemoModeEnabled();
+
   return (
     <div className="min-h-screen bg-background">
       <RegistrationHeader />
@@ -18,6 +21,13 @@ export default function Home() {
           </a>
           .
         </p>
+        {demoMode ? (
+          <p className="mt-6 text-body">
+            <a href="/demo" className="text-primary underline">
+              Open the developer demo
+            </a>
+          </p>
+        ) : null}
       </main>
       <RegistrationFooter />
     </div>

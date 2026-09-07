@@ -18,6 +18,7 @@ type SubmitStepProps = {
   studentName: string;
   student: Record<string, unknown>;
   completed: boolean;
+  demoMode?: boolean;
   onSubmitted: () => Promise<void>;
   onGoToStep: (stepId: WizardStepId) => void;
 };
@@ -32,6 +33,7 @@ export function SubmitStep({
   studentName,
   student,
   completed,
+  demoMode = false,
   onSubmitted,
   onGoToStep,
 }: SubmitStepProps) {
@@ -39,6 +41,10 @@ export function SubmitStep({
   const readiness = validateSubmitReadiness(student);
 
   async function handleSubmit() {
+    if (demoMode) {
+      return;
+    }
+
     if (!readiness.ready) {
       toast.error(formatMissingFieldsMessage(readiness.missingLabels));
       return;
@@ -102,7 +108,7 @@ export function SubmitStep({
           <Button
             className={REG_TOUCH_CLASS}
             onClick={handleSubmit}
-            disabled={submitting || !readiness.ready}
+            disabled={demoMode || submitting || !readiness.ready}
           >
             {submitting ? "Submitting…" : "Submit registration"}
           </Button>
