@@ -80,6 +80,12 @@ describe("admin authentication with the real store and session chain", () => {
     await expect(verifyAdminOtp(ADMIN_EMAIL, challenge.challengeId, challenge.code)).rejects.toThrow();
     await expect(verifyAdminOtp(DANAE_ADMIN_EMAIL, challenge.challengeId, challenge.code)).resolves.toBe(DANAE_ADMIN_EMAIL);
   });
+  it("keeps approved admin OTP cooldowns separate", async () => {
+    await otp(ADMIN_EMAIL);
+    const challenge = await otp(DANAE_ADMIN_EMAIL);
+    expect(backend.emails).toHaveLength(2);
+    await expect(verifyAdminOtp(DANAE_ADMIN_EMAIL, challenge.challengeId, challenge.code)).resolves.toBe(DANAE_ADMIN_EMAIL);
+  });
   it("rejects a valid code after five wrong guesses", async () => {
     const challenge = await otp();
     const wrong = challenge.code === "111111" ? "222222" : "111111";
