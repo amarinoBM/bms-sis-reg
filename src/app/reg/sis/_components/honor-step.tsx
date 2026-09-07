@@ -38,6 +38,7 @@ type HonorStepProps = {
   parentName?: string;
   signed: boolean;
   honorCodeURL?: string | null;
+  demoMode?: boolean;
   onSigned: () => Promise<void>;
   onGoToStep: (stepId: WizardStepId) => void;
 };
@@ -49,6 +50,7 @@ export function HonorStep({
   parentName,
   signed,
   honorCodeURL,
+  demoMode = false,
   onSigned,
   onGoToStep,
 }: HonorStepProps) {
@@ -61,6 +63,10 @@ export function HonorStep({
   const honorDocumentUrl = buildDriveViewUrl(HONOR_DOCUMENT_TEMPLATE_ID);
 
   async function handleSign() {
+    if (demoMode) {
+      return;
+    }
+
     const errors: Record<string, string> = {};
     if (!parentSignature.trim()) {
       errors.parentSignature = "Enter the parent full name.";
@@ -204,7 +210,7 @@ export function HonorStep({
             <Button
               className={cn(REG_TOUCH_CLASS, "bg-[#32325d] hover:bg-[#32325d]/90")}
               onClick={handleSign}
-              disabled={signing || !parentSignature.trim() || !studentSignature.trim()}
+              disabled={demoMode || signing || !parentSignature.trim() || !studentSignature.trim()}
               aria-busy={signing}
             >
               {signing ? "Signing…" : HONOR_SIGN_BUTTON_LABEL}

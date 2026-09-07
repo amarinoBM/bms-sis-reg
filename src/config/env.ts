@@ -6,6 +6,7 @@ const serverEnvSchema = z.object({
   EXTERNAL_WRITES_ENABLED: z.enum(["true", "false"]).optional(),
   AUTH_SECRET: z.string().min(32).optional(),
   NEXT_PUBLIC_APP_URL: z.url().optional(),
+  DEMO_MODE: z.enum(["true", "false"]).optional(),
 });
 
 export type ServerEnv = {
@@ -65,4 +66,10 @@ export function requireBackendlessCodeUrl(env: NodeJS.ProcessEnv = process.env):
   }
 
   return codeUrl.replace(/\/$/, "");
+}
+
+export function isDemoModeEnabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return env.NODE_ENV !== "production" && env.DEMO_MODE === "true";
 }

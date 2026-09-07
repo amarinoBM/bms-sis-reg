@@ -68,7 +68,10 @@ type StepFormProps = {
   stepId: WizardStepId;
   initialValues: Record<string, unknown>;
   disabled: boolean;
-  persistence?: { kind: "parent" } | { kind: "admin"; version: string };
+  persistence?:
+    | { kind: "parent" }
+    | { kind: "admin"; version: string }
+    | { kind: "demo" };
   onAdminStateChange?: (state: AdminFormState) => void;
   onAdminUploaded?: (result: AdminUploadResult) => void;
   onSaved: () => Promise<void>;
@@ -189,7 +192,7 @@ export function StepForm({
   );
 
   const sectionComplete = (disabled || justSaved) && !isEditing;
-  const readOnly = sectionComplete;
+  const readOnly = persistence.kind === "demo" || sectionComplete;
   const activeValues = readOnly && !justSaved ? displayedInitialValues : values;
   const visibleFields = visibleStepFields(stepId, definition.fields, activeValues);
   const fieldGroups = groupStepFields(visibleFields);
@@ -197,6 +200,10 @@ export function StepForm({
   const nextStepId = getNextStepId(stepId);
 
   async function handleUnlock() {
+    if (persistence.kind === "demo") {
+      return;
+    }
+
     setUnlocking(true);
     try {
       if (persistence.kind === "parent") await postApi<{ unlocked: boolean }>("/api/students/unlock", {
@@ -216,6 +223,10 @@ export function StepForm({
   }
 
   async function handleSave() {
+    if (persistence.kind === "demo") {
+      return;
+    }
+
     if (adminState.current.busy) return;
     if (!definition.saveHandler) {
       return;
@@ -255,6 +266,10 @@ export function StepForm({
   }
 
   async function handleUpload(field: StepFieldDefinition, file: File) {
+    if (persistence.kind === "demo") {
+      return;
+    }
+
     if (adminState.current.busy) return;
     if (!field.uploadType) {
       return;
@@ -652,7 +667,7 @@ export function StepForm({
               : "This section is complete."
           }
           onEdit={
-            definition.saveHandler && sectionComplete
+            definition.saveHandler && sectionComplete && persistence.kind !== "demo"
               ? () => void handleUnlock()
               : undefined
           }

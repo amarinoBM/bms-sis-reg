@@ -29,7 +29,7 @@ export default async function RegSisPage({ searchParams }: RegSisPageProps) {
 
   return (
     <RegistrationShell>
-      <SisWorkspace leadId={leadId} initialStudentName={studentName} />
+      <SisWorkspace mode="live" leadId={leadId} initialStudentName={studentName} />
     </RegistrationShell>
   );
 }
