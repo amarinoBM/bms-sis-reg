@@ -177,6 +177,10 @@ test("admin preview is explicit, read-only, and does not mutate registrations", 
     await expect(page.getByRole("button", { name: /save section|edit section|sign|submit|upload/i })).toHaveCount(0);
   }
 
+  await page.goto("/admin/preview?lead_id=lead_ambiguous&student_name=Same&step=10");
+  await expect(page.getByRole("heading", { name: "Preview link not found" })).toBeVisible();
+  await expect(page.getByText("Student information", { exact: true })).toHaveCount(0);
+
   await page.goto("/reg?lead_id=lead_bennett&student_name=Madilyn&step=10");
   await expect(page.getByRole("heading", { name: "Verify your email" })).toBeVisible();
 
@@ -184,6 +188,29 @@ test("admin preview is explicit, read-only, and does not mutate registrations", 
   expect(state.writes).toHaveLength(0);
   expect(state.uploads).toHaveLength(0);
   expect(state.audit.some((entry: { event: string }) => ["save_requested", "save_verified", "upload_requested", "upload_verified"].includes(entry.event))).toBe(false);
+});
+
+test("invalid deep-link targets fail safely and preview requires an admin session", async ({ page, request, context }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  await page.goto("/reg?lead_id=lead_bennett&student_name=Not%20a%20student&step=10");
+  const sent = page.waitForResponse("**/api/otp/send");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  expect((await sent).status()).toBe(200);
+  const { code } = await (await request.get("http://127.0.0.1:3039/_test/code")).json();
+  await page.getByLabel("Login code").fill(code);
+  const verified = page.waitForResponse("**/api/otp/verify");
+  await page.getByRole("button", { name: "Continue to Student Information" }).click();
+  expect((await verified).status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Verify your email" })).toBeVisible();
+  await expect(page.getByText("Registering", { exact: false })).toHaveCount(0);
+
+  await context.clearCookies();
+  await page.goto("/admin/preview?lead_id=lead_bennett&student_name=Madilyn&step=10");
+  await expect(page).toHaveURL(/\/admin\/login/);
+
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.writes).toHaveLength(0);
+  expect(state.uploads).toHaveLength(0);
 });
 
 test("searches exact identifiers progressively and falls back without extra controls", async ({ page, request }, testInfo) => {
