@@ -2,7 +2,7 @@
 
 ## Scope
 
-Staff can sign in from the registration footer, search registration-eligible students, inspect all sections, edit answers, and upload documents. Only `am@brilliantmicroschool.org` is allowed. Parents alone sign agreements and submit registration. The parent login email stays read-only: changing it would let staff receive a parent code and bypass that boundary. Browsing does not change registration progress or notify parents.
+Staff can sign in from the registration footer, search registration-eligible students, inspect all sections, edit answers, and upload documents. Only `am@brilliantmicroschool.org` and `danae.stellaki@brilliantmicroschool.org` are allowed. Parents alone sign agreements and submit registration. The parent login email stays read-only: changing it would let staff receive a parent code and bypass that boundary. Browsing does not change registration progress or notify parents.
 
 To test a student-specific registration link while signed in as an admin, open the same query parameters under `/admin/preview` (for example, `/admin/preview?lead_id=...&student_name=...&step=10`). Preview requires the separate admin session and is read-only. Opening the `/reg` version still requires the parent OTP. Use the existing `/admin` editor for a controlled synthetic save or upload test.
 
@@ -17,7 +17,7 @@ This branch does not enable or deploy production access. Configure:
 - `ADMIN_ACCESS_ENABLED=true` only after the checks below
 - `ADMIN_AUTH_SECRET`: a new random secret of at least 32 characters, different from `AUTH_SECRET`
 - `ADMIN_AUDIT_TABLE=reg_admin_audit`
-- `ADMIN_EMAIL_LEAD_ID`: an explicitly approved test/internal Close lead used only for email routing. The recipient remains the fixed admin allowlist address, not the lead's contacts. Close stores the email body on this lead, so restrict who can read its email activities.
+- `ADMIN_EMAIL_LEAD_ID`: an explicitly approved test/internal Close lead used only for email routing. The recipient remains the approved admin address that requested the code, not the lead's contacts. Close stores the email body on this lead, so restrict who can read its email activities.
 - existing Backendless settings and the correct `NEXT_PUBLIC_APP_URL`
 - `EXTERNAL_WRITES_ENABLED=true` only where registration edits are authorized
 
