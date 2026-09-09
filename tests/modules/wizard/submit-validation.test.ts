@@ -45,12 +45,35 @@ describe("submit validation", () => {
       starting_date: Date.now(),
       length_of_staying: "Full year",
       uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+      student_last_school_contact_email: "records@example.org",
       honorCodeSigned: "Completed",
       ToSBool: true,
       Caucasian: true,
     });
 
     expect(result.ready).toBe(true);
+  });
+
+  it("requires a valid prior school records email for school-request submissions", () => {
+    const base = {
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+    };
+
+    expect(validateSubmitReadiness(base).missingKeys).toContain(
+      "student_last_school_contact_email",
+    );
+    expect(
+      validateSubmitReadiness({
+        ...base,
+        student_last_school_contact_email: "not-an-email",
+      }).missingKeys,
+    ).toContain("student_last_school_contact_email");
+    expect(
+      validateSubmitReadiness({
+        ...base,
+        student_last_school_contact_email: "records@example.org",
+      }).missingKeys,
+    ).not.toContain("student_last_school_contact_email");
   });
 });
 
@@ -69,5 +92,11 @@ describe("save handler field whitelists", () => {
 
   it("includes share_contact on save1.5", () => {
     expect(SAVE_HANDLERS["save1.5"]).toContain("share_contact");
+  });
+
+  it("allows the prior school records email on save6.1", () => {
+    expect(SAVE_HANDLERS["save6.1"]).toContain(
+      "student_last_school_contact_email",
+    );
   });
 });

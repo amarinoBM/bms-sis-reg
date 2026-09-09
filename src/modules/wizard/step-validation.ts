@@ -28,8 +28,12 @@ import {
 import {
   hasTranscriptDeliveryChoice,
   isFamilyTranscriptDelivery,
+  isValidTranscriptSchoolContactEmail,
   readCreditTransferSubjects,
+  readTranscriptDeliveryChoice,
   readTransferCreditFlag,
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
 } from "@/modules/wizard/transcript-fields";
 
 export type StepFieldErrors = Record<string, string>;
@@ -255,6 +259,7 @@ function validateStep8(values: Record<string, unknown>): StepFieldErrors {
 
 function validateStep9(values: Record<string, unknown>): StepFieldErrors {
   const errors: StepFieldErrors = {};
+  const deliveryChoice = readTranscriptDeliveryChoice(values.uploadTranscript);
 
   if (!hasTranscriptDeliveryChoice(values.uploadTranscript)) {
     setError(
@@ -262,6 +267,19 @@ function validateStep9(values: Record<string, unknown>): StepFieldErrors {
       "uploadTranscript",
       "Choose how transcripts will be delivered.",
     );
+  }
+
+  if (deliveryChoice === TRANSCRIPT_DELIVERY_SCHOOL) {
+    const email = values[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD];
+    if (!hasText(email)) {
+      setError(
+        errors,
+        TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
+        requiredFieldError("Prior school records email"),
+      );
+    } else if (!isValidTranscriptSchoolContactEmail(email)) {
+      setError(errors, TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD, "Enter a valid email address.");
+    }
   }
 
   if (readTransferCreditFlag(values.transferCredit)) {

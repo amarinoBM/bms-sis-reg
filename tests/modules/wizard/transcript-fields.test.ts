@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  normalizeTranscriptSchoolContactEmail,
   readCreditTransferSubjects,
   readTranscriptDeliveryChoice,
   readTranscriptFiles,
@@ -26,5 +27,12 @@ describe("transcript-fields", () => {
       "Spanish",
       "Algebra 1",
     ]);
+  });
+
+  it("trims the prior school records email before saving", () => {
+    expect(normalizeTranscriptSchoolContactEmail("  records@example.org  ")).toBe(
+      "records@example.org",
+    );
+    expect(normalizeTranscriptSchoolContactEmail(undefined)).toBe("");
   });
 });

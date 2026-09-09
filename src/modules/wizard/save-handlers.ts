@@ -1,4 +1,5 @@
 import { LEARNING_PROFILE_SAVE3_KEYS } from "@/modules/wizard/learning-profile";
+import { TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD } from "@/modules/wizard/transcript-fields";
 
 export type SaveHandlerKey =
   | "save1"
@@ -86,6 +87,7 @@ export const SAVE_HANDLERS: Record<SaveHandlerKey, readonly string[]> = {
   ],
   "save6.1": [
     "CreditTransfer",
+    TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
     "transcriptFiles",
     "transferCredit",
     "uploadTranscript",

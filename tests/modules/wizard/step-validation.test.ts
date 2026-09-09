@@ -6,7 +6,10 @@ import {
   isValidEmail,
   isValidPhone,
 } from "@/lib/field-validation";
-import { TRANSCRIPT_DELIVERY_SCHOOL } from "@/modules/wizard/transcript-fields";
+import {
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_DELIVERY_UPLOAD,
+} from "@/modules/wizard/transcript-fields";
 import { validateStepForSave } from "@/modules/wizard/step-validation";
 
 describe("field-validation", () => {
@@ -60,5 +63,30 @@ describe("step-validation", () => {
     });
 
     expect(result.fieldErrors.CreditTransfer).toBeTruthy();
+  });
+
+  it("requires a valid prior school records email only for the school request path", () => {
+    const missing = validateStepForSave("9", {
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+    });
+    expect(missing.fieldErrors.student_last_school_contact_email).toContain("required");
+
+    const invalid = validateStepForSave("9", {
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+      student_last_school_contact_email: "not-an-email",
+    });
+    expect(invalid.fieldErrors.student_last_school_contact_email).toContain("valid email");
+
+    const valid = validateStepForSave("9", {
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+      student_last_school_contact_email: "records@example.org",
+    });
+    expect(valid.fieldErrors.student_last_school_contact_email).toBeUndefined();
+
+    const upload = validateStepForSave("9", {
+      uploadTranscript: TRANSCRIPT_DELIVERY_UPLOAD,
+      transcriptFiles: ["https://drive.google.com/file/d/record/view"],
+    });
+    expect(upload.fieldErrors.student_last_school_contact_email).toBeUndefined();
   });
 });

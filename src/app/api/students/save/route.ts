@@ -4,7 +4,10 @@ import { AppError } from "@/core/app-error";
 import { runRoute } from "@/server/http/route-handler";
 import { saveStudentStep, loadStudentRecord } from "@/modules/students/repository";
 import { parseSaveStep } from "@/modules/wizard/save-service";
-import { unflattenFormValues } from "@/modules/wizard/step-schemas";
+import { unflattenFormValues, flattenFormValues } from "@/modules/wizard/step-schemas";
+import { expandVirtualFormFields } from "@/modules/wizard/field-normalization";
+import { validateStepForSave } from "@/modules/wizard/step-validation";
+import { WIZARD_STEPS } from "@/modules/wizard/steps";
 import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
 import { preserveDocumentFields } from "@/modules/uploads/document-files";
 
@@ -37,13 +40,30 @@ export async function POST(request: Request) {
       });
     }
 
-    const fields = preserveDocumentFields(unflattenFormValues(parsed.fields), current.student);
+    const rawFields = preserveDocumentFields(unflattenFormValues(parsed.fields), current.student);
+    const fields = expandVirtualFormFields(
+      saveStep,
+      rawFields,
+    );
+    const step = WIZARD_STEPS.find((candidate) => candidate.saveHandler === saveStep);
+    if (step) {
+      const validation = validateStepForSave(
+        step.id,
+        flattenFormValues({ ...current.student, ...fields }),
+      );
+      if (!validation.valid) {
+        throw new AppError({
+          code: "INVALID_INPUT",
+          message: validation.summary ?? "Fix the required fields before saving.",
+        });
+      }
+    }
 
     return saveStudentStep(
       parsed.leadId,
       parsed.objectId,
       saveStep,
-      fields,
+      rawFields,
       current.student,
     );
   }, request);

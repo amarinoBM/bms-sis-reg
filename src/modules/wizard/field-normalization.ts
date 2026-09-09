@@ -16,6 +16,8 @@ import {
   readCreditTransferSubjects,
   readTranscriptDeliveryChoice,
   readTransferCreditFlag,
+  normalizeTranscriptSchoolContactEmail,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
 } from "@/modules/wizard/transcript-fields";
 import {
   readIepOr504Plan,
@@ -53,6 +55,11 @@ export function expandVirtualFormFields(
     const deliveryChoice = readTranscriptDeliveryChoice(expanded.uploadTranscript);
     if (deliveryChoice) {
       expanded.uploadTranscript = deliveryChoice;
+    }
+
+    if (Object.hasOwn(expanded, TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD)) {
+      expanded[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD] =
+        normalizeTranscriptSchoolContactEmail(expanded[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD]);
     }
   }
 
