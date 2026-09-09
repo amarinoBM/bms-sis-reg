@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isValidTranscriptSchoolContactEmail,
   normalizeTranscriptSchoolContactEmail,
   readCreditTransferSubjects,
   readTranscriptDeliveryChoice,
@@ -34,5 +35,10 @@ describe("transcript-fields", () => {
       "records@example.org",
     );
     expect(normalizeTranscriptSchoolContactEmail(undefined)).toBe("");
+  });
+
+  it("rejects reserved encrypted markers and oversized addresses", () => {
+    expect(isValidTranscriptSchoolContactEmail("sis:v1:records@example.org")).toBe(false);
+    expect(isValidTranscriptSchoolContactEmail(`${"a".repeat(245)}@example.org`)).toBe(false);
   });
 });

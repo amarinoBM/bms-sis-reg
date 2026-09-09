@@ -4,6 +4,7 @@ import { isValidEmail } from "@/lib/field-validation";
 
 export const TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD =
   "student_last_school_contact_email" as const;
+export const TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH = 254 as const;
 
 export const TRANSCRIPT_DELIVERY_UPLOAD =
   "I can upload them" as const;
@@ -55,7 +56,12 @@ export function normalizeTranscriptSchoolContactEmail(value: unknown): string {
 }
 
 export function isValidTranscriptSchoolContactEmail(value: unknown): boolean {
-  return isValidEmail(normalizeTranscriptSchoolContactEmail(value));
+  const normalized = normalizeTranscriptSchoolContactEmail(value);
+  return (
+    normalized.length <= TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH &&
+    !normalized.startsWith("sis:v1:") &&
+    isValidEmail(normalized)
+  );
 }
 
 export function readTranscriptFiles(value: unknown): string[] {

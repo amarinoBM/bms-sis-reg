@@ -69,6 +69,15 @@ describe("wizard save-service", () => {
     ).not.toHaveProperty("student_last_school_contact_email");
   });
 
+  it("drops invalid prior school emails from upload saves", () => {
+    expect(
+      expandVirtualFormFields("save6.1", {
+        uploadTranscript: "I can upload them",
+        student_last_school_contact_email: "sis:v1:ignored@example.org",
+      }),
+    ).not.toHaveProperty("student_last_school_contact_email");
+  });
+
   it("still rejects an empty or unrelated save request", () => {
     expect(() => buildStepSavePayload("save6.1", {}, {})).toThrow();
     expect(() => buildStepSavePayload("save6.1", { unrelated: true }, {})).toThrow();

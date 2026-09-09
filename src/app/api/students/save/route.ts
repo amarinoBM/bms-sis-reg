@@ -7,7 +7,11 @@ import { parseSaveStep } from "@/modules/wizard/save-service";
 import { unflattenFormValues, flattenFormValues } from "@/modules/wizard/step-schemas";
 import { expandVirtualFormFields } from "@/modules/wizard/field-normalization";
 import { validateStepForSave } from "@/modules/wizard/step-validation";
-import { WIZARD_STEPS } from "@/modules/wizard/steps";
+import {
+  readTranscriptDeliveryChoice,
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
+} from "@/modules/wizard/transcript-fields";
 import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
 import { preserveDocumentFields } from "@/modules/uploads/document-files";
 
@@ -45,10 +49,9 @@ export async function POST(request: Request) {
       saveStep,
       rawFields,
     );
-    const step = WIZARD_STEPS.find((candidate) => candidate.saveHandler === saveStep);
-    if (step) {
+    if (saveStep === "save6.1") {
       const validation = validateStepForSave(
-        step.id,
+        "9",
         flattenFormValues({ ...current.student, ...fields }),
       );
       if (!validation.valid) {
@@ -59,12 +62,28 @@ export async function POST(request: Request) {
       }
     }
 
-    return saveStudentStep(
+    const result = await saveStudentStep(
       parsed.leadId,
       parsed.objectId,
       saveStep,
       rawFields,
       current.student,
     );
+
+    if (
+      saveStep === "save6.1" &&
+      readTranscriptDeliveryChoice(fields.uploadTranscript) === TRANSCRIPT_DELIVERY_SCHOOL &&
+      Object.hasOwn(fields, TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD)
+    ) {
+      const saved = await loadStudentRecord(parsed.leadId, parsed.studentName);
+      if (saved.student[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD] !== fields[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD]) {
+        throw new AppError({
+          code: "EXTERNAL_READBACK_MISMATCH",
+          message: "The transcript contact email could not be confirmed. Reload the registration and try again.",
+        });
+      }
+    }
+
+    return result;
   }, request);
 }

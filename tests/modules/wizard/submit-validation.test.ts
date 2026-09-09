@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { TRANSCRIPT_DELIVERY_SCHOOL } from "@/modules/wizard/transcript-fields";
+import {
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_DELIVERY_UPLOAD,
+} from "@/modules/wizard/transcript-fields";
 import { SAVE_HANDLERS } from "@/modules/wizard/save-handlers";
 import { pickSaveStepFields } from "@/modules/wizard/save-service";
 import {
@@ -22,7 +25,7 @@ describe("submit validation", () => {
   });
 
   it("accepts a minimally complete record", () => {
-    const result = validateSubmitReadiness({
+    const requestRecord = {
       contact_id: "cont_abcdefghijklmnop",
       student_name: "Noah",
       student_last_name: "Moore",
@@ -49,9 +52,15 @@ describe("submit validation", () => {
       honorCodeSigned: "Completed",
       ToSBool: true,
       Caucasian: true,
-    });
+    };
 
-    expect(result.ready).toBe(true);
+    expect(validateSubmitReadiness(requestRecord).ready).toBe(true);
+    expect(validateSubmitReadiness({
+      ...requestRecord,
+      uploadTranscript: TRANSCRIPT_DELIVERY_UPLOAD,
+      transcriptFiles: ["https://drive.google.com/file/d/record/view"],
+      student_last_school_contact_email: undefined,
+    }).ready).toBe(true);
   });
 
   it("requires a valid prior school records email for school-request submissions", () => {

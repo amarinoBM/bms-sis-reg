@@ -395,6 +395,15 @@ export function StepForm({
         return next;
       });
     }
+
+    if (key === "uploadTranscript" && !isFamilyTranscriptDelivery(value)) {
+      setFieldErrors((current) => {
+        if (!current.transcriptFiles) return current;
+        const next = { ...current };
+        delete next.transcriptFiles;
+        return next;
+      });
+    }
   }
 
   function updateValues(updates: Record<string, unknown>) {

@@ -18,6 +18,7 @@ import {
   TRANSCRIPT_DELIVERY_SCHOOL,
   TRANSCRIPT_DELIVERY_UPLOAD,
   TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH,
   TRANSCRIPT_DELIVERY_CHOICES,
   transcriptDeliveryQuestionLabel,
   transcriptSchoolRequestNote,
@@ -95,6 +96,7 @@ export function TranscriptFields({
           requirement="required"
           disabled={readOnly}
           autoComplete="off"
+          maxLength={TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH}
           onChange={(value) => onChange(TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD, value)}
         />
       ) : null}
