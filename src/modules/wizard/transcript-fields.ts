@@ -1,5 +1,11 @@
 /** Transcript step — keys match ms_student_dir columns saved via save6.1. */
 
+import { isValidEmail } from "@/lib/field-validation";
+
+export const TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD =
+  "student_last_school_contact_email" as const;
+export const TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH = 254 as const;
+
 export const TRANSCRIPT_DELIVERY_UPLOAD =
   "I can upload them" as const;
 
@@ -43,6 +49,19 @@ export function transcriptStepIntro(studentName: string): string {
 
 export function transcriptSchoolRequestNote(): string {
   return "We'll contact the prior school on your behalf. A $50 processing fee applies. You don't need to upload files here.";
+}
+
+export function normalizeTranscriptSchoolContactEmail(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export function isValidTranscriptSchoolContactEmail(value: unknown): boolean {
+  const normalized = normalizeTranscriptSchoolContactEmail(value);
+  return (
+    normalized.length <= TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH &&
+    !normalized.startsWith("sis:v1:") &&
+    isValidEmail(normalized)
+  );
 }
 
 export function readTranscriptFiles(value: unknown): string[] {

@@ -14,6 +14,7 @@ import { writeAdminValue } from "@/server/admin/store";
 import { POST as search } from "@/app/api/admin/search/route";
 import { POST as load } from "@/app/api/admin/registration/route";
 import { POST as save } from "@/app/api/admin/save/route";
+import { POST as parentSave } from "@/app/api/students/save/route";
 import { POST as upload } from "@/app/api/admin/uploads/route";
 import { POST as sendCode } from "@/app/api/admin/otp/send/route";
 import { POST as verifyCode } from "@/app/api/admin/otp/verify/route";
@@ -24,6 +25,10 @@ import { GET as document } from "@/app/api/admin/document/route";
 import { setParentSession } from "@/server/auth/parent-session";
 import { findSuggestedParentEmail } from "@/modules/students/repository";
 import { flattenFormValues } from "@/modules/wizard/step-schemas";
+import {
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_DELIVERY_UPLOAD,
+} from "@/modules/wizard/transcript-fields";
 
 let backend: ReturnType<typeof createAdminBackend>;
 const req = (path: string, body: unknown, origin = "http://localhost:3010") => new Request("http://localhost:3010" + path, {
@@ -218,6 +223,74 @@ describe("admin APIs and parent boundaries", () => {
     expect((await search(req("/api/admin/search", { query: "Alex" }))).status).toBe(401);
     await setParentSession({ leadId: "lead_family" });
     expect((await search(req("/api/admin/search", { query: "Alex" }))).status).toBe(401);
+  });
+  it("enforces the transcript contact email at the parent save boundary", async () => {
+    await setParentSession({ leadId: "lead_family" });
+    backend.records[0].uploadTranscript = TRANSCRIPT_DELIVERY_SCHOOL;
+    backend.records[0].transcriptFiles = [];
+
+    const fields = {
+      ...flattenFormValues(backend.records[0]),
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+      transferCredit: false,
+      CreditTransfer: [],
+      transcriptFiles: [],
+    };
+    const invalid = await parentSave(req("/api/students/save", {
+      leadId: "lead_family",
+      objectId: "student-1",
+      saveStep: "save6.1",
+      fields: { ...fields, student_last_school_contact_email: "not-an-email" },
+    }));
+    expect(invalid.status).toBe(400);
+    expect(backend.writes).toHaveLength(0);
+
+    const missing = await parentSave(req("/api/students/save", {
+      leadId: "lead_family",
+      objectId: "student-1",
+      saveStep: "save6.1",
+      fields: { ...fields, student_last_school_contact_email: "" },
+    }));
+    expect(missing.status).toBe(400);
+    expect(backend.writes).toHaveLength(0);
+
+    const valid = await parentSave(req("/api/students/save", {
+      leadId: "lead_family",
+      objectId: "student-1",
+      saveStep: "save6.1",
+      fields: { ...fields, student_last_school_contact_email: "  records@example.org  " },
+    }));
+    expect(valid.status).toBe(200);
+    expect(backend.records[0].student_last_school_contact_email).toBe("records@example.org");
+
+    backend.records[0].transcriptFiles = ["https://drive.google.com/file/d/synthetic-transcript/view"];
+    delete backend.records[0].student_last_school_contact_email;
+    const upload = await parentSave(req("/api/students/save", {
+      leadId: "lead_family",
+      objectId: "student-1",
+      saveStep: "save6.1",
+      fields: {
+        ...flattenFormValues(backend.records[0]),
+        uploadTranscript: TRANSCRIPT_DELIVERY_UPLOAD,
+        transcriptFiles: ["https://drive.google.com/file/d/record/view"],
+        student_last_school_contact_email: "sis:v1:ignored@example.org",
+      },
+    }));
+    expect(upload.status).toBe(200);
+    expect(backend.records[0].student_last_school_contact_email).toBeUndefined();
+  });
+  it("preserves partial parent saves for earlier wizard steps", async () => {
+    await setParentSession({ leadId: "lead_family" });
+
+    const response = await parentSave(req("/api/students/save", {
+      leadId: "lead_family",
+      objectId: "student-1",
+      saveStep: "save1",
+      fields: { student_last_name: "Updated" },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(backend.records[0].student_last_name).toBe("Updated");
   });
   it("rejects cross-origin and missing-origin writes", async () => {
     await createAdminSession(ADMIN_EMAIL);
@@ -414,6 +487,60 @@ describe("admin APIs and parent boundaries", () => {
     } }));
     expect(response.status).toBe(400);
     expect(backend.writes).toHaveLength(0);
+  });
+  it("validates and reads back the admin transcript request email", async () => {
+    await createAdminSession(ADMIN_EMAIL);
+    backend.records[0].uploadTranscript = TRANSCRIPT_DELIVERY_SCHOOL;
+    backend.records[0].transcriptFiles = [];
+    const data = await loaded();
+    const fields = {
+      ...flattenFormValues(data.student),
+      uploadTranscript: TRANSCRIPT_DELIVERY_SCHOOL,
+      transcriptFiles: [],
+      transferCredit: false,
+      CreditTransfer: [],
+    };
+
+    const missing = await save(req("/api/admin/save", {
+      ...target,
+      version: data.adminVersion,
+      saveStep: "save6.1",
+      fields: { ...fields, student_last_school_contact_email: "" },
+    }));
+    expect(missing.status).toBe(400);
+
+    const invalid = await save(req("/api/admin/save", {
+      ...target,
+      version: data.adminVersion,
+      saveStep: "save6.1",
+      fields: { ...fields, student_last_school_contact_email: "not-an-email" },
+    }));
+    expect(invalid.status).toBe(400);
+
+    const valid = await save(req("/api/admin/save", {
+      ...target,
+      version: data.adminVersion,
+      saveStep: "save6.1",
+      fields: { ...fields, student_last_school_contact_email: "  records@example.org  " },
+    }));
+    expect(valid.status).toBe(200);
+    expect((await loaded()).student.student_last_school_contact_email).toBe("records@example.org");
+
+    backend.records[0].transcriptFiles = ["https://drive.google.com/file/d/synthetic-transcript/view"];
+    delete backend.records[0].student_last_school_contact_email;
+    const uploadData = await loaded();
+    const upload = await save(req("/api/admin/save", {
+      ...target,
+      version: uploadData.adminVersion,
+      saveStep: "save6.1",
+      fields: {
+        ...flattenFormValues(uploadData.student),
+        uploadTranscript: TRANSCRIPT_DELIVERY_UPLOAD,
+        student_last_school_contact_email: "sis:v1:ignored@example.org",
+      },
+    }));
+    expect(upload.status).toBe(200);
+    expect(backend.records[0].student_last_school_contact_email).toBeUndefined();
   });
   it("admin credentials cannot sign or submit through parent APIs", async () => {
     await createAdminSession(ADMIN_EMAIL);

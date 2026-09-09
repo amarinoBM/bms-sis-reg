@@ -56,6 +56,10 @@ import {
   validateStepForSave,
 } from "@/modules/wizard/step-validation";
 import { resolveParentEmailState } from "@/modules/students/parent-emails";
+import {
+  isFamilyTranscriptDelivery,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
+} from "@/modules/wizard/transcript-fields";
 
 export type AdminFormState = { dirty: boolean; busy: boolean };
 export type AdminUploadResult = { fieldKey: string; url: string; adminVersion: string };
@@ -376,6 +380,27 @@ export function StepForm({
       setFieldErrors((current) => {
         const next = { ...current };
         delete next[key];
+        return next;
+      });
+    }
+
+    if (
+      key === "uploadTranscript" &&
+      isFamilyTranscriptDelivery(value)
+    ) {
+      setFieldErrors((current) => {
+        if (!current[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD]) return current;
+        const next = { ...current };
+        delete next[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD];
+        return next;
+      });
+    }
+
+    if (key === "uploadTranscript" && !isFamilyTranscriptDelivery(value)) {
+      setFieldErrors((current) => {
+        if (!current.transcriptFiles) return current;
+        const next = { ...current };
+        delete next.transcriptFiles;
         return next;
       });
     }

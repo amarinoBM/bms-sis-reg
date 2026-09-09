@@ -14,8 +14,12 @@ import {
 } from "@/modules/wizard/field-options";
 import {
   readCreditTransferSubjects,
+  isValidTranscriptSchoolContactEmail,
   readTranscriptDeliveryChoice,
   readTransferCreditFlag,
+  normalizeTranscriptSchoolContactEmail,
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
 } from "@/modules/wizard/transcript-fields";
 import {
   readIepOr504Plan,
@@ -53,6 +57,20 @@ export function expandVirtualFormFields(
     const deliveryChoice = readTranscriptDeliveryChoice(expanded.uploadTranscript);
     if (deliveryChoice) {
       expanded.uploadTranscript = deliveryChoice;
+    }
+
+    if (Object.hasOwn(expanded, TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD)) {
+      const normalizedEmail = normalizeTranscriptSchoolContactEmail(
+        expanded[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD],
+      );
+      if (
+        readTranscriptDeliveryChoice(expanded.uploadTranscript) !== TRANSCRIPT_DELIVERY_SCHOOL &&
+        !isValidTranscriptSchoolContactEmail(normalizedEmail)
+      ) {
+        delete expanded[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD];
+      } else {
+        expanded[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD] = normalizedEmail;
+      }
     }
   }
 

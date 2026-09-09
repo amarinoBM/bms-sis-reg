@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isValidTranscriptSchoolContactEmail,
+  normalizeTranscriptSchoolContactEmail,
   readCreditTransferSubjects,
   readTranscriptDeliveryChoice,
   readTranscriptFiles,
@@ -26,5 +28,17 @@ describe("transcript-fields", () => {
       "Spanish",
       "Algebra 1",
     ]);
+  });
+
+  it("trims the prior school records email before saving", () => {
+    expect(normalizeTranscriptSchoolContactEmail("  records@example.org  ")).toBe(
+      "records@example.org",
+    );
+    expect(normalizeTranscriptSchoolContactEmail(undefined)).toBe("");
+  });
+
+  it("rejects reserved encrypted markers and oversized addresses", () => {
+    expect(isValidTranscriptSchoolContactEmail("sis:v1:records@example.org")).toBe(false);
+    expect(isValidTranscriptSchoolContactEmail(`${"a".repeat(245)}@example.org`)).toBe(false);
   });
 });

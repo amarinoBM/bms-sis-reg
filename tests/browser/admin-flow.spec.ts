@@ -414,6 +414,14 @@ test("admin signs in, searches, edits, switches students, and signs out", async 
   expect(state.records[0].computer_system).toBe("MacOS Computer");
   expect(state.audit.some((a: { event: string }) => a.event === "save_verified")).toBe(true);
   await page.getByLabel("Jump to section").selectOption("9");
+  await page.getByLabel("Ask BMS to request records from the school").check();
+  await page.getByLabel("Prior school records email").fill("records@example.org");
+  const contactEmailSave = page.waitForResponse("**/api/admin/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await contactEmailSave).status()).toBe(200);
+  await expect(page.getByLabel("Prior school records email")).toBeDisabled();
+  await page.getByRole("button", { name: "Edit section" }).click();
+  await page.getByLabel("I'll upload records myself").check();
   await expect(page.getByRole("link", { name: /Transcript file/ })).toHaveCount(1);
   for (let count = 2; count <= 3; count++) {
     await expect(page.getByRole("button", { name: "Add another file" })).toBeVisible();
@@ -558,4 +566,41 @@ test("parent keeps draft answers during uploads and can add several transcripts"
   expect(finalState.records[0].transcriptFiles).toHaveLength(3);
   await page.screenshot({ path: testInfo.outputPath("parent-transcripts.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("parent requires and preserves the prior school records email only when BMS requests records", async ({ page, request, context }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  const value = await sealData({ leadId: "lead_family", studentName: "Alex", isLoggedIn: true }, { password: "synthetic-parent-browser-secret-32-characters!!" });
+  await context.addCookies([{ name: "bms-sis-reg-parent", value, url: "http://127.0.0.1:3028", httpOnly: true, sameSite: "Lax" }]);
+  await page.goto("/reg/sis?lead_id=lead_family&student_name=Alex");
+  for (let i = 0; i < 8; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+
+  await page.getByLabel("Ask BMS to request records from the school").check();
+  const schoolEmail = page.getByLabel("Prior school records email");
+  await expect(schoolEmail).toBeVisible();
+  await page.getByRole("button", { name: "Save section" }).click();
+  await expect(page.getByText("Prior school records email is required.", { exact: true })).toBeVisible();
+
+  await schoolEmail.fill("not-an-email");
+  await page.getByRole("button", { name: "Save section" }).click();
+  await expect(page.getByText("Enter a valid email address.", { exact: true })).toBeVisible();
+
+  await page.getByLabel("I'll upload records myself").check();
+  await expect(schoolEmail).toHaveCount(0);
+  await expect(page.getByText("Enter a valid email address.", { exact: true })).toHaveCount(0);
+
+  await page.getByLabel("Ask BMS to request records from the school").check();
+  await expect(schoolEmail).toHaveValue("not-an-email");
+  await page.getByRole("button", { name: "Save section" }).click();
+  await expect(page.getByText("Enter a valid email address.", { exact: true })).toBeVisible();
+
+  await schoolEmail.fill("  records@example.org  ");
+  const saved = page.waitForResponse("**/api/students/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await saved).status()).toBe(200);
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.records[0].student_last_school_contact_email).toBe("records@example.org");
+  await page.reload();
+  for (let i = 0; i < 8; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByLabel("Prior school records email")).toHaveValue("records@example.org");
 });

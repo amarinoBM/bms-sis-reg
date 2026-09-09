@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildDriveFileUrl, UPLOAD_FIELD_MAP } from "@/modules/uploads/upload-config";
+import { expandVirtualFormFields } from "@/modules/wizard/field-normalization";
 import { buildStepSavePayload } from "@/modules/wizard/save-service";
 import { unflattenFormValues } from "@/modules/wizard/step-schemas";
 
@@ -36,6 +37,45 @@ describe("wizard save-service", () => {
     expect(payload.UpdateHistory).toEqual([
       expect.objectContaining({ step: "save6.1", fields: ["section_completion"] }),
     ]);
+  });
+
+  it("keeps the prior school records email in save6.1 payloads", () => {
+    const payload = buildStepSavePayload(
+      "save6.1",
+      {
+        uploadTranscript: "I prefer you source them from the school ($50 processing fee)",
+        student_last_school_contact_email: "records@example.org",
+      },
+      {},
+    );
+
+    expect(payload.student_last_school_contact_email).toBe("records@example.org");
+  });
+
+  it("trims the prior school records email during save6.1 normalization", () => {
+    expect(
+      expandVirtualFormFields("save6.1", {
+        uploadTranscript: "I prefer you source them from the school ($50 processing fee)",
+        student_last_school_contact_email: "  records@example.org  ",
+      }).student_last_school_contact_email,
+    ).toBe("records@example.org");
+  });
+
+  it("does not add an absent prior school records email to upload saves", () => {
+    expect(
+      expandVirtualFormFields("save6.1", {
+        uploadTranscript: "I can upload them",
+      }),
+    ).not.toHaveProperty("student_last_school_contact_email");
+  });
+
+  it("drops invalid prior school emails from upload saves", () => {
+    expect(
+      expandVirtualFormFields("save6.1", {
+        uploadTranscript: "I can upload them",
+        student_last_school_contact_email: "sis:v1:ignored@example.org",
+      }),
+    ).not.toHaveProperty("student_last_school_contact_email");
   });
 
   it("still rejects an empty or unrelated save request", () => {

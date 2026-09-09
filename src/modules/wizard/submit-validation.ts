@@ -8,9 +8,13 @@ import {
 } from "@/modules/wizard/learning-profile";
 import {
   hasTranscriptDeliveryChoice,
+  isValidTranscriptSchoolContactEmail,
   isFamilyTranscriptDelivery,
   readCreditTransferSubjects,
+  readTranscriptDeliveryChoice,
   readTransferCreditFlag,
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
 } from "@/modules/wizard/transcript-fields";
 import {
   readIepOr504Plan,
@@ -202,6 +206,14 @@ const SUBMIT_REQUIREMENTS: SubmitRequirement[] = [
     isMissing: (student) =>
       isFamilyTranscriptDelivery(student.uploadTranscript) &&
       readStudentTranscriptFiles(student).length === 0,
+  },
+  {
+    key: TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
+    label: "Prior school records email",
+    stepId: "9",
+    isMissing: (student) =>
+      readTranscriptDeliveryChoice(student.uploadTranscript) === TRANSCRIPT_DELIVERY_SCHOOL &&
+      !isValidTranscriptSchoolContactEmail(student[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD]),
   },
   {
     key: "home_state",

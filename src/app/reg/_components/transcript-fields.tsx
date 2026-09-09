@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FormTextInput,
   FormCheckbox,
   FormFileUpload,
   FormMultiOptionSelect,
@@ -14,8 +15,11 @@ import {
   readCreditTransferSubjects,
   readTranscriptDeliveryChoice,
   readTransferCreditFlag,
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_DELIVERY_UPLOAD,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH,
   TRANSCRIPT_DELIVERY_CHOICES,
-  TRANSCRIPT_DELIVERY_OPTIONS,
   transcriptDeliveryQuestionLabel,
   transcriptSchoolRequestNote,
   transcriptStepIntro,
@@ -81,7 +85,23 @@ export function TranscriptFields({
         onChange={(value) => onChange("uploadTranscript", value)}
       />
 
-      {deliveryChoice === TRANSCRIPT_DELIVERY_OPTIONS[0] ? (
+      {deliveryChoice === TRANSCRIPT_DELIVERY_SCHOOL ? (
+        <FormTextInput
+          id={TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD}
+          label="Prior school records email"
+          description="Enter the prior school's registrar or records-office email address."
+          type="email"
+          value={String(values[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD] ?? "")}
+          error={fieldErrors[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD]}
+          requirement="required"
+          disabled={readOnly}
+          autoComplete="off"
+          maxLength={TRANSCRIPT_SCHOOL_CONTACT_EMAIL_MAX_LENGTH}
+          onChange={(value) => onChange(TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD, value)}
+        />
+      ) : null}
+
+      {deliveryChoice === TRANSCRIPT_DELIVERY_UPLOAD ? (
         <FormFileUpload
           id="transcript-upload"
           label="Upload transcript files"
@@ -98,7 +118,7 @@ export function TranscriptFields({
         />
       ) : null}
 
-      {deliveryChoice === TRANSCRIPT_DELIVERY_OPTIONS[1] ? (
+      {deliveryChoice === TRANSCRIPT_DELIVERY_SCHOOL ? (
         <div className="rounded-lg border border-border/80 bg-muted/20 p-4 text-body text-muted-foreground">
           {transcriptSchoolRequestNote()}
         </div>

@@ -4,7 +4,14 @@ import { AppError } from "@/core/app-error";
 import { runRoute } from "@/server/http/route-handler";
 import { saveStudentStep, loadStudentRecord } from "@/modules/students/repository";
 import { parseSaveStep } from "@/modules/wizard/save-service";
-import { unflattenFormValues } from "@/modules/wizard/step-schemas";
+import { unflattenFormValues, flattenFormValues } from "@/modules/wizard/step-schemas";
+import { expandVirtualFormFields } from "@/modules/wizard/field-normalization";
+import { validateStepForSave } from "@/modules/wizard/step-validation";
+import {
+  readTranscriptDeliveryChoice,
+  TRANSCRIPT_DELIVERY_SCHOOL,
+  TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD,
+} from "@/modules/wizard/transcript-fields";
 import { requireParentApiSession } from "@/server/auth/require-parent-api-session";
 import { preserveDocumentFields } from "@/modules/uploads/document-files";
 
@@ -37,14 +44,46 @@ export async function POST(request: Request) {
       });
     }
 
-    const fields = preserveDocumentFields(unflattenFormValues(parsed.fields), current.student);
+    const rawFields = preserveDocumentFields(unflattenFormValues(parsed.fields), current.student);
+    const fields = expandVirtualFormFields(
+      saveStep,
+      rawFields,
+    );
+    if (saveStep === "save6.1") {
+      const validation = validateStepForSave(
+        "9",
+        flattenFormValues({ ...current.student, ...fields }),
+      );
+      if (!validation.valid) {
+        throw new AppError({
+          code: "INVALID_INPUT",
+          message: validation.summary ?? "Fix the required fields before saving.",
+        });
+      }
+    }
 
-    return saveStudentStep(
+    const result = await saveStudentStep(
       parsed.leadId,
       parsed.objectId,
       saveStep,
-      fields,
+      rawFields,
       current.student,
     );
+
+    if (
+      saveStep === "save6.1" &&
+      readTranscriptDeliveryChoice(fields.uploadTranscript) === TRANSCRIPT_DELIVERY_SCHOOL &&
+      Object.hasOwn(fields, TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD)
+    ) {
+      const saved = await loadStudentRecord(parsed.leadId, parsed.studentName);
+      if (saved.student[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD] !== fields[TRANSCRIPT_SCHOOL_CONTACT_EMAIL_FIELD]) {
+        throw new AppError({
+          code: "EXTERNAL_READBACK_MISMATCH",
+          message: "The transcript contact email could not be confirmed. Reload the registration and try again.",
+        });
+      }
+    }
+
+    return result;
   }, request);
 }
