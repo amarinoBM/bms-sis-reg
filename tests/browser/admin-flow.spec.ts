@@ -520,6 +520,29 @@ test("parent edits free-text interests independently of optional categories", as
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test("parent saves and reloads their last name", async ({ page, request, context }) => {
+  await request.get("http://127.0.0.1:3039/_test/reset");
+  const value = await sealData({ leadId: "lead_family", studentName: "Alex", isLoggedIn: true }, { password: "synthetic-parent-browser-secret-32-characters!!" });
+  await context.addCookies([{ name: "bms-sis-reg-parent", value, url: "http://127.0.0.1:3028", httpOnly: true, sameSite: "Lax" }]);
+  await page.goto("/reg/sis?lead_id=lead_family&student_name=Alex");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+
+  await page.getByLabel("Parent last name").fill("Example");
+  await page.getByLabel("Phone").fill("555-010-1234");
+  await page.getByLabel("Address").fill("123 Main Street");
+  await page.getByLabel("Relationship to student").click();
+  await page.getByRole("option", { name: "Parent", exact: true }).click();
+  const saved = page.waitForResponse("**/api/students/save");
+  await page.getByRole("button", { name: "Save section" }).click();
+  expect((await saved).status()).toBe(200);
+
+  const state = await (await request.get("http://127.0.0.1:3039/_test/state")).json();
+  expect(state.records[0].parent_last_name).toBe("Example");
+  await page.reload();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByLabel("Parent last name")).toHaveValue("Example");
+});
+
 test("parent keeps draft answers during uploads and can add several transcripts", async ({ page, request, context }, testInfo) => {
   await request.get("http://127.0.0.1:3039/_test/reset");
   // Synthetic signed session: no production OTPs, credentials, or students.
