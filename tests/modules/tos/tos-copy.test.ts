@@ -21,6 +21,8 @@ describe("tos copy", () => {
     expect(TOS_HIGHLIGHT_BULLETS[0]).toContain("accuracy of all the information");
     expect(TOS_HIGHLIGHT_BULLETS.join(" ")).toContain("starting price appear in the table");
     expect(TOS_HIGHLIGHT_BULLETS.join(" ")).toContain("fifteenth (15th)");
+    expect(TOS_HIGHLIGHT_BULLETS.join(" ")).toContain("unless applicable law requires otherwise");
+    expect(TOS_HIGHLIGHT_BULLETS.join(" ")).not.toContain("will be forfeited");
     expect(TOS_HIGHLIGHT_BULLETS.join(" ")).not.toContain("$690/month");
     expect(TOS_HIGHLIGHT_BULLETS.join(" ")).not.toContain("$650/month");
     expect(TOS_GUIDED_STUDY_BULLET).not.toContain("$385");
